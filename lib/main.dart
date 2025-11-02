@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qonbaq/core/utils/api_client.dart';
 import 'package:qonbaq/core/utils/constants.dart';
 import 'package:qonbaq/data/datasources/auth_remote_datasource.dart';
@@ -11,7 +12,9 @@ import 'package:qonbaq/presentation/pages/auth_page.dart';
 import 'package:qonbaq/presentation/pages/home_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
 
-void main() {
+Future<void> main() async {
+  // Загружаем .env файл перед запуском приложения
+  await dotenv.load(fileName: '.env');
   runApp(const MyApp());
 }
 
