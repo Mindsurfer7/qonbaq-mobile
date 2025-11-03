@@ -18,6 +18,13 @@ class HomePage extends StatelessWidget {
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             actions: [
               IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                tooltip: 'Перейти в бизнес-интерфейс',
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed('/business');
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () {
                   authProvider.logout();
