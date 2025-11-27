@@ -46,6 +46,13 @@ dependencies:
   
   # Работа с .env файлами
   flutter_dotenv: ^5.1.0
+  
+  # Хранение данных
+  shared_preferences: ^2.2.2
+  
+  # Формы
+  flutter_form_builder: ^9.1.1
+  form_builder_validators: ^11.1.2
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../../core/utils/credentials_storage.dart';
 
 /// Страница аутентификации с табами (логин/регистрация)
 class AuthPage extends StatefulWidget {
@@ -62,6 +63,26 @@ class _LoginTabState extends State<LoginTab> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final credentials = await CredentialsStorage.getSavedCredentials();
+    if (mounted) {
+      setState(() {
+        if (credentials['email'] != null) {
+          _emailController.text = credentials['email']!;
+        }
+        if (credentials['password'] != null) {
+          _passwordController.text = credentials['password']!;
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -73,15 +94,20 @@ class _LoginTabState extends State<LoginTab> {
       return;
     }
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    final success = await authProvider.signIn(email: email, password: password);
 
     if (!mounted) return;
 
     if (success) {
+      // Сохраняем учетные данные после успешного входа
+      await CredentialsStorage.saveCredentials(
+        email: email,
+        password: password,
+      );
       Navigator.of(context).pushReplacementNamed('/home');
       ScaffoldMessenger.of(
         context,

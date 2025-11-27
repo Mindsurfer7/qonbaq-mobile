@@ -26,3 +26,5 @@ class ChatsEmailPage extends StatelessWidget {
     );
   }
 }
+
+

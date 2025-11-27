@@ -50,6 +50,18 @@ import 'package:qonbaq/presentation/pages/approvals_page.dart';
 import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
+import 'package:qonbaq/presentation/providers/profile_provider.dart';
+import 'package:qonbaq/data/datasources/user_remote_datasource_impl.dart';
+import 'package:qonbaq/data/datasources/user_local_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/user_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/user_repository.dart';
+import 'package:qonbaq/domain/usecases/get_user_businesses.dart';
+import 'package:qonbaq/domain/usecases/get_user_profile.dart';
+import 'package:qonbaq/data/datasources/task_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/task_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/task_repository.dart';
+import 'package:qonbaq/domain/usecases/create_task.dart';
+import 'package:qonbaq/domain/usecases/get_tasks.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,8 +90,35 @@ class MyApp extends StatelessWidget {
       loginUser: loginUser,
     );
 
-    return ChangeNotifierProvider(
-      create: (_) => authProvider,
+    // Инициализация зависимостей для профиля
+    final userRemoteDataSource = UserRemoteDataSourceImpl(apiClient: apiClient);
+    final userLocalDataSource = UserLocalDataSourceImpl();
+    final UserRepository userRepository = UserRepositoryImpl(
+      remoteDataSource: userRemoteDataSource,
+      localDataSource: userLocalDataSource,
+    );
+    final getUserBusinesses = GetUserBusinesses(userRepository);
+    final getUserProfile = GetUserProfile(userRepository);
+    final profileProvider = ProfileProvider(
+      getUserBusinesses: getUserBusinesses,
+      getUserProfile: getUserProfile,
+    );
+
+    // Инициализация зависимостей для задач
+    final taskRemoteDataSource = TaskRemoteDataSourceImpl(apiClient: apiClient);
+    final TaskRepository taskRepository = TaskRepositoryImpl(
+      remoteDataSource: taskRemoteDataSource,
+    );
+    final createTask = CreateTask(taskRepository);
+    final getTasks = GetTasks(taskRepository);
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => authProvider),
+        ChangeNotifierProvider(create: (_) => profileProvider),
+        Provider<CreateTask>(create: (_) => createTask),
+        Provider<GetTasks>(create: (_) => getTasks),
+      ],
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,

@@ -1,5 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/entities/business.dart';
+import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/user_model.dart';
@@ -72,6 +74,30 @@ class UserRepositoryImpl extends RepositoryImpl implements UserRepository {
       return Right(createdUser.toEntity());
     } catch (e) {
       return Left(ServerFailure('Ошибка при создании пользователя: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Business>>> getUserBusinesses() async {
+    try {
+      final businesses = await remoteDataSource.getUserBusinesses();
+      return Right(businesses.map((model) => model.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении компаний: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserProfile>> getUserProfile({
+    String? businessId,
+  }) async {
+    try {
+      final profile = await remoteDataSource.getUserProfile(
+        businessId: businessId,
+      );
+      return Right(profile.toEntity());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении профиля: $e'));
     }
   }
 }

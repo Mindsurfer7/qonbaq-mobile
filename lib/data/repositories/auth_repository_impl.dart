@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/token_storage.dart';
 import '../models/register_request.dart';
 import '../models/login_request.dart';
 import '../datasources/auth_remote_datasource.dart';
@@ -33,6 +34,8 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
       }
 
       final response = await remoteDataSource.register(request);
+      // Сохраняем токен
+      TokenStorage.instance.setAccessToken(response.accessToken);
       return Right(response.toUserEntity());
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -54,6 +57,8 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
       }
 
       final response = await remoteDataSource.login(request);
+      // Сохраняем токен
+      TokenStorage.instance.setAccessToken(response.accessToken);
       return Right(response.toUserEntity());
     } catch (e) {
       return Left(ServerFailure(e.toString()));

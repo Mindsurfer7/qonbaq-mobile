@@ -1,5 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../entities/user.dart';
+import '../entities/business.dart';
+import '../entities/user_profile.dart';
 import '../../core/error/failures.dart';
 import '../repositories/repository.dart';
 
@@ -14,4 +16,10 @@ abstract class UserRepository extends Repository {
 
   /// Создать нового пользователя
   Future<Either<Failure, User>> createUser(User user);
+
+  /// Получить список компаний пользователя
+  Future<Either<Failure, List<Business>>> getUserBusinesses();
+
+  /// Получить профиль пользователя в контексте компании
+  Future<Either<Failure, UserProfile>> getUserProfile({String? businessId});
 }

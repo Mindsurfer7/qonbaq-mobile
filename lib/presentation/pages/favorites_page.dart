@@ -26,3 +26,5 @@ class FavoritesPage extends StatelessWidget {
     );
   }
 }
+
+
