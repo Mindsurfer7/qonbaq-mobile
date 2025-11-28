@@ -3,6 +3,7 @@ import '../../domain/entities/auth_user.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/login_user.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/token_storage.dart';
 
 /// Провайдер для управления состоянием аутентификации
 class AuthProvider with ChangeNotifier {
@@ -86,9 +87,11 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// Выход пользователя
-  void logout() {
+  Future<void> logout() async {
     _user = null;
     _error = null;
+    // Очищаем токены
+    await TokenStorage.instance.clearTokens();
     notifyListeners();
   }
 

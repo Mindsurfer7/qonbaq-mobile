@@ -2,9 +2,11 @@ import 'package:dartz/dartz.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../domain/entities/employee.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/user_model.dart';
+import '../models/employee_model.dart';
 import '../datasources/user_remote_datasource.dart';
 import '../datasources/user_local_datasource.dart';
 import '../repositories/repository_impl.dart';
@@ -98,6 +100,18 @@ class UserRepositoryImpl extends RepositoryImpl implements UserRepository {
       return Right(profile.toEntity());
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении профиля: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Employee>>> getBusinessEmployees(
+    String businessId,
+  ) async {
+    try {
+      final employees = await remoteDataSource.getBusinessEmployees(businessId);
+      return Right(employees.map((model) => model.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении сотрудников: $e'));
     }
   }
 }

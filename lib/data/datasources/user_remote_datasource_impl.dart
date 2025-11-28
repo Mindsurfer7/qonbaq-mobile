@@ -5,6 +5,7 @@ import '../datasources/user_remote_datasource.dart';
 import '../models/user_model.dart';
 import '../models/business_model.dart';
 import '../models/user_profile_model.dart';
+import '../models/employee_model.dart';
 
 /// Реализация удаленного источника данных для пользователей
 class UserRemoteDataSourceImpl extends UserRemoteDataSource {
@@ -95,6 +96,47 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<List<EmployeeModel>> getBusinessEmployees(String businessId) async {
+    print('📋 getBusinessEmployees called with businessId: $businessId');
+    try {
+      final response = await apiClient.get(
+        '/api/user/business/$businessId/employees',
+        headers: _getAuthHeaders(),
+      );
+
+      print('✅ getBusinessEmployees response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final employeesList = json['employees'] as List<dynamic>;
+        print('✅ Found ${employeesList.length} employees');
+        return employeesList
+            .map((item) => EmployeeModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      } else if (response.statusCode == 401) {
+        print('❌ getBusinessEmployees: 401 Unauthorized');
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        print('❌ getBusinessEmployees: 403 Forbidden');
+        throw Exception('Нет доступа к этой компании');
+      } else {
+        print(
+          '❌ getBusinessEmployees: Unexpected status code ${response.statusCode}',
+        );
+        print('   Response body: ${response.body}');
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('❌ getBusinessEmployees error: $e');
+      print('   Stack trace: $stackTrace');
       if (e is Exception) {
         rethrow;
       }

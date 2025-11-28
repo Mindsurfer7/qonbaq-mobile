@@ -17,4 +17,7 @@ abstract class AuthRepository extends Repository {
     required String email,
     required String password,
   });
+
+  /// Обновление токена через refresh token
+  Future<Either<Failure, AuthUser>> refreshToken(String refreshToken);
 }

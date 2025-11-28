@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user_profile.dart';
 import '../providers/profile_provider.dart';
+import '../widgets/business_selector_widget.dart';
 
 /// Страница профиля и настроек
 class ProfileSettingsPage extends StatefulWidget {
@@ -74,32 +75,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Widget _buildContent(ProfileProvider provider) {
     return Column(
       children: [
-        // Если компаний несколько, показываем селектор
-        if (provider.businesses!.length > 1)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField(
-              value: provider.selectedBusiness,
-              decoration: const InputDecoration(
-                labelText: 'Выберите компанию',
-                border: OutlineInputBorder(),
-              ),
-              items:
-                  provider.businesses!
-                      .map(
-                        (business) => DropdownMenuItem(
-                          value: business,
-                          child: Text(business.name),
-                        ),
-                      )
-                      .toList(),
-              onChanged: (business) {
-                if (business != null) {
-                  provider.selectBusiness(business);
-                }
-              },
-            ),
-          ),
+        // Переиспользуемый виджет выбора компании
+        const BusinessSelectorWidget(compact: false),
         Expanded(
           child:
               provider.profile != null

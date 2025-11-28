@@ -34,8 +34,11 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
       }
 
       final response = await remoteDataSource.register(request);
-      // Сохраняем токен
-      TokenStorage.instance.setAccessToken(response.accessToken);
+      // Сохраняем оба токена
+      await TokenStorage.instance.setTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
       return Right(response.toUserEntity());
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -57,8 +60,26 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
       }
 
       final response = await remoteDataSource.login(request);
-      // Сохраняем токен
-      TokenStorage.instance.setAccessToken(response.accessToken);
+      // Сохраняем оба токена
+      await TokenStorage.instance.setTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
+      return Right(response.toUserEntity());
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthUser>> refreshToken(String refreshToken) async {
+    try {
+      final response = await remoteDataSource.refreshToken(refreshToken);
+      // Сохраняем обновленные токены
+      await TokenStorage.instance.setTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
       return Right(response.toUserEntity());
     } catch (e) {
       return Left(ServerFailure(e.toString()));

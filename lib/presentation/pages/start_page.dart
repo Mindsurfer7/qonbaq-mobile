@@ -1,46 +1,49 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/token_storage.dart';
 
 /// Стартовая страница приложения
-class StartPage extends StatelessWidget {
+class StartPage extends StatefulWidget {
   const StartPage({super.key});
+
+  @override
+  State<StartPage> createState() => _StartPageState();
+}
+
+class _StartPageState extends State<StartPage> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  /// Проверка статуса аутентификации при старте
+  Future<void> _checkAuthStatus() async {
+    // Небольшая задержка для инициализации
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (!mounted) return;
+    
+    final tokenStorage = TokenStorage.instance;
+    
+    // Если есть токены, перенаправляем на главную страницу
+    if (tokenStorage.hasAccessToken() && tokenStorage.hasRefreshToken()) {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/business');
+      }
+    } else {
+      // Если токенов нет, перенаправляем на страницу логина
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/auth');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('QonbaQ Business Application')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'QonbaQ',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/business');
-              },
-              child: const Text('Войти в систему'),
-            ),
-            const SizedBox(height: 32),
-            const Text('Этапы разработки приложения:'),
-            const SizedBox(height: 16),
-            _buildStage('Business Application', 0.8),
-            _buildStage('Family Application', 0.1),
-            _buildStage('Interaction with public organizations', 0.1),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStage(String name, double progress) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [Text(name), LinearProgressIndicator(value: progress)],
+      body: const Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

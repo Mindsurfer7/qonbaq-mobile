@@ -76,4 +76,28 @@ class AuthRemoteDataSource extends DataSource {
       throw Exception('Ошибка сети: $e');
     }
   }
+
+  /// Обновление токена через refresh token
+  Future<AuthResponse> refreshToken(String refreshToken) async {
+    try {
+      final response = await apiClient.post(
+        '/auth/refresh',
+        body: {'refreshToken': refreshToken},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return AuthResponse.fromJson(json);
+      } else if (response.statusCode == 401) {
+        throw Exception('Refresh токен недействителен');
+      } else {
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
 }

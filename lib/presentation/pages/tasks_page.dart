@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/entities/business.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/get_tasks.dart';
+import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/create_task_form.dart';
@@ -21,104 +23,34 @@ class _TasksPageState extends State<TasksPage> {
   String? _error;
   List<Task> _tasks = [];
 
-  void _showCreateTaskDialog(CreateTask createTaskUseCase, String businessId) {
+  void _showCreateTaskDialog(
+    CreateTask createTaskUseCase,
+    String businessId,
+    UserRepository userRepository,
+  ) {
     showDialog(
       context: context,
       builder:
-          (context) => Dialog(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
-              child: Column(
-                children: [
-                  // Заголовок
-                  Container(
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Создать задачу',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Форма
-                  Expanded(
-                    child: CreateTaskForm(
-                      businessId: businessId,
-                      onSubmit:
-                          (task) => _handleCreateTask(task, createTaskUseCase),
-                      onCancel: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          (context) => _CreateTaskDialog(
+            businessId: businessId,
+            userRepository: userRepository,
+            createTaskUseCase: createTaskUseCase,
+            onSuccess: () {
+              // Обновляем список задач
+              final profileProvider = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
+              final selectedBusiness = profileProvider.selectedBusiness;
+              final getTasksUseCase = Provider.of<GetTasks>(
+                context,
+                listen: false,
+              );
+              if (selectedBusiness != null) {
+                _loadTasks(getTasksUseCase, selectedBusiness.id);
+              }
+            },
           ),
-    );
-  }
-
-  Future<void> _handleCreateTask(
-    Task task,
-    CreateTask createTaskUseCase,
-  ) async {
-    setState(() {
-      _error = null;
-    });
-
-    final result = await createTaskUseCase.call(CreateTaskParams(task: task));
-
-    result.fold(
-      (failure) {
-        setState(() {
-          _error = _getErrorMessage(failure);
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_error ?? 'Ошибка при создании задачи'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      (createdTask) {
-        if (mounted) {
-          Navigator.of(context).pop(); // Закрываем диалог
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Задача успешно создана'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // Обновляем список задач
-          final profileProvider = Provider.of<ProfileProvider>(
-            context,
-            listen: false,
-          );
-          final selectedBusiness = profileProvider.selectedBusiness;
-          final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
-          if (selectedBusiness != null) {
-            _loadTasks(getTasksUseCase, selectedBusiness.id);
-          }
-        }
-      },
     );
   }
 
@@ -188,6 +120,7 @@ class _TasksPageState extends State<TasksPage> {
     final selectedBusiness = profileProvider.selectedBusiness;
     final createTaskUseCase = Provider.of<CreateTask>(context);
     final getTasksUseCase = Provider.of<GetTasks>(context);
+    final userRepository = Provider.of<UserRepository>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -214,164 +147,214 @@ class _TasksPageState extends State<TasksPage> {
           ),
         ],
       ),
-      body: selectedBusiness == null
-          ? _buildBusinessSelectionView(profileProvider)
-          : _buildTasksView(selectedBusiness, getTasksUseCase),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (selectedBusiness != null) {
-                          _loadTasks(getTasksUseCase, selectedBusiness.id);
-                        }
-                      },
-                      child: const Text('Повторить'),
-                    ),
-                  ],
-                ),
-              )
-              : _tasks.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.task_alt, size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Нет задач',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Нажмите + чтобы создать задачу',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              )
-              : RefreshIndicator(
-                onRefresh: () async {
-                  if (selectedBusiness != null) {
-                    await _loadTasks(getTasksUseCase, selectedBusiness.id);
-                  }
-                },
-                child: ListView.builder(
-                  itemCount: _tasks.length,
-                  padding: const EdgeInsets.all(8),
-                  itemBuilder: (context, index) {
-                    final task = _tasks[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: ListTile(
-                        leading: _getStatusIcon(task.status),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration:
-                                task.status == TaskStatus.completed
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (task.description != null &&
-                                task.description!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  task.description!,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                if (task.priority != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getPriorityColor(task.priority!),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      _getPriorityText(task.priority!),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                if (task.priority != null)
-                                  const SizedBox(width: 8),
-                                if (task.isImportant)
-                                  const Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: Colors.amber,
-                                  ),
-                                if (task.deadline != null) ...[
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.event,
-                                    size: 16,
-                                    color:
-                                        _isDeadlineOverdue(task.deadline!)
-                                            ? Colors.red
-                                            : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDate(task.deadline!),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          _isDeadlineOverdue(task.deadline!)
-                                              ? Colors.red
-                                              : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                        trailing: _getStatusChip(task.status),
-                        onTap: () {
-                          // TODO: Переход на страницу деталей задачи
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
+      body:
+          selectedBusiness == null
+              ? _buildBusinessSelectionView(profileProvider)
+              : _buildTasksView(selectedBusiness, getTasksUseCase),
       floatingActionButton:
           selectedBusiness != null
               ? FloatingActionButton(
                 onPressed: () {
-                  _showCreateTaskDialog(createTaskUseCase, selectedBusiness.id);
+                  _showCreateTaskDialog(
+                    createTaskUseCase,
+                    selectedBusiness.id,
+                    userRepository,
+                  );
                 },
                 child: const Icon(Icons.add),
               )
               : null,
+    );
+  }
+
+  /// Вид для выбора компании (когда бизнес не выбран)
+  Widget _buildBusinessSelectionView(ProfileProvider profileProvider) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Плашка с сообщением
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.business_center,
+                  size: 48,
+                  color: Colors.orange.shade700,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Необходимо выбрать компанию',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Для работы с задачами выберите компанию из списка',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          // Виджет выбора компании
+          const BusinessSelectorWidget(compact: false),
+        ],
+      ),
+    );
+  }
+
+  /// Вид со списком задач (когда бизнес выбран)
+  Widget _buildTasksView(Business selectedBusiness, GetTasks getTasksUseCase) {
+    if (_isLoadingTasks) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                _loadTasks(getTasksUseCase, selectedBusiness.id);
+              },
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Нет задач',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Нажмите + чтобы создать задачу',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadTasks(getTasksUseCase, selectedBusiness.id);
+      },
+      child: ListView.builder(
+        itemCount: _tasks.length,
+        padding: const EdgeInsets.all(8),
+        itemBuilder: (context, index) {
+          final task = _tasks[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: ListTile(
+              leading: _getStatusIcon(task.status),
+              title: Text(
+                task.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  decoration:
+                      task.status == TaskStatus.completed
+                          ? TextDecoration.lineThrough
+                          : null,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (task.description != null && task.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        task.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (task.priority != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getPriorityColor(task.priority!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _getPriorityText(task.priority!),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      if (task.priority != null) const SizedBox(width: 8),
+                      if (task.isImportant)
+                        const Icon(Icons.star, size: 16, color: Colors.amber),
+                      if (task.deadline != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.event,
+                          size: 16,
+                          color:
+                              _isDeadlineOverdue(task.deadline!)
+                                  ? Colors.red
+                                  : Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(task.deadline!),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                _isDeadlineOverdue(task.deadline!)
+                                    ? Colors.red
+                                    : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              trailing: _getStatusChip(task.status),
+              onTap: () {
+                // TODO: Переход на страницу деталей задачи
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -478,212 +461,116 @@ class _TasksPageState extends State<TasksPage> {
   bool _isDeadlineOverdue(DateTime deadline) {
     return deadline.isBefore(DateTime.now());
   }
+}
 
-  /// Вид для выбора компании (когда бизнес не выбран)
-  Widget _buildBusinessSelectionView(ProfileProvider profileProvider) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Плашка с сообщением
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.business_center,
-                  size: 48,
-                  color: Colors.orange.shade700,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Необходимо выбрать компанию',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Для работы с задачами выберите компанию из списка',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          // Виджет выбора компании
-          const BusinessSelectorWidget(compact: false),
-        ],
-      ),
-    );
+/// Диалог создания задачи с обработкой ошибок
+class _CreateTaskDialog extends StatefulWidget {
+  final String businessId;
+  final UserRepository userRepository;
+  final CreateTask createTaskUseCase;
+  final VoidCallback onSuccess;
+
+  const _CreateTaskDialog({
+    required this.businessId,
+    required this.userRepository,
+    required this.createTaskUseCase,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
+}
+
+class _CreateTaskDialogState extends State<_CreateTaskDialog> {
+  String? _error;
+
+  String _getErrorMessage(Failure failure) {
+    if (failure is ServerFailure) {
+      return failure.message;
+    } else if (failure is NetworkFailure) {
+      return failure.message;
+    }
+    return 'Произошла ошибка';
   }
 
-  /// Вид со списком задач (когда бизнес выбран)
-  Widget _buildTasksView(Business selectedBusiness, GetTasks getTasksUseCase) {
-    if (_isLoadingTasks) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _loadTasks(getTasksUseCase, selectedBusiness.id);
-              },
-              child: const Text('Повторить'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.task_alt, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Нет задач',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Нажмите + чтобы создать задачу',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadTasks(getTasksUseCase, selectedBusiness.id);
-      },
-      child: ListView.builder(
-        itemCount: _tasks.length,
-        padding: const EdgeInsets.all(8),
-        itemBuilder: (context, index) {
-          final task = _tasks[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
-            child: ListTile(
-              leading: _getStatusIcon(task.status),
-              title: Text(
-                task.title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  decoration: task.status == TaskStatus.completed
-                      ? TextDecoration.lineThrough
-                      : null,
+            // Заголовок
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
                 ),
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  if (task.description != null &&
-                      task.description!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        task.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  const Text(
+                    'Создать задачу',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (task.priority != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getPriorityColor(task.priority!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getPriorityText(task.priority!),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      if (task.priority != null)
-                        const SizedBox(width: 8),
-                      if (task.isImportant)
-                        const Icon(
-                          Icons.star,
-                          size: 16,
-                          color: Colors.amber,
-                        ),
-                      if (task.deadline != null) ...[
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.event,
-                          size: 16,
-                          color: _isDeadlineOverdue(task.deadline!)
-                              ? Colors.red
-                              : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDate(task.deadline!),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _isDeadlineOverdue(task.deadline!)
-                                ? Colors.red
-                                : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-              trailing: _getStatusChip(task.status),
-              onTap: () {
-                // TODO: Переход на страницу деталей задачи
-              },
             ),
-          );
-        },
+            // Форма
+            Expanded(
+              child: CreateTaskForm(
+                businessId: widget.businessId,
+                userRepository: widget.userRepository,
+                error: _error,
+                onError: (error) {
+                  setState(() {
+                    _error = error;
+                  });
+                },
+                onSubmit: (task) async {
+                  final result = await widget.createTaskUseCase.call(
+                    CreateTaskParams(task: task),
+                  );
+
+                  result.fold(
+                    (failure) {
+                      // Показываем ошибку в форме
+                      setState(() {
+                        _error = _getErrorMessage(failure);
+                      });
+                    },
+                    (createdTask) {
+                      // Закрываем диалог и показываем успех
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Задача успешно создана'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        widget.onSuccess();
+                      }
+                    },
+                  );
+                },
+                onCancel: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

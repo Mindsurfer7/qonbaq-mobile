@@ -62,6 +62,11 @@ import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
 import 'package:qonbaq/domain/usecases/create_task.dart';
 import 'package:qonbaq/domain/usecases/get_tasks.dart';
+import 'package:qonbaq/core/utils/token_storage.dart';
+import 'package:qonbaq/core/utils/auth_interceptor.dart';
+
+// Глобальный ключ для навигации (для интерсептора)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +74,8 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   // Загружаем конфигурацию маршрутов
   await RoutesConfig.instance.loadRoutes();
+  // Инициализируем хранилище токенов
+  await TokenStorage.instance.initialize();
   runApp(const MyApp());
 }
 
@@ -78,10 +85,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Инициализация зависимостей
-    final apiClient = ApiClient(baseUrl: AppConstants.apiBaseUrl);
-    final authRemoteDataSource = AuthRemoteDataSource(apiClient: apiClient);
+    // Сначала создаем базовый ApiClient для auth (без интерсептора, чтобы избежать рекурсии)
+    final baseApiClient = ApiClient(baseUrl: AppConstants.apiBaseUrl);
+    final authRemoteDataSource = AuthRemoteDataSource(apiClient: baseApiClient);
+    
+    // Создаем интерсептор (использует baseApiClient для обновления токена)
+    final authInterceptor = AuthInterceptor(
+      authDataSource: authRemoteDataSource,
+      navigatorKey: navigatorKey,
+    );
+    
+    // Создаем ApiClient с интерсептором для всех остальных запросов
+    final apiClient = ApiClient(
+      baseUrl: AppConstants.apiBaseUrl,
+      authInterceptor: authInterceptor,
+    );
+    
     final AuthRepository authRepository = AuthRepositoryImpl(
-      remoteDataSource: authRemoteDataSource,
+      remoteDataSource: authRemoteDataSource, // Используем baseApiClient для auth
     );
     final registerUser = RegisterUser(authRepository);
     final loginUser = LoginUser(authRepository);
@@ -102,6 +123,7 @@ class MyApp extends StatelessWidget {
     final profileProvider = ProfileProvider(
       getUserBusinesses: getUserBusinesses,
       getUserProfile: getUserProfile,
+      userRepository: userRepository,
     );
 
     // Инициализация зависимостей для задач
@@ -118,8 +140,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => profileProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
+        Provider<UserRepository>(create: (_) => userRepository),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

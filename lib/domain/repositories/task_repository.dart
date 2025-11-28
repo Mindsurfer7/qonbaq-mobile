@@ -31,4 +31,3 @@ abstract class TaskRepository extends Repository {
   /// Удалить задачу
   Future<Either<Failure, void>> deleteTask(String id);
 }
-

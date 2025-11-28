@@ -2,18 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/repositories/user_repository.dart';
+import 'user_selector_widget.dart';
 
 /// Форма создания задачи
 class CreateTaskForm extends StatefulWidget {
   final String businessId;
+  final UserRepository userRepository;
   final Function(Task) onSubmit;
   final VoidCallback onCancel;
+  final String? error; // Ошибка от сервера
+  final Function(String)? onError; // Callback для обновления ошибки
 
   const CreateTaskForm({
     super.key,
     required this.businessId,
+    required this.userRepository,
     required this.onSubmit,
     required this.onCancel,
+    this.error,
+    this.onError,
   });
 
   @override
@@ -25,6 +33,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
+  String? _assignedToId;
+  String? _assignedById;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +45,29 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Показываем ошибку от сервера, если есть
+            if (widget.error != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.error!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Заголовок
             FormBuilderTextField(
               name: 'title',
@@ -66,12 +99,15 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 labelText: 'Приоритет',
                 border: OutlineInputBorder(),
               ),
-              items: TaskPriority.values
-                  .map((priority) => DropdownMenuItem(
-                        value: priority,
-                        child: Text(_getPriorityText(priority)),
-                      ))
-                  .toList(),
+              items:
+                  TaskPriority.values
+                      .map(
+                        (priority) => DropdownMenuItem(
+                          value: priority,
+                          child: Text(_getPriorityText(priority)),
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 16),
 
@@ -83,34 +119,45 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 border: OutlineInputBorder(),
               ),
               initialValue: TaskStatus.pending,
-              items: TaskStatus.values
-                  .map((status) => DropdownMenuItem(
-                        value: status,
-                        child: Text(_getStatusText(status)),
-                      ))
-                  .toList(),
+              items:
+                  TaskStatus.values
+                      .map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(_getStatusText(status)),
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 16),
 
-            // Исполнитель (ID)
-            FormBuilderTextField(
-              name: 'assignedTo',
-              decoration: const InputDecoration(
-                labelText: 'ID исполнителя',
-                border: OutlineInputBorder(),
-                hintText: 'Введите ID пользователя',
-              ),
+            // Исполнитель
+            UserSelectorWidget(
+              businessId: widget.businessId,
+              userRepository: widget.userRepository,
+              selectedUserId: _assignedToId,
+              onUserSelected: (userId) {
+                setState(() {
+                  _assignedToId = userId;
+                });
+                _formKey.currentState?.fields['assignedTo']?.didChange(userId);
+              },
+              label: 'Исполнитель',
             ),
             const SizedBox(height: 16),
 
-            // Поручитель (ID)
-            FormBuilderTextField(
-              name: 'assignedBy',
-              decoration: const InputDecoration(
-                labelText: 'ID поручителя',
-                border: OutlineInputBorder(),
-                hintText: 'Введите ID пользователя',
-              ),
+            // Поручитель
+            UserSelectorWidget(
+              businessId: widget.businessId,
+              userRepository: widget.userRepository,
+              selectedUserId: _assignedById,
+              onUserSelected: (userId) {
+                setState(() {
+                  _assignedById = userId;
+                });
+                _formKey.currentState?.fields['assignedBy']?.didChange(userId);
+              },
+              label: 'Поручитель',
             ),
             const SizedBox(height: 16),
 
@@ -221,6 +268,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   }
 
   void _handleSubmit() {
+    // Сохраняем значения из UserSelectorWidget
+    _formKey.currentState?.fields['assignedTo']?.didChange(_assignedToId);
+    _formKey.currentState?.fields['assignedBy']?.didChange(_assignedById);
+
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
 
@@ -232,8 +283,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         description: formData['description'] as String?,
         status: formData['status'] as TaskStatus? ?? TaskStatus.pending,
         priority: formData['priority'] as TaskPriority?,
-        assignedTo: formData['assignedTo'] as String?,
-        assignedBy: formData['assignedBy'] as String?,
+        assignedTo: _assignedToId,
+        assignedBy: _assignedById,
         assignmentDate: formData['assignmentDate'] as DateTime?,
         deadline: formData['deadline'] as DateTime?,
         isImportant: formData['isImportant'] as bool? ?? false,
@@ -246,6 +297,15 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       );
 
       widget.onSubmit(task);
+    } else {
+      // Прокручиваем к началу формы, чтобы пользователь увидел ошибки валидации
+      if (mounted) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     }
   }
 
@@ -253,11 +313,12 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (observerIdsString == null || observerIdsString.trim().isEmpty) {
       return null;
     }
-    final ids = observerIdsString
-        .split(',')
-        .map((id) => id.trim())
-        .where((id) => id.isNotEmpty)
-        .toList();
+    final ids =
+        observerIdsString
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
     return ids.isEmpty ? null : ids;
   }
 
@@ -287,4 +348,3 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     }
   }
 }
-
