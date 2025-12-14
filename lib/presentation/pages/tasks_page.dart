@@ -6,6 +6,7 @@ import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/get_tasks.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
+import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/create_task_form.dart';
 import '../widgets/business_selector_widget.dart';
@@ -483,9 +484,12 @@ class _CreateTaskDialog extends StatefulWidget {
 
 class _CreateTaskDialogState extends State<_CreateTaskDialog> {
   String? _error;
+  List<ValidationError>? _validationErrors;
 
   String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
+    if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    } else if (failure is ServerFailure) {
       return failure.message;
     } else if (failure is NetworkFailure) {
       return failure.message;
@@ -534,6 +538,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                 businessId: widget.businessId,
                 userRepository: widget.userRepository,
                 error: _error,
+                validationErrors: _validationErrors,
                 onError: (error) {
                   setState(() {
                     _error = error;
@@ -546,10 +551,18 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
 
                   result.fold(
                     (failure) {
-                      // Показываем ошибку в форме
-                      setState(() {
-                        _error = _getErrorMessage(failure);
-                      });
+                      // Обрабатываем ошибки валидации
+                      if (failure is ValidationFailure) {
+                        setState(() {
+                          _error = failure.serverMessage ?? failure.message;
+                          _validationErrors = failure.errors;
+                        });
+                      } else {
+                        setState(() {
+                          _error = _getErrorMessage(failure);
+                          _validationErrors = null;
+                        });
+                      }
                     },
                     (createdTask) {
                       // Закрываем диалог и показываем успех

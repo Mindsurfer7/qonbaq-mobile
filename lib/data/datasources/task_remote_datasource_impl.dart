@@ -4,6 +4,7 @@ import '../../core/utils/token_storage.dart';
 import '../../domain/entities/task.dart';
 import '../datasources/task_remote_datasource.dart';
 import '../models/task_model.dart';
+import '../models/validation_error.dart';
 
 /// Реализация удаленного источника данных для задач
 class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
@@ -38,12 +39,15 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['error'] as String? ?? 'Ошибка валидации';
-        throw Exception(message);
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
       } else {
         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
       if (e is Exception) {
         rethrow;
       }
@@ -156,12 +160,15 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         throw Exception('Задача не найдена');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['error'] as String? ?? 'Ошибка валидации';
-        throw Exception(message);
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
       } else {
         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
       if (e is Exception) {
         rethrow;
       }
@@ -219,5 +226,15 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         return 'URGENT';
     }
   }
+}
+
+/// Исключение для ошибок валидации
+class ValidationException implements Exception {
+  final ValidationErrorResponse validationResponse;
+
+  ValidationException(this.validationResponse);
+
+  @override
+  String toString() => validationResponse.message ?? validationResponse.error;
 }
 

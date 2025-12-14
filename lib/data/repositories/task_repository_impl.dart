@@ -5,6 +5,7 @@ import '../../core/error/failures.dart';
 import '../models/task_model.dart';
 import '../datasources/task_remote_datasource.dart';
 import '../repositories/repository_impl.dart';
+import '../datasources/task_remote_datasource_impl.dart';
 
 /// Реализация репозитория задач
 /// Использует Remote DataSource
@@ -21,6 +22,12 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
       final taskModel = TaskModel.fromEntity(task);
       final createdTask = await remoteDataSource.createTask(taskModel);
       return Right(createdTask.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при создании задачи: $e'));
     }
@@ -72,6 +79,12 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
       final taskModel = TaskModel.fromEntity(task);
       final updatedTask = await remoteDataSource.updateTask(id, taskModel);
       return Right(updatedTask.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при обновлении задачи: $e'));
     }

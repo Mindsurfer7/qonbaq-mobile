@@ -1,3 +1,5 @@
+import '../../data/models/validation_error.dart';
+
 /// Базовые классы для обработки ошибок
 abstract class Failure {
   final String message;
@@ -11,6 +13,18 @@ abstract class Failure {
 /// Ошибки сервера
 class ServerFailure extends Failure {
   const ServerFailure(super.message);
+}
+
+/// Ошибки валидации с деталями
+class ValidationFailure extends Failure {
+  final List<ValidationError> errors;
+  final String? serverMessage;
+
+  const ValidationFailure(
+    super.message,
+    this.errors, {
+    this.serverMessage,
+  });
 }
 
 /// Ошибки кэша

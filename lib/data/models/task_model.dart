@@ -182,6 +182,25 @@ class TaskModel extends Task implements Model {
     }
   }
 
+  /// Форматирование даты в ISO8601 с указанием часового пояса UTC
+  /// Формат: YYYY-MM-DDTHH:mm:ss.000Z (с миллисекундами и Z для UTC)
+  /// Бэкенд ожидает полный формат ISO 8601 с указанием часового пояса
+  static String _formatDateTime(DateTime dateTime) {
+    // Преобразуем в UTC, если дата не в UTC
+    final utcDateTime = dateTime.isUtc ? dateTime : dateTime.toUtc();
+    
+    final year = utcDateTime.year.toString().padLeft(4, '0');
+    final month = utcDateTime.month.toString().padLeft(2, '0');
+    final day = utcDateTime.day.toString().padLeft(2, '0');
+    final hour = utcDateTime.hour.toString().padLeft(2, '0');
+    final minute = utcDateTime.minute.toString().padLeft(2, '0');
+    final second = utcDateTime.second.toString().padLeft(2, '0');
+    final millisecond = utcDateTime.millisecond.toString().padLeft(3, '0');
+    
+    // Формат: 2025-12-14T12:00:00.000Z
+    return '$year-$month-${day}T$hour:$minute:$second.${millisecond}Z';
+  }
+
   @override
   Map<String, dynamic> toJson() {
     return {
@@ -194,8 +213,8 @@ class TaskModel extends Task implements Model {
       if (assignedTo != null) 'assignedTo': assignedTo,
       if (assignedBy != null) 'assignedBy': assignedBy,
       if (assignmentDate != null)
-        'assignmentDate': assignmentDate!.toIso8601String(),
-      if (deadline != null) 'deadline': deadline!.toIso8601String(),
+        'assignmentDate': _formatDateTime(assignmentDate!),
+      if (deadline != null) 'deadline': _formatDateTime(deadline!),
       'isImportant': isImportant,
       'isRecurring': isRecurring,
       'hasControlPoint': hasControlPoint,
@@ -225,7 +244,7 @@ class TaskModel extends Task implements Model {
           'frequency': _recurrenceFrequencyToString(recurrence!.frequency),
           'interval': recurrence!.interval,
           if (recurrence!.endDate != null)
-            'endDate': recurrence!.endDate!.toIso8601String(),
+            'endDate': _formatDateTime(recurrence!.endDate!),
           if (recurrence!.daysOfWeek != null)
             'daysOfWeek': recurrence!.daysOfWeek,
           if (recurrence!.dayOfMonth != null)
@@ -246,8 +265,8 @@ class TaskModel extends Task implements Model {
       if (assignedTo != null && assignedTo!.isNotEmpty) 'assignedTo': assignedTo,
       if (assignedBy != null && assignedBy!.isNotEmpty) 'assignedBy': assignedBy,
       if (assignmentDate != null)
-        'assignmentDate': assignmentDate!.toIso8601String(),
-      if (deadline != null) 'deadline': deadline!.toIso8601String(),
+        'assignmentDate': _formatDateTime(assignmentDate!),
+      if (deadline != null) 'deadline': _formatDateTime(deadline!),
       if (isImportant) 'isImportant': isImportant,
       if (isRecurring) 'isRecurring': isRecurring,
       if (hasControlPoint) 'hasControlPoint': hasControlPoint,
@@ -273,7 +292,7 @@ class TaskModel extends Task implements Model {
           'frequency': _recurrenceFrequencyToString(recurrence!.frequency),
           'interval': recurrence!.interval,
           if (recurrence!.endDate != null)
-            'endDate': recurrence!.endDate!.toIso8601String(),
+            'endDate': _formatDateTime(recurrence!.endDate!),
           if (recurrence!.daysOfWeek != null)
             'daysOfWeek': recurrence!.daysOfWeek,
           if (recurrence!.dayOfMonth != null)

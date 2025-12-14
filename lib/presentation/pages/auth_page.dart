@@ -108,7 +108,7 @@ class _LoginTabState extends State<LoginTab> {
         email: email,
         password: password,
       );
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushReplacementNamed('/business');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Успешный вход!')));
@@ -263,7 +263,7 @@ class _RegisterTabState extends State<RegisterTab> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushReplacementNamed('/business');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Регистрация успешна!')));

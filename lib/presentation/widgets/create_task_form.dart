@@ -3,6 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/repositories/user_repository.dart';
+import '../../data/models/validation_error.dart';
 import 'user_selector_widget.dart';
 
 /// Форма создания задачи
@@ -11,7 +12,8 @@ class CreateTaskForm extends StatefulWidget {
   final UserRepository userRepository;
   final Function(Task) onSubmit;
   final VoidCallback onCancel;
-  final String? error; // Ошибка от сервера
+  final String? error; // Общая ошибка от сервера
+  final List<ValidationError>? validationErrors; // Ошибки валидации по полям
   final Function(String)? onError; // Callback для обновления ошибки
 
   const CreateTaskForm({
@@ -21,6 +23,7 @@ class CreateTaskForm extends StatefulWidget {
     required this.onSubmit,
     required this.onCancel,
     this.error,
+    this.validationErrors,
     this.onError,
   });
 
@@ -35,6 +38,93 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   bool _hasControlPoint = false;
   String? _assignedToId;
   String? _assignedById;
+  // Храним ошибки валидации для отображения в полях
+  final Map<String, String> _fieldErrors = {};
+
+  @override
+  void didUpdateWidget(CreateTaskForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Применяем ошибки валидации к полям формы
+    if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyValidationErrors();
+      });
+    } else if (widget.validationErrors == null || widget.validationErrors!.isEmpty) {
+      // Очищаем ошибки, если их нет
+      setState(() {
+        _fieldErrors.clear();
+      });
+    }
+  }
+
+  void _applyValidationErrors() {
+    if (_formKey.currentState == null) return;
+
+    final Map<String, String> newErrors = {};
+
+    for (final error in widget.validationErrors ?? []) {
+      // Маппинг полей из JSON в поля формы
+      final fieldName = _mapFieldName(error.field);
+      final field = _formKey.currentState?.fields[fieldName];
+      
+      if (field != null) {
+        // Сохраняем ошибку для отображения
+        newErrors[fieldName] = error.message;
+        // Устанавливаем ошибку валидации для поля
+        field.invalidate(error.message);
+        // Вызываем validate, чтобы ошибка отобразилась
+        field.validate();
+      }
+    }
+
+    // Обновляем состояние для отображения ошибок
+    setState(() {
+      _fieldErrors.clear();
+      _fieldErrors.addAll(newErrors);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Применяем ошибки валидации после первой отрисовки, если они есть
+    if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyValidationErrors();
+      });
+    }
+  }
+
+  /// Маппинг имен полей из JSON ответа в имена полей формы
+  String _mapFieldName(String jsonField) {
+    // Прямое соответствие
+    final directMapping = {
+      'title': 'title',
+      'description': 'description',
+      'priority': 'priority',
+      'status': 'status',
+      'assignedTo': 'assignedTo',
+      'assignedBy': 'assignedBy',
+      'assignmentDate': 'assignmentDate',
+      'deadline': 'deadline',
+      'isImportant': 'isImportant',
+      'isRecurring': 'isRecurring',
+      'hasControlPoint': 'hasControlPoint',
+      'voiceNoteUrl': 'voiceNoteUrl',
+      'observerIds': 'observerIds',
+      'businessId': 'businessId', // Хотя этого поля нет в форме, но может быть ошибка
+    };
+
+    // Если поле вложенное (например, recurrence.frequency)
+    if (jsonField.contains('.')) {
+      final parts = jsonField.split('.');
+      // Для вложенных полей пока просто берем первое поле
+      // Можно расширить логику при необходимости
+      return directMapping[parts[0]] ?? jsonField;
+    }
+
+    return directMapping[jsonField] ?? jsonField;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,9 +161,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Заголовок
             FormBuilderTextField(
               name: 'title',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Название задачи *',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _fieldErrors['title'],
+                errorMaxLines: 2,
               ),
               validator: FormBuilderValidators.required(
                 errorText: 'Название задачи обязательно',
@@ -84,9 +176,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Описание
             FormBuilderTextField(
               name: 'description',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Описание',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _fieldErrors['description'],
+                errorMaxLines: 2,
               ),
               maxLines: 4,
             ),
@@ -95,9 +189,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Приоритет
             FormBuilderDropdown<TaskPriority>(
               name: 'priority',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Приоритет',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _fieldErrors['priority'],
+                errorMaxLines: 2,
               ),
               items:
                   TaskPriority.values
@@ -114,9 +210,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Статус
             FormBuilderDropdown<TaskStatus>(
               name: 'status',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Статус',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _fieldErrors['status'],
+                errorMaxLines: 2,
               ),
               initialValue: TaskStatus.pending,
               items:
@@ -164,10 +262,12 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Дата поручения
             FormBuilderDateTimePicker(
               name: 'assignmentDate',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Дата поручения',
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today),
+                border: const OutlineInputBorder(),
+                suffixIcon: const Icon(Icons.calendar_today),
+                errorText: _fieldErrors['assignmentDate'],
+                errorMaxLines: 2,
               ),
               inputType: InputType.both,
             ),
@@ -176,10 +276,12 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Дедлайн
             FormBuilderDateTimePicker(
               name: 'deadline',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Дедлайн',
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.event),
+                border: const OutlineInputBorder(),
+                suffixIcon: const Icon(Icons.event),
+                errorText: _fieldErrors['deadline'],
+                errorMaxLines: 2,
               ),
               inputType: InputType.both,
             ),
@@ -227,9 +329,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // URL голосовой заметки
             FormBuilderTextField(
               name: 'voiceNoteUrl',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'URL голосовой заметки',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _fieldErrors['voiceNoteUrl'],
+                errorMaxLines: 2,
               ),
             ),
             const SizedBox(height: 16),
@@ -237,11 +341,13 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // ID наблюдателей (через запятую)
             FormBuilderTextField(
               name: 'observerIds',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'ID наблюдателей',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 hintText: 'Введите ID через запятую',
                 helperText: 'Разделите ID запятой, например: id1,id2,id3',
+                errorText: _fieldErrors['observerIds'],
+                errorMaxLines: 2,
               ),
             ),
             const SizedBox(height: 24),
@@ -268,6 +374,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   }
 
   void _handleSubmit() {
+    // Очищаем ошибки валидации перед новой отправкой
+    setState(() {
+      _fieldErrors.clear();
+    });
+
     // Сохраняем значения из UserSelectorWidget
     _formKey.currentState?.fields['assignedTo']?.didChange(_assignedToId);
     _formKey.currentState?.fields['assignedBy']?.didChange(_assignedById);
