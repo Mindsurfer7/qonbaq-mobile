@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../domain/entities/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../providers/invite_provider.dart';
@@ -377,10 +378,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Deep link для мобильных приложений
+                  const SizedBox(height: 24),
+                  // QR-код для веб-ссылки
                   const Text(
-                    'Deep link (для мобильных приложений):',
+                    'QR-код для регистрации:',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -388,54 +389,96 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                    'Отсканируйте QR-код, чтобы открыть ссылку на регистрацию в браузере.',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey.shade600,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: TextEditingController(
-                            text: inviteProvider.inviteResult!.links.deepLink,
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: const Offset(0, 3),
                           ),
-                          readOnly: true,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(
-                              text: inviteProvider.inviteResult!.links.deepLink,
-                            ),
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Deep link скопирован'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
-                        tooltip: 'Копировать deep link',
+                      child: QrImageView(
+                        data: inviteProvider.inviteResult!.links.web,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                        backgroundColor: Colors.white,
                       ),
-                    ],
+                    ),
                   ),
+                  // Закомментировано: Deep link для мобильных приложений
+                  // const SizedBox(height: 16),
+                  // const Text(
+                  //   'Deep link (для мобильных приложений):',
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w500,
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 4),
+                  // Text(
+                  //   'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                  //   style: TextStyle(
+                  //     fontSize: 11,
+                  //     color: Colors.grey.shade600,
+                  //     fontStyle: FontStyle.italic,
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 8),
+                  // Row(
+                  //   children: [
+                  //     Expanded(
+                  //       child: TextField(
+                  //         controller: TextEditingController(
+                  //           text: inviteProvider.inviteResult!.links.deepLink,
+                  //         ),
+                  //         readOnly: true,
+                  //         decoration: const InputDecoration(
+                  //           border: OutlineInputBorder(),
+                  //           contentPadding: EdgeInsets.symmetric(
+                  //             horizontal: 12,
+                  //             vertical: 8,
+                  //           ),
+                  //         ),
+                  //         style: const TextStyle(fontSize: 12),
+                  //       ),
+                  //     ),
+                  //     const SizedBox(width: 8),
+                  //     IconButton(
+                  //       icon: const Icon(Icons.copy),
+                  //       onPressed: () async {
+                  //         await Clipboard.setData(
+                  //           ClipboardData(
+                  //             text: inviteProvider.inviteResult!.links.deepLink,
+                  //           ),
+                  //         );
+                  //         if (context.mounted) {
+                  //           ScaffoldMessenger.of(context).showSnackBar(
+                  //             const SnackBar(
+                  //               content: Text('Deep link скопирован'),
+                  //               duration: Duration(seconds: 2),
+                  //             ),
+                  //           );
+                  //         }
+                  //       },
+                  //       tooltip: 'Копировать deep link',
+                  //     ),
+                  //   ],
+                  // ),
                 ]
                 // Если активного инвайта нет, показываем кнопку "Пригласить"
                 else ...[
@@ -527,10 +570,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    // Deep link для мобильных приложений
+                    const SizedBox(height: 24),
+                    // QR-код для веб-ссылки
                     const Text(
-                      'Deep link (для мобильных приложений):',
+                      'QR-код для регистрации:',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -538,54 +581,96 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                      'Отсканируйте QR-код, чтобы открыть ссылку на регистрацию в браузере.',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.grey.shade600,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: TextEditingController(
-                              text: inviteProvider.inviteResult!.links.deepLink,
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 2,
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
                             ),
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.copy),
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              ClipboardData(
-                                text: inviteProvider.inviteResult!.links.deepLink,
-                              ),
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Deep link скопирован'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          },
-                          tooltip: 'Копировать deep link',
+                        child: QrImageView(
+                          data: inviteProvider.inviteResult!.links.web,
+                          version: QrVersions.auto,
+                          size: 200.0,
+                          backgroundColor: Colors.white,
                         ),
-                      ],
+                      ),
                     ),
+                    // Закомментировано: Deep link для мобильных приложений
+                    // const SizedBox(height: 16),
+                    // const Text(
+                    //   'Deep link (для мобильных приложений):',
+                    //   style: TextStyle(
+                    //     fontSize: 14,
+                    //     fontWeight: FontWeight.w500,
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 4),
+                    // Text(
+                    //   'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                    //   style: TextStyle(
+                    //     fontSize: 11,
+                    //     color: Colors.grey.shade600,
+                    //     fontStyle: FontStyle.italic,
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 8),
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: TextField(
+                    //         controller: TextEditingController(
+                    //           text: inviteProvider.inviteResult!.links.deepLink,
+                    //         ),
+                    //         readOnly: true,
+                    //         decoration: const InputDecoration(
+                    //           border: OutlineInputBorder(),
+                    //           contentPadding: EdgeInsets.symmetric(
+                    //             horizontal: 12,
+                    //             vertical: 8,
+                    //           ),
+                    //         ),
+                    //         style: const TextStyle(fontSize: 12),
+                    //       ),
+                    //     ),
+                    //     const SizedBox(width: 8),
+                    //     IconButton(
+                    //       icon: const Icon(Icons.copy),
+                    //       onPressed: () async {
+                    //         await Clipboard.setData(
+                    //           ClipboardData(
+                    //             text: inviteProvider.inviteResult!.links.deepLink,
+                    //           ),
+                    //         );
+                    //         if (context.mounted) {
+                    //           ScaffoldMessenger.of(context).showSnackBar(
+                    //             const SnackBar(
+                    //               content: Text('Deep link скопирован'),
+                    //               duration: Duration(seconds: 2),
+                    //             ),
+                    //           );
+                    //         }
+                    //       },
+                    //       tooltip: 'Копировать deep link',
+                    //     ),
+                    //   ],
+                    // ),
                   ],
                 ],
               ],
