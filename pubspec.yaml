@@ -53,6 +53,9 @@ dependencies:
   # Формы
   flutter_form_builder: ^9.1.1
   form_builder_validators: ^11.1.2
+  
+  # Deep links
+  app_links: ^6.3.3
 
 dev_dependencies:
   flutter_test:

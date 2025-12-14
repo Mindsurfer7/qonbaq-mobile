@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../../core/utils/credentials_storage.dart';
+import '../../core/utils/deep_link_service.dart';
 
 /// Страница аутентификации с табами (логин/регистрация)
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key});
+  final String? inviteCode;
+
+  const AuthPage({super.key, this.inviteCode});
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -18,7 +21,19 @@ class _AuthPageState extends State<AuthPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    // Определяем начальный индекс таба: если есть invite код, начинаем с регистрации
+    final initialIndex = (widget.inviteCode != null || 
+                         DeepLinkService.instance.pendingInviteCode != null) ? 1 : 0;
+    _tabController = TabController(length: 2, vsync: this, initialIndex: initialIndex);
+    
+    // Если есть inviteCode, переключаемся на таб регистрации
+    if (widget.inviteCode != null || DeepLinkService.instance.pendingInviteCode != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _tabController.animateTo(1);
+        }
+      });
+    }
   }
 
   @override
@@ -42,7 +57,12 @@ class _AuthPageState extends State<AuthPage>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [LoginTab(), RegisterTab()],
+        children: [
+          const LoginTab(),
+          RegisterTab(
+            inviteCode: widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode,
+          ),
+        ],
       ),
     );
   }
@@ -224,7 +244,9 @@ class _LoginTabState extends State<LoginTab> {
 
 /// Таб регистрации
 class RegisterTab extends StatefulWidget {
-  const RegisterTab({super.key});
+  final String? inviteCode;
+
+  const RegisterTab({super.key, this.inviteCode});
 
   @override
   State<RegisterTab> createState() => _RegisterTabState();
@@ -238,6 +260,14 @@ class _RegisterTabState extends State<RegisterTab> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String? _inviteCode;
+
+  @override
+  void initState() {
+    super.initState();
+    // Получаем код приглашения из параметра или из deep link сервиса
+    _inviteCode = widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode;
+  }
 
   @override
   void dispose() {
@@ -258,7 +288,13 @@ class _RegisterTabState extends State<RegisterTab> {
       email: _emailController.text.trim(),
       username: _usernameController.text.trim(),
       password: _passwordController.text,
+      inviteCode: _inviteCode,
     );
+
+    // Очищаем код приглашения после использования
+    if (_inviteCode != null) {
+      DeepLinkService.instance.clearInviteCode();
+    }
 
     if (!mounted) return;
 
@@ -282,6 +318,33 @@ class _RegisterTabState extends State<RegisterTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 32),
+                // Показываем информацию о коде приглашения, если он есть
+                if (_inviteCode != null && _inviteCode!.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.card_giftcard, color: Colors.green.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Вы регистрируетесь по приглашению',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -427,6 +490,58 @@ class _RegisterTabState extends State<RegisterTab> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Страница регистрации, которая извлекает invite код из URL
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
+  @override
+  void initState() {
+    super.initState();
+    _extractInviteAndNavigate();
+  }
+
+  Future<void> _extractInviteAndNavigate() async {
+    // Небольшая задержка для инициализации
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (!mounted) return;
+
+    // Проверяем invite код в сервисе (уже должен быть обработан через app_links)
+    String? inviteCode = DeepLinkService.instance.pendingInviteCode;
+    
+    // Если invite код не найден, пытаемся получить из текущего URL
+    if (inviteCode == null) {
+      inviteCode = await DeepLinkService.instance.checkCurrentUrlForInvite();
+      if (inviteCode != null) {
+        DeepLinkService.instance.setInviteCode(inviteCode);
+      }
+    }
+
+    // Перенаправляем на страницу авторизации с invite кодом
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => AuthPage(inviteCode: inviteCode),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }

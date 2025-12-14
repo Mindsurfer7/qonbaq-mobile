@@ -51,6 +51,7 @@ import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
 import 'package:qonbaq/presentation/providers/profile_provider.dart';
+import 'package:qonbaq/presentation/providers/invite_provider.dart';
 import 'package:qonbaq/data/datasources/user_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/user_local_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/user_repository_impl.dart';
@@ -62,8 +63,14 @@ import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
 import 'package:qonbaq/domain/usecases/create_task.dart';
 import 'package:qonbaq/domain/usecases/get_tasks.dart';
+import 'package:qonbaq/data/datasources/invite_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/invite_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/invite_repository.dart';
+import 'package:qonbaq/domain/usecases/create_invite.dart';
+import 'package:qonbaq/domain/usecases/get_current_invite.dart';
 import 'package:qonbaq/core/utils/token_storage.dart';
 import 'package:qonbaq/core/utils/auth_interceptor.dart';
+import 'package:qonbaq/core/utils/deep_link_service.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -76,11 +83,14 @@ Future<void> main() async {
   await RoutesConfig.instance.loadRoutes();
   // Инициализируем хранилище токенов
   await TokenStorage.instance.initialize();
+  // Инициализируем обработку deep links
+  await DeepLinkService.instance.initialize();
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -134,10 +144,23 @@ class MyApp extends StatelessWidget {
     final createTask = CreateTask(taskRepository);
     final getTasks = GetTasks(taskRepository);
 
+    // Инициализация зависимостей для приглашений
+    final inviteRemoteDataSource = InviteRemoteDataSourceImpl(apiClient: apiClient);
+    final InviteRepository inviteRepository = InviteRepositoryImpl(
+      remoteDataSource: inviteRemoteDataSource,
+    );
+    final createInvite = CreateInvite(inviteRepository);
+    final getCurrentInvite = GetCurrentInvite(inviteRepository);
+    final inviteProvider = InviteProvider(
+      createInvite: createInvite,
+      getCurrentInvite: getCurrentInvite,
+    );
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
         ChangeNotifierProvider(create: (_) => profileProvider),
+        ChangeNotifierProvider(create: (_) => inviteProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<UserRepository>(create: (_) => userRepository),
@@ -154,8 +177,13 @@ class MyApp extends StatelessWidget {
         routes: {
           // Стартовая страница
           '/': (context) => const StartPage(),
+          // Регистрация с invite кодом (обрабатывает /register?invite=...)
+          '/register': (context) => const RegisterPage(),
           // Авторизация
-          '/auth': (context) => const AuthPage(),
+          '/auth': (context) {
+            final inviteCode = DeepLinkService.instance.pendingInviteCode;
+            return AuthPage(inviteCode: inviteCode);
+          },
           '/home': (context) => const HomePage(),
           // Главная бизнес-страница
           '/business': (context) => const BusinessMainPage(),

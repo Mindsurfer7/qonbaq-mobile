@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/user_profile.dart';
 import '../providers/profile_provider.dart';
+import '../providers/invite_provider.dart';
 import '../widgets/business_selector_widget.dart';
 
 /// Страница профиля и настроек
@@ -19,6 +21,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
       provider.loadBusinesses();
+      
+      // Загружаем текущий активный инвайт
+      final inviteProvider = Provider.of<InviteProvider>(context, listen: false);
+      inviteProvider.loadCurrentInvite();
     });
   }
 
@@ -113,22 +119,36 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
             ),
           ),
-          // Сетка с секциями
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+          // Сетка с секциями (кастомная сетка для поддержки динамической высоты)
+          Column(
             children: [
-              // Данные о работнике
-              _buildEmployeeDataCard(profile),
-              // Позиция в организационной структуре
-              _buildOrgStructureCard(profile),
-              // Пригласить новых коллег
-              _buildInviteColleaguesCard(),
-              // Кадровые документы
-              _buildHrDocumentsCard(profile),
+              // Первый ряд карточек
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildEmployeeDataCard(profile),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildOrgStructureCard(profile),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Второй ряд карточек
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildInviteColleaguesCard(),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildHrDocumentsCard(profile),
+                  ),
+                ],
+              ),
             ],
           ),
           // Взаимозаменяемый работник (отдельно)
@@ -138,6 +158,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
@@ -167,6 +188,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -235,6 +257,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -289,45 +312,287 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 
   Widget _buildInviteColleaguesCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Пригласить новых коллег',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return Consumer<InviteProvider>(
+      builder: (context, inviteProvider, child) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Пригласить новых коллег',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                // Если есть активный инвайт, показываем ссылки сразу
+                if (inviteProvider.inviteResult != null) ...[
+                  // Web ссылка
+                  const Text(
+                    'Web ссылка (для браузера):',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: TextEditingController(
+                            text: inviteProvider.inviteResult!.links.web,
+                          ),
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(
+                              text: inviteProvider.inviteResult!.links.web,
+                            ),
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Web ссылка скопирована'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        tooltip: 'Копировать web ссылку',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Deep link для мобильных приложений
+                  const Text(
+                    'Deep link (для мобильных приложений):',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: TextEditingController(
+                            text: inviteProvider.inviteResult!.links.deepLink,
+                          ),
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(
+                              text: inviteProvider.inviteResult!.links.deepLink,
+                            ),
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Deep link скопирован'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        tooltip: 'Копировать deep link',
+                      ),
+                    ],
+                  ),
+                ]
+                // Если активного инвайта нет, показываем кнопку "Пригласить"
+                else ...[
+                  // Кнопка "Пригласить"
+                  ElevatedButton.icon(
+                    onPressed: inviteProvider.isLoading
+                        ? null
+                        : () async {
+                            await inviteProvider.createInviteLink();
+                          },
+                    icon: inviteProvider.isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.person_add),
+                    label: Text(
+                      inviteProvider.isLoading
+                          ? 'Создание...'
+                          : 'Пригласить',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 40),
+                    ),
+                  ),
+                  // Показываем ошибку, если есть
+                  if (inviteProvider.error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      inviteProvider.error!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                  // Показываем ссылки после успешного создания (если только что создали)
+                  if (inviteProvider.inviteResult != null) ...[
+                    const SizedBox(height: 16),
+                    // Web ссылка
+                    const Text(
+                      'Web ссылка (для браузера):',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: TextEditingController(
+                              text: inviteProvider.inviteResult!.links.web,
+                            ),
+                            readOnly: true,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.copy),
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(
+                                text: inviteProvider.inviteResult!.links.web,
+                              ),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Web ссылка скопирована'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          tooltip: 'Копировать web ссылку',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Deep link для мобильных приложений
+                    const Text(
+                      'Deep link (для мобильных приложений):',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Используйте для SMS, мессенджеров, QR-кодов. При клике откроется приложение.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: TextEditingController(
+                              text: inviteProvider.inviteResult!.links.deepLink,
+                            ),
+                            readOnly: true,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.copy),
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(
+                                text: inviteProvider.inviteResult!.links.deepLink,
+                              ),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Deep link скопирован'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          tooltip: 'Копировать deep link',
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Приглашение по телефону')),
-                );
-              },
-              icon: const Icon(Icons.phone),
-              label: const Text('1. по номеру телефона'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 40),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Приглашение по email')),
-                );
-              },
-              icon: const Icon(Icons.email),
-              label: const Text('2. по электронной почте'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 40),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -339,6 +604,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(

@@ -5,16 +5,26 @@ class RegisterRequest implements Model {
   final String email;
   final String username;
   final String password;
+  final String? inviteCode;
 
   RegisterRequest({
     required this.email,
     required this.username,
     required this.password,
+    this.inviteCode,
   });
 
   @override
   Map<String, dynamic> toJson() {
-    return {'email': email, 'username': username, 'password': password};
+    final json = {
+      'email': email,
+      'username': username,
+      'password': password,
+    };
+    if (inviteCode != null && inviteCode!.isNotEmpty) {
+      json['inviteCode'] = inviteCode!;
+    }
+    return json;
   }
 
   /// Валидация данных

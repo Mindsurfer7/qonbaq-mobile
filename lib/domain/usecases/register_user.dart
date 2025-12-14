@@ -9,11 +9,13 @@ class RegisterParams {
   final String email;
   final String username;
   final String password;
+  final String? inviteCode;
 
   RegisterParams({
     required this.email,
     required this.username,
     required this.password,
+    this.inviteCode,
   });
 }
 
@@ -29,6 +31,7 @@ class RegisterUser implements UseCase<AuthUser, RegisterParams> {
       email: params.email,
       username: params.username,
       password: params.password,
+      inviteCode: params.inviteCode,
     );
   }
 }

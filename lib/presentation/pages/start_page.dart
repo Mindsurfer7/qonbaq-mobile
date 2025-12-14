@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/token_storage.dart';
+import '../../core/utils/deep_link_service.dart';
+import 'auth_page.dart';
 
 /// Стартовая страница приложения
 class StartPage extends StatefulWidget {
@@ -31,9 +33,20 @@ class _StartPageState extends State<StartPage> {
         Navigator.of(context).pushReplacementNamed('/business');
       }
     } else {
-      // Если токенов нет, перенаправляем на страницу логина
+      // Если токенов нет, проверяем наличие кода приглашения
+      final inviteCode = DeepLinkService.instance.pendingInviteCode;
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/auth');
+        if (inviteCode != null) {
+          // Если есть код приглашения, открываем страницу регистрации с кодом
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => AuthPage(inviteCode: inviteCode),
+            ),
+          );
+        } else {
+          // Если кода приглашения нет, перенаправляем на страницу логина
+          Navigator.of(context).pushReplacementNamed('/auth');
+        }
       }
     }
   }

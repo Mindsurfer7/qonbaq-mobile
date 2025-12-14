@@ -19,12 +19,14 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
     required String email,
     required String username,
     required String password,
+    String? inviteCode,
   }) async {
     try {
       final request = RegisterRequest(
         email: email,
         username: username,
         password: password,
+        inviteCode: inviteCode,
       );
 
       // Валидация

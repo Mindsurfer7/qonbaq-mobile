@@ -33,13 +33,19 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String username,
     required String password,
+    String? inviteCode,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     final result = await registerUser.call(
-      RegisterParams(email: email, username: username, password: password),
+      RegisterParams(
+        email: email,
+        username: username,
+        password: password,
+        inviteCode: inviteCode,
+      ),
     );
 
     _isLoading = false;
