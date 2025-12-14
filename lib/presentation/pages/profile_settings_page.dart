@@ -22,9 +22,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
       provider.loadBusinesses();
-      
+
       // Загружаем текущий активный инвайт
-      final inviteProvider = Provider.of<InviteProvider>(context, listen: false);
+      final inviteProvider = Provider.of<InviteProvider>(
+        context,
+        listen: false,
+      );
       inviteProvider.loadCurrentInvite();
     });
   }
@@ -127,13 +130,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _buildEmployeeDataCard(profile),
-                  ),
+                  Expanded(child: _buildEmployeeDataCard(profile)),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildOrgStructureCard(profile),
-                  ),
+                  Expanded(child: _buildOrgStructureCard(profile)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -141,13 +140,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _buildInviteColleaguesCard(),
-                  ),
+                  Expanded(child: _buildInviteColleaguesCard()),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildHrDocumentsCard(profile),
-                  ),
+                  Expanded(child: _buildHrDocumentsCard(profile)),
                 ],
               ),
             ],
@@ -332,10 +327,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   // Web ссылка
                   const Text(
                     'Web ссылка (для браузера):',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -382,10 +374,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   // QR-код для веб-ссылки
                   const Text(
                     'QR-код для регистрации:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -484,24 +473,22 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 else ...[
                   // Кнопка "Пригласить"
                   ElevatedButton.icon(
-                    onPressed: inviteProvider.isLoading
-                        ? null
-                        : () async {
-                            await inviteProvider.createInviteLink();
-                          },
-                    icon: inviteProvider.isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.person_add),
+                    onPressed:
+                        inviteProvider.isLoading
+                            ? null
+                            : () async {
+                              await inviteProvider.createInviteLink();
+                            },
+                    icon:
+                        inviteProvider.isLoading
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.person_add),
                     label: Text(
-                      inviteProvider.isLoading
-                          ? 'Создание...'
-                          : 'Пригласить',
+                      inviteProvider.isLoading ? 'Создание...' : 'Пригласить',
                     ),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 40),
@@ -512,10 +499,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     const SizedBox(height: 8),
                     Text(
                       inviteProvider.error!,
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
                     ),
                   ],
                   // Показываем ссылки после успешного создания (если только что создали)
