@@ -39,3 +39,4 @@ class CreateInviteResult extends Entity {
   });
 }
 
+

@@ -32,3 +32,4 @@ class CreateInvite implements UseCase<CreateInviteResult, CreateInviteParams> {
   }
 }
 
+
