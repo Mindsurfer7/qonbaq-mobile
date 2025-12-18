@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' hide Task;
 import '../../domain/entities/task.dart';
+import '../../domain/entities/task_comment.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/task_model.dart';
@@ -52,6 +53,7 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
     TaskPriority? priority,
     bool? isImportant,
     bool? hasControlPoint,
+    bool? dontForget,
     int? page,
     int? limit,
   }) async {
@@ -64,6 +66,7 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
         priority: priority,
         isImportant: isImportant,
         hasControlPoint: hasControlPoint,
+        dontForget: dontForget,
         page: page,
         limit: limit,
       );
@@ -97,6 +100,48 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure('Ошибка при удалении задачи: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TaskComment>> createComment(String taskId, String text) async {
+    try {
+      final comment = await remoteDataSource.createComment(taskId, text);
+      return Right(comment.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при создании комментария: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TaskComment>> updateComment(String taskId, String commentId, String text) async {
+    try {
+      final comment = await remoteDataSource.updateComment(taskId, commentId, text);
+      return Right(comment.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при обновлении комментария: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteComment(String taskId, String commentId) async {
+    try {
+      await remoteDataSource.deleteComment(taskId, commentId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при удалении комментария: $e'));
     }
   }
 }

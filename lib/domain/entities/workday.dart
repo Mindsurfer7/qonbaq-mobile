@@ -44,18 +44,64 @@ class WorkDay extends Entity {
       'WorkDay(id: $id, businessId: $businessId, status: $status, date: $date)';
 }
 
+/// Детализация рабочего дня
+class WorkDayDetail {
+  final DateTime date;
+  final double hours;
+  final WorkDayStatus status;
+
+  const WorkDayDetail({
+    required this.date,
+    required this.hours,
+    required this.status,
+  });
+}
+
+/// Норма рабочих дней
+class WorkDayNorm {
+  final int days;
+
+  const WorkDayNorm({required this.days});
+}
+
 /// Статистика рабочего дня за месяц
 class WorkDayStatistics extends Entity {
   final String businessId;
   final String month; // Формат: YYYY-MM
   final int workedDays;
   final int absentDays;
+  
+  // Расширенная статистика
+  final double totalHours;
+  final double? avgHoursPerDay;
+  final int daysDifference;
+  final bool isOverNorm;
+  final bool isUnderNorm;
+  final double completionPercentage;
+  final WorkDayNorm norm;
+  
+  // Разбивка по статусам
+  final int completedDays;
+  final int startedDays;
+  
+  // Детализация по дням
+  final List<WorkDayDetail> days;
 
   const WorkDayStatistics({
     required this.businessId,
     required this.month,
     required this.workedDays,
     required this.absentDays,
+    required this.totalHours,
+    this.avgHoursPerDay,
+    required this.daysDifference,
+    required this.isOverNorm,
+    required this.isUnderNorm,
+    required this.completionPercentage,
+    required this.norm,
+    required this.completedDays,
+    required this.startedDays,
+    required this.days,
   });
 
   @override
@@ -71,6 +117,6 @@ class WorkDayStatistics extends Entity {
 
   @override
   String toString() =>
-      'WorkDayStatistics(businessId: $businessId, month: $month, workedDays: $workedDays, absentDays: $absentDays)';
+      'WorkDayStatistics(businessId: $businessId, month: $month, workedDays: $workedDays, absentDays: $absentDays, totalHours: $totalHours)';
 }
 

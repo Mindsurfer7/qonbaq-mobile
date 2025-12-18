@@ -42,11 +42,13 @@ import 'package:qonbaq/presentation/pages/imprest_page.dart';
 import 'package:qonbaq/presentation/pages/assets_card_page.dart';
 import 'package:qonbaq/presentation/pages/hr_documents_page.dart';
 import 'package:qonbaq/presentation/pages/staff_schedule_page.dart';
+import 'package:qonbaq/presentation/pages/timesheet_page.dart';
 import 'package:qonbaq/presentation/pages/start_work_day_page.dart';
 import 'package:qonbaq/presentation/pages/chats_email_page.dart';
 import 'package:qonbaq/presentation/pages/calendar_page.dart';
 import 'package:qonbaq/presentation/pages/profile_settings_page.dart';
 import 'package:qonbaq/presentation/pages/tasks_page.dart';
+import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
 import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
@@ -64,6 +66,11 @@ import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
 import 'package:qonbaq/domain/usecases/create_task.dart';
 import 'package:qonbaq/domain/usecases/get_tasks.dart';
+import 'package:qonbaq/domain/usecases/get_task_by_id.dart';
+import 'package:qonbaq/domain/usecases/update_task.dart';
+import 'package:qonbaq/domain/usecases/create_task_comment.dart';
+import 'package:qonbaq/domain/usecases/update_task_comment.dart';
+import 'package:qonbaq/domain/usecases/delete_task_comment.dart';
 import 'package:qonbaq/data/datasources/invite_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/invite_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/invite_repository.dart';
@@ -80,6 +87,9 @@ import 'package:qonbaq/domain/usecases/end_workday.dart';
 import 'package:qonbaq/domain/usecases/mark_absent.dart';
 import 'package:qonbaq/domain/usecases/get_workday_status.dart';
 import 'package:qonbaq/domain/usecases/get_workday_statistics.dart';
+import 'package:qonbaq/data/datasources/chat_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/chat_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/chat_repository.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -154,6 +164,11 @@ class MyApp extends StatelessWidget {
     );
     final createTask = CreateTask(taskRepository);
     final getTasks = GetTasks(taskRepository);
+    final getTaskById = GetTaskById(taskRepository);
+    final updateTask = UpdateTask(taskRepository);
+    final createTaskComment = CreateTaskComment(taskRepository);
+    final updateTaskComment = UpdateTaskComment(taskRepository);
+    final deleteTaskComment = DeleteTaskComment(taskRepository);
 
     // Инициализация зависимостей для приглашений
     final inviteRemoteDataSource = InviteRemoteDataSourceImpl(apiClient: apiClient);
@@ -178,6 +193,12 @@ class MyApp extends StatelessWidget {
     final getWorkDayStatus = GetWorkDayStatus(workDayRepository);
     final getWorkDayStatistics = GetWorkDayStatistics(workDayRepository);
 
+    // Инициализация зависимостей для чатов
+    final chatRemoteDataSource = ChatRemoteDataSourceImpl(apiClient: apiClient);
+    final ChatRepository chatRepository = ChatRepositoryImpl(
+      remoteDataSource: chatRemoteDataSource,
+    );
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
@@ -185,7 +206,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => inviteProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
+        Provider<GetTaskById>(create: (_) => getTaskById),
+        Provider<UpdateTask>(create: (_) => updateTask),
+        Provider<CreateTaskComment>(create: (_) => createTaskComment),
+        Provider<UpdateTaskComment>(create: (_) => updateTaskComment),
+        Provider<DeleteTaskComment>(create: (_) => deleteTaskComment),
         Provider<UserRepository>(create: (_) => userRepository),
+        Provider<ChatRepository>(create: (_) => chatRepository),
         Provider<StartWorkDay>(create: (_) => startWorkDay),
         Provider<EndWorkDay>(create: (_) => endWorkDay),
         Provider<MarkAbsent>(create: (_) => markAbsent),
@@ -265,6 +292,8 @@ class MyApp extends StatelessWidget {
           '/business/admin/hr_documents': (context) => const HrDocumentsPage(),
           '/business/admin/staff_schedule':
               (context) => const StaffSchedulePage(),
+          '/business/admin/timesheet':
+              (context) => const TimesheetPage(),
           // Аналитический блок
           '/business/analytics': (context) => const AnalyticsBlockPage(),
           // Общие разделы
@@ -273,6 +302,15 @@ class MyApp extends StatelessWidget {
           '/calendar': (context) => const CalendarPage(),
           '/profile_settings': (context) => const ProfileSettingsPage(),
           '/tasks': (context) => const TasksPage(),
+          '/tasks/detail': (context) {
+            final taskId = ModalRoute.of(context)!.settings.arguments as String?;
+            if (taskId == null) {
+              return const Scaffold(
+                body: Center(child: Text('ID задачи не указан')),
+              );
+            }
+            return TaskDetailPage(taskId: taskId);
+          },
           '/approvals': (context) => const ApprovalsPage(),
           '/remember': (context) => const RememberPage(),
           '/favorites': (context) => const FavoritesPage(),

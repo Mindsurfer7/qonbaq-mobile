@@ -4,6 +4,7 @@ import '../../core/utils/token_storage.dart';
 import '../../domain/entities/task.dart';
 import '../datasources/task_remote_datasource.dart';
 import '../models/task_model.dart';
+import '../models/task_comment_model.dart';
 import '../models/validation_error.dart';
 
 /// Реализация удаленного источника данных для задач
@@ -90,6 +91,7 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
     TaskPriority? priority,
     bool? isImportant,
     bool? hasControlPoint,
+    bool? dontForget,
     int? page,
     int? limit,
   }) async {
@@ -109,6 +111,9 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       }
       if (hasControlPoint != null) {
         queryParams['hasControlPoint'] = hasControlPoint.toString();
+      }
+      if (dontForget != null) {
+        queryParams['dontForget'] = dontForget.toString();
       }
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();
@@ -224,6 +229,99 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         return 'HIGH';
       case TaskPriority.urgent:
         return 'URGENT';
+    }
+  }
+
+  @override
+  Future<TaskCommentModel> createComment(String taskId, String text) async {
+    try {
+      final response = await apiClient.post(
+        '/api/tasks/$taskId/comments',
+        headers: _getAuthHeaders(),
+        body: {'text': text},
+      );
+
+      if (response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return TaskCommentModel.fromJson(json);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 404) {
+        throw Exception('Задача не найдена');
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else {
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<TaskCommentModel> updateComment(String taskId, String commentId, String text) async {
+    try {
+      final response = await apiClient.put(
+        '/api/tasks/$taskId/comments/$commentId',
+        headers: _getAuthHeaders(),
+        body: {'text': text},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return TaskCommentModel.fromJson(json);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 404) {
+        throw Exception('Комментарий не найден');
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else {
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteComment(String taskId, String commentId) async {
+    try {
+      final response = await apiClient.delete(
+        '/api/tasks/$taskId/comments/$commentId',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 404) {
+        throw Exception('Комментарий не найден');
+      } else {
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
     }
   }
 }

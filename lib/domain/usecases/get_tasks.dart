@@ -13,6 +13,7 @@ class GetTasksParams {
   final TaskPriority? priority;
   final bool? isImportant;
   final bool? hasControlPoint;
+  final bool? dontForget;
   final int? page;
   final int? limit;
 
@@ -24,6 +25,7 @@ class GetTasksParams {
     this.priority,
     this.isImportant,
     this.hasControlPoint,
+    this.dontForget,
     this.page,
     this.limit,
   });
@@ -45,6 +47,7 @@ class GetTasks implements UseCase<List<Task>, GetTasksParams> {
       priority: params.priority,
       isImportant: params.isImportant,
       hasControlPoint: params.hasControlPoint,
+      dontForget: params.dontForget,
       page: params.page,
       limit: params.limit,
     );

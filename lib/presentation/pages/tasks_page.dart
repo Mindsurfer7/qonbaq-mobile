@@ -350,7 +350,10 @@ class _TasksPageState extends State<TasksPage> {
               ),
               trailing: _getStatusChip(task.status),
               onTap: () {
-                // TODO: Переход на страницу деталей задачи
+                Navigator.of(context).pushNamed(
+                  '/tasks/detail',
+                  arguments: task.id,
+                );
               },
             ),
           );

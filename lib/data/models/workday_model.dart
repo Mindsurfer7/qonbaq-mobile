@@ -91,6 +91,48 @@ class WorkDayModel extends WorkDay implements Model {
   }
 }
 
+/// Модель детализации рабочего дня
+class WorkDayDetailModel extends WorkDayDetail {
+  const WorkDayDetailModel({
+    required super.date,
+    required super.hours,
+    required super.status,
+  });
+
+  factory WorkDayDetailModel.fromJson(Map<String, dynamic> json) {
+    return WorkDayDetailModel(
+      date: DateTime.parse(json['date'] as String),
+      hours: (json['hours'] as num).toDouble(),
+      status: WorkDayModel._parseStatus(json['status'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'date': date.toIso8601String(),
+      'hours': hours,
+      'status': WorkDayModel._statusToString(status),
+    };
+  }
+}
+
+/// Модель нормы рабочих дней
+class WorkDayNormModel extends WorkDayNorm {
+  const WorkDayNormModel({required super.days});
+
+  factory WorkDayNormModel.fromJson(Map<String, dynamic> json) {
+    return WorkDayNormModel(
+      days: json['days'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'days': days,
+    };
+  }
+}
+
 /// Модель статистики рабочего дня
 class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
   const WorkDayStatisticsModel({
@@ -98,14 +140,55 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
     required super.month,
     required super.workedDays,
     required super.absentDays,
+    required super.totalHours,
+    super.avgHoursPerDay,
+    required super.daysDifference,
+    required super.isOverNorm,
+    required super.isUnderNorm,
+    required super.completionPercentage,
+    required super.norm,
+    required super.completedDays,
+    required super.startedDays,
+    required super.days,
   });
 
-  factory WorkDayStatisticsModel.fromJson(Map<String, dynamic> json) {
+  factory WorkDayStatisticsModel.fromJson(
+    Map<String, dynamic> json, {
+    String? businessId,
+  }) {
+    // Извлекаем данные из вложенной структуры
+    final period = json['period'] as Map<String, dynamic>?;
+    final statistics = json['statistics'] as Map<String, dynamic>? ?? {};
+    final normJson = json['norm'] as Map<String, dynamic>? ?? {'days': 22};
+    final workDaysJson = json['workDays'] as List<dynamic>? ?? [];
+    
+    // Месяц из period или из корня
+    final month = period?['month'] as String? ?? 
+                  json['month'] as String? ?? 
+                  '';
+    
+    // businessId должен передаваться извне, так как его нет в ответе API
+    final finalBusinessId = businessId ?? json['businessId'] as String? ?? '';
+    
     return WorkDayStatisticsModel(
-      businessId: json['businessId'] as String,
-      month: json['month'] as String,
-      workedDays: json['workedDays'] as int,
-      absentDays: json['absentDays'] as int,
+      businessId: finalBusinessId,
+      month: month,
+      workedDays: statistics['workedDays'] as int? ?? 0,
+      absentDays: statistics['absentDays'] as int? ?? 0,
+      totalHours: (statistics['totalHours'] as num?)?.toDouble() ?? 0.0,
+      avgHoursPerDay: statistics['avgHoursPerDay'] != null
+          ? (statistics['avgHoursPerDay'] as num).toDouble()
+          : null,
+      daysDifference: statistics['daysDifference'] as int? ?? 0,
+      isOverNorm: statistics['isOverNorm'] as bool? ?? false,
+      isUnderNorm: statistics['isUnderNorm'] as bool? ?? false,
+      completionPercentage: (statistics['completionPercentage'] as num?)?.toDouble() ?? 0.0,
+      norm: WorkDayNormModel.fromJson(normJson),
+      completedDays: statistics['completedDays'] as int? ?? 0,
+      startedDays: statistics['startedDays'] as int? ?? 0,
+      days: workDaysJson
+          .map((day) => WorkDayDetailModel.fromJson(day as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -116,6 +199,16 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
       'month': month,
       'workedDays': workedDays,
       'absentDays': absentDays,
+      'totalHours': totalHours,
+      if (avgHoursPerDay != null) 'avgHoursPerDay': avgHoursPerDay,
+      'daysDifference': daysDifference,
+      'isOverNorm': isOverNorm,
+      'isUnderNorm': isUnderNorm,
+      'completionPercentage': completionPercentage,
+      'norm': (norm as WorkDayNormModel).toJson(),
+      'completedDays': completedDays,
+      'startedDays': startedDays,
+      'days': days.map((day) => (day as WorkDayDetailModel).toJson()).toList(),
     };
   }
 
@@ -125,6 +218,16 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
       month: month,
       workedDays: workedDays,
       absentDays: absentDays,
+      totalHours: totalHours,
+      avgHoursPerDay: avgHoursPerDay,
+      daysDifference: daysDifference,
+      isOverNorm: isOverNorm,
+      isUnderNorm: isUnderNorm,
+      completionPercentage: completionPercentage,
+      norm: norm,
+      completedDays: completedDays,
+      startedDays: startedDays,
+      days: days,
     );
   }
 
@@ -134,6 +237,16 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
       month: statistics.month,
       workedDays: statistics.workedDays,
       absentDays: statistics.absentDays,
+      totalHours: statistics.totalHours,
+      avgHoursPerDay: statistics.avgHoursPerDay,
+      daysDifference: statistics.daysDifference,
+      isOverNorm: statistics.isOverNorm,
+      isUnderNorm: statistics.isUnderNorm,
+      completionPercentage: statistics.completionPercentage,
+      norm: statistics.norm,
+      completedDays: statistics.completedDays,
+      startedDays: statistics.startedDays,
+      days: statistics.days,
     );
   }
 }

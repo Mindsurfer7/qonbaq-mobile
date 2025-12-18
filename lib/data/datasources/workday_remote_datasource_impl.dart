@@ -188,7 +188,7 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return WorkDayStatisticsModel.fromJson(json);
+        return WorkDayStatisticsModel.fromJson(json, businessId: businessId);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {

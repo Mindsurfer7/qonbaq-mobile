@@ -49,6 +49,12 @@ class AdminBlockPage extends StatelessWidget {
             '/business/admin/staff_schedule',
             Icons.schedule,
           ),
+          _buildSectionCard(
+            context,
+            'Табелирование',
+            '/business/admin/timesheet',
+            Icons.access_time,
+          ),
         ],
       ),
     );

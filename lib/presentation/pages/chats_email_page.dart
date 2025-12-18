@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'employees_list_page.dart';
 
 /// Страница чатов, почты и телефонии
 class ChatsEmailPage extends StatelessWidget {
@@ -22,7 +23,40 @@ class ChatsEmailPage extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(child: Text('Чаты, почта, телефония')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const EmployeesListPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.chat),
+              label: const Text('Чаты'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'Почта и телефония\nбудут доступны позже',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

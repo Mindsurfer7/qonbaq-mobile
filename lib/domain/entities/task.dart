@@ -1,4 +1,7 @@
 import '../entities/entity.dart';
+import 'business.dart';
+import 'user_profile.dart';
+import 'task_comment.dart';
 
 /// Статус задачи
 enum TaskStatus {
@@ -26,50 +29,83 @@ enum RecurrenceFrequency {
 
 /// Параметры рекуррентности задачи
 class TaskRecurrence {
+  final String id;
+  final String taskId;
   final RecurrenceFrequency frequency;
   final int interval;
   final DateTime? endDate;
   final List<int>? daysOfWeek; // 0-6, где 0 = воскресенье
   final int? dayOfMonth;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   const TaskRecurrence({
+    required this.id,
+    required this.taskId,
     required this.frequency,
     this.interval = 1,
     this.endDate,
     this.daysOfWeek,
     this.dayOfMonth,
+    required this.createdAt,
+    required this.updatedAt,
   });
 }
 
 /// Вложение задачи
 class TaskAttachment {
   final String id;
-  final String url;
+  final String taskId;
+  final String fileUrl;
   final String? fileName;
   final String? fileType;
-  final int? fileSize;
+  final bool isResult;
+  final DateTime createdAt;
 
   const TaskAttachment({
     required this.id,
-    required this.url,
+    required this.taskId,
+    required this.fileUrl,
     this.fileName,
     this.fileType,
-    this.fileSize,
+    this.isResult = false,
+    required this.createdAt,
   });
 }
 
 /// Индикатор для точки контроля
 class TaskIndicator {
   final String id;
+  final String taskId;
   final String name;
-  final String? description;
-  final String? value;
+  final double? targetValue;
+  final double? actualValue;
+  final String? unit;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   const TaskIndicator({
     required this.id,
+    required this.taskId,
     required this.name,
-    this.description,
-    this.value,
+    this.targetValue,
+    this.actualValue,
+    this.unit,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+}
+
+/// Наблюдатель задачи
+class TaskObserver {
+  final String id;
+  final DateTime createdAt;
+  final ProfileUser user;
+
+  const TaskObserver({
+    required this.id,
+    required this.createdAt,
+    required this.user,
   });
 }
 
@@ -88,14 +124,22 @@ class Task extends Entity {
   final bool isImportant;
   final bool isRecurring;
   final bool hasControlPoint;
+  final bool dontForget;
   final String? voiceNoteUrl;
   final String? resultText;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<String>? observerIds; // ID наблюдателей
+  final List<String>? observerIds; // ID наблюдателей (для списка задач)
   final List<TaskAttachment>? attachments;
   final List<TaskIndicator>? indicators;
   final TaskRecurrence? recurrence;
+  
+  // Детальные данные (для детальной страницы)
+  final Business? business;
+  final ProfileUser? assignee;
+  final ProfileUser? assigner;
+  final List<TaskObserver>? observers;
+  final List<TaskComment>? comments;
 
   const Task({
     required this.id,
@@ -111,6 +155,7 @@ class Task extends Entity {
     this.isImportant = false,
     this.isRecurring = false,
     this.hasControlPoint = false,
+    this.dontForget = false,
     this.voiceNoteUrl,
     this.resultText,
     required this.createdAt,
@@ -119,6 +164,11 @@ class Task extends Entity {
     this.attachments,
     this.indicators,
     this.recurrence,
+    this.business,
+    this.assignee,
+    this.assigner,
+    this.observers,
+    this.comments,
   });
 
   @override

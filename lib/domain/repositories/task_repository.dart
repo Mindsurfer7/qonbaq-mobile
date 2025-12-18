@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' hide Task;
 import '../entities/task.dart';
+import '../entities/task_comment.dart';
 import '../../core/error/failures.dart';
 import '../repositories/repository.dart';
 
@@ -21,6 +22,7 @@ abstract class TaskRepository extends Repository {
     TaskPriority? priority,
     bool? isImportant,
     bool? hasControlPoint,
+    bool? dontForget,
     int? page,
     int? limit,
   });
@@ -30,4 +32,13 @@ abstract class TaskRepository extends Repository {
 
   /// Удалить задачу
   Future<Either<Failure, void>> deleteTask(String id);
+
+  /// Создать комментарий к задаче
+  Future<Either<Failure, TaskComment>> createComment(String taskId, String text);
+
+  /// Обновить комментарий
+  Future<Either<Failure, TaskComment>> updateComment(String taskId, String commentId, String text);
+
+  /// Удалить комментарий
+  Future<Either<Failure, void>> deleteComment(String taskId, String commentId);
 }

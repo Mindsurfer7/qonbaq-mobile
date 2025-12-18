@@ -36,6 +36,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
+  bool _dontForget = false;
   String? _assignedToId;
   String? _assignedById;
   // Храним ошибки валидации для отображения в полях
@@ -110,6 +111,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       'isImportant': 'isImportant',
       'isRecurring': 'isRecurring',
       'hasControlPoint': 'hasControlPoint',
+      'dontForget': 'dontForget',
       'voiceNoteUrl': 'voiceNoteUrl',
       'observerIds': 'observerIds',
       'businessId': 'businessId', // Хотя этого поля нет в форме, но может быть ошибка
@@ -324,6 +326,19 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 });
               },
             ),
+            const SizedBox(height: 8),
+
+            // Не забыть выполнить
+            FormBuilderCheckbox(
+              name: 'dontForget',
+              title: const Text('Не забыть выполнить'),
+              initialValue: _dontForget,
+              onChanged: (value) {
+                setState(() {
+                  _dontForget = value ?? false;
+                });
+              },
+            ),
             const SizedBox(height: 16),
 
             // URL голосовой заметки
@@ -401,6 +416,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         isImportant: formData['isImportant'] as bool? ?? false,
         isRecurring: formData['isRecurring'] as bool? ?? false,
         hasControlPoint: formData['hasControlPoint'] as bool? ?? false,
+        dontForget: formData['dontForget'] as bool? ?? false,
         voiceNoteUrl: formData['voiceNoteUrl'] as String?,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
