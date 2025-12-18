@@ -1,8 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../widgets/workday_dialog.dart';
+import '../providers/profile_provider.dart';
 
 /// Главная страница бизнес-приложения
-class BusinessMainPage extends StatelessWidget {
+class BusinessMainPage extends StatefulWidget {
   const BusinessMainPage({super.key});
+
+  @override
+  State<BusinessMainPage> createState() => _BusinessMainPageState();
+}
+
+class _BusinessMainPageState extends State<BusinessMainPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Загружаем компании при инициализации страницы
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<ProfileProvider>(context, listen: false);
+      // Загружаем компании, если они еще не загружены
+      if (provider.businesses == null && !provider.isLoading) {
+        provider.loadBusinesses();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +68,9 @@ class BusinessMainPage extends StatelessWidget {
                 _buildTopNavItem(
                   context,
                   'Начать рабочий день',
-                  '/start_work_day',
+                  null,
                   Icons.play_arrow,
+                  onTap: () => _showWorkDayDialog(context),
                 ),
                 _buildTopNavItem(
                   context,
@@ -197,12 +219,13 @@ class BusinessMainPage extends StatelessWidget {
   Widget _buildTopNavItem(
     BuildContext context,
     String label,
-    String route,
-    IconData icon,
-  ) {
+    String? route,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
     return Expanded(
       child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(route),
+        onTap: onTap ?? (route != null ? () => Navigator.of(context).pushNamed(route) : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Column(
@@ -223,6 +246,13 @@ class BusinessMainPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showWorkDayDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const WorkDayDialog(),
     );
   }
 }

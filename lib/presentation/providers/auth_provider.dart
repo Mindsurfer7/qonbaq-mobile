@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/login_user.dart';
+import '../../domain/usecases/refresh_token.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/token_storage.dart';
 
@@ -9,8 +10,13 @@ import '../../core/utils/token_storage.dart';
 class AuthProvider with ChangeNotifier {
   final RegisterUser registerUser;
   final LoginUser loginUser;
+  final RefreshToken refreshToken;
 
-  AuthProvider({required this.registerUser, required this.loginUser});
+  AuthProvider({
+    required this.registerUser,
+    required this.loginUser,
+    required this.refreshToken,
+  });
 
   AuthUser? _user;
   bool _isLoading = false;
@@ -99,6 +105,41 @@ class AuthProvider with ChangeNotifier {
     // Очищаем токены
     await TokenStorage.instance.clearTokens();
     notifyListeners();
+  }
+
+  /// Проверка и обновление токена при старте приложения
+  /// Возвращает true, если токен валиден или успешно обновлен
+  Future<bool> validateAndRefreshToken() async {
+    final tokenStorage = TokenStorage.instance;
+    
+    // Если токенов нет, пользователь не авторизован
+    if (!tokenStorage.hasTokens()) {
+      return false;
+    }
+
+    // Пытаемся обновить токен через refresh token для валидации
+    final refreshTokenValue = tokenStorage.getRefreshToken();
+    if (refreshTokenValue == null || refreshTokenValue.isEmpty) {
+      return false;
+    }
+
+    final result = await refreshToken.call(refreshTokenValue);
+    
+    return result.fold(
+      (failure) {
+        // Если не удалось обновить токен, очищаем его
+        _error = _getErrorMessage(failure);
+        tokenStorage.clearTokens();
+        return false;
+      },
+      (user) {
+        // Токен успешно обновлен, сохраняем пользователя
+        _user = user;
+        _error = null;
+        notifyListeners();
+        return true;
+      },
+    );
   }
 
   /// Очистка ошибки

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/deep_link_service.dart';
+import '../../presentation/providers/auth_provider.dart';
 import 'auth_page.dart';
 
 /// Стартовая страница приложения
@@ -15,7 +17,10 @@ class _StartPageState extends State<StartPage> {
   @override
   void initState() {
     super.initState();
-    _checkAuthStatus();
+    // Используем addPostFrameCallback для доступа к context после построения виджета
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStatus();
+    });
   }
 
   /// Проверка статуса аутентификации при старте
@@ -27,10 +32,19 @@ class _StartPageState extends State<StartPage> {
     
     final tokenStorage = TokenStorage.instance;
     
-    // Если есть токены, перенаправляем на главную страницу
+    // Если есть токены, пытаемся их валидировать и обновить
     if (tokenStorage.hasAccessToken() && tokenStorage.hasRefreshToken()) {
-      if (mounted) {
+      final authProvider = context.read<AuthProvider>();
+      final isValid = await authProvider.validateAndRefreshToken();
+      
+      if (!mounted) return;
+      
+      if (isValid) {
+        // Токен валиден, перенаправляем на главную страницу
         Navigator.of(context).pushReplacementNamed('/business');
+      } else {
+        // Токен невалиден, перенаправляем на страницу логина
+        Navigator.of(context).pushReplacementNamed('/auth');
       }
     } else {
       // Если токенов нет, проверяем наличие кода приглашения

@@ -9,6 +9,7 @@ import 'package:qonbaq/data/repositories/auth_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/auth_repository.dart';
 import 'package:qonbaq/domain/usecases/login_user.dart';
 import 'package:qonbaq/domain/usecases/register_user.dart';
+import 'package:qonbaq/domain/usecases/refresh_token.dart';
 import 'package:qonbaq/presentation/pages/auth_page.dart';
 import 'package:qonbaq/presentation/pages/home_page.dart';
 import 'package:qonbaq/presentation/pages/start_page.dart';
@@ -71,6 +72,14 @@ import 'package:qonbaq/domain/usecases/get_current_invite.dart';
 import 'package:qonbaq/core/utils/token_storage.dart';
 import 'package:qonbaq/core/utils/auth_interceptor.dart';
 import 'package:qonbaq/core/utils/deep_link_service.dart';
+import 'package:qonbaq/data/datasources/workday_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/workday_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/workday_repository.dart';
+import 'package:qonbaq/domain/usecases/start_workday.dart';
+import 'package:qonbaq/domain/usecases/end_workday.dart';
+import 'package:qonbaq/domain/usecases/mark_absent.dart';
+import 'package:qonbaq/domain/usecases/get_workday_status.dart';
+import 'package:qonbaq/domain/usecases/get_workday_statistics.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -116,9 +125,11 @@ class MyApp extends StatelessWidget {
     );
     final registerUser = RegisterUser(authRepository);
     final loginUser = LoginUser(authRepository);
+    final refreshTokenUseCase = RefreshToken(authRepository);
     final authProvider = AuthProvider(
       registerUser: registerUser,
       loginUser: loginUser,
+      refreshToken: refreshTokenUseCase,
     );
 
     // Инициализация зависимостей для профиля
@@ -156,6 +167,17 @@ class MyApp extends StatelessWidget {
       getCurrentInvite: getCurrentInvite,
     );
 
+    // Инициализация зависимостей для рабочего дня
+    final workDayRemoteDataSource = WorkDayRemoteDataSourceImpl(apiClient: apiClient);
+    final WorkDayRepository workDayRepository = WorkDayRepositoryImpl(
+      remoteDataSource: workDayRemoteDataSource,
+    );
+    final startWorkDay = StartWorkDay(workDayRepository);
+    final endWorkDay = EndWorkDay(workDayRepository);
+    final markAbsent = MarkAbsent(workDayRepository);
+    final getWorkDayStatus = GetWorkDayStatus(workDayRepository);
+    final getWorkDayStatistics = GetWorkDayStatistics(workDayRepository);
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
@@ -164,6 +186,11 @@ class MyApp extends StatelessWidget {
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<UserRepository>(create: (_) => userRepository),
+        Provider<StartWorkDay>(create: (_) => startWorkDay),
+        Provider<EndWorkDay>(create: (_) => endWorkDay),
+        Provider<MarkAbsent>(create: (_) => markAbsent),
+        Provider<GetWorkDayStatus>(create: (_) => getWorkDayStatus),
+        Provider<GetWorkDayStatistics>(create: (_) => getWorkDayStatistics),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
