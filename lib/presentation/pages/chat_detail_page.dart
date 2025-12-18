@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/entities/message.dart';
@@ -176,6 +177,133 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     FocusScope.of(context).requestFocus(FocusNode());
   }
 
+  void _showMessageContextMenu(BuildContext context, Message message) {
+    final isMyMessage = message.sender.id == _currentUserId;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Индикатор вверху (как в Telegram)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Показываем превью сообщения
+                if (!isMyMessage)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          child: Text(
+                            message.sender.name.isNotEmpty
+                                ? message.sender.name[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                message.sender.name.isNotEmpty
+                                    ? message.sender.name
+                                    : 'Пользователь',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                message.text,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Список действий
+                ListTile(
+                  leading: Icon(
+                    Icons.reply,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('Ответить'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _selectReplyMessage(message);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy),
+                  title: const Text('Копировать'),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: message.text));
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Сообщение скопировано'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                // Можно добавить другие действия в будущем:
+                // if (isMyMessage)
+                //   ListTile(
+                //     leading: const Icon(Icons.delete, color: Colors.red),
+                //     title: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                //     onTap: () {
+                //       // Удаление сообщения
+                //       Navigator.pop(context);
+                //     },
+                // ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _cancelReply() {
     setState(() {
       _replyToMessage = null;
@@ -232,18 +360,31 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.reply, color: Colors.grey[600], size: 20),
+                  Container(
+                    width: 3,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.reply, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ответ на сообщение',
+                          _replyToMessage!.sender.id == _currentUserId
+                              ? 'Вы'
+                              : _replyToMessage!.sender.name.isNotEmpty
+                                  ? _replyToMessage!.sender.name
+                                  : 'Пользователь',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -253,7 +394,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Colors.grey[700],
                           ),
                         ),
                       ],
@@ -264,6 +405,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     onPressed: _cancelReply,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
+                    color: Colors.grey[600],
                   ),
                 ],
               ),
@@ -316,7 +458,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                   _messages[index - 1].sender.id != message.sender.id;
 
                               return GestureDetector(
-                                onLongPress: () => _selectReplyMessage(message),
+                                onLongPress: () => _showMessageContextMenu(context, message),
                                 child: _buildMessageBubble(
                                   message,
                                   isMyMessage,
