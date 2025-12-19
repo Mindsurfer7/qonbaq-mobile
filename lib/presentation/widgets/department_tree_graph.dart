@@ -4,11 +4,13 @@ import '../../domain/entities/department.dart';
 /// Виджет для отображения графа организационной структуры
 class DepartmentTreeGraph extends StatelessWidget {
   final List<Department> departments;
+  final String? businessName; // Название бизнеса для отображения вверху
   final Function(String departmentId)? onDepartmentTap;
 
   const DepartmentTreeGraph({
     super.key,
     required this.departments,
+    this.businessName,
     this.onDepartmentTap,
   });
 
@@ -45,8 +47,66 @@ class DepartmentTreeGraph extends StatelessWidget {
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: _buildTreeWidget(tree, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Бизнес вверху
+              if (businessName != null) ...[
+                _buildBusinessNode(businessName!),
+                const SizedBox(height: 24),
+                // Линия от бизнеса к подразделениям
+                Container(
+                  height: 20,
+                  width: 2,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 4),
+              ],
+              // Дерево подразделений
+              _buildTreeWidget(tree, 0),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Строит узел бизнеса
+  Widget _buildBusinessNode(String businessName) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24.0,
+        vertical: 16.0,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade100,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: Colors.blue.shade300,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.business, color: Colors.blue.shade700, size: 28),
+          const SizedBox(width: 12),
+          Text(
+            businessName,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue.shade900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -74,23 +134,71 @@ class DepartmentTreeGraph extends StatelessWidget {
   Widget _buildTreeWidget(Map<String, List<Department>> tree, int level) {
     final rootDepartments = tree['root'] ?? [];
 
-    if (rootDepartments.isEmpty && tree.length == 1) {
-      // Если нет корневых, берем первое подразделение
-      final firstKey = tree.keys.first;
-      if (firstKey != 'root') {
-        final dept = departments.firstWhere((d) => d.id == firstKey);
-        return _buildDepartmentNode(dept, level, tree);
-      }
-    }
-
     if (rootDepartments.isEmpty) {
       return const SizedBox.shrink();
     }
 
+    // Строим дерево по уровням
+    return _buildTreeByLevels(tree);
+  }
+
+  /// Строит дерево по уровням
+  Widget _buildTreeByLevels(Map<String, List<Department>> tree) {
+    // Собираем все уровни
+    final levels = <int, List<Department>>{};
+    
+    // Начинаем с корневого уровня
+    final rootDepts = tree['root'] ?? [];
+    if (rootDepts.isEmpty) return const SizedBox.shrink();
+    
+    levels[0] = rootDepts;
+    
+    // Рекурсивно собираем все уровни
+    void collectLevel(List<Department> parents, int currentLevel) {
+      final children = <Department>[];
+      for (final parent in parents) {
+        final parentChildren = tree[parent.id] ?? [];
+        children.addAll(parentChildren);
+      }
+      
+      if (children.isNotEmpty) {
+        levels[currentLevel + 1] = children;
+        collectLevel(children, currentLevel + 1);
+      }
+    }
+    
+    collectLevel(rootDepts, 0);
+    
+    // Строим виджет для каждого уровня
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: rootDepartments.map((dept) {
-        return _buildDepartmentNode(dept, level, tree);
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: levels.entries.map((entry) {
+        final level = entry.key;
+        final departments = entry.value;
+        
+        return Column(
+          children: [
+            if (level > 0) ...[
+              const SizedBox(height: 24),
+              // Вертикальная линия
+              Container(
+                height: 20,
+                width: 2,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 4),
+            ],
+            // Ряд подразделений этого уровня
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16.0,
+              runSpacing: 16.0,
+              children: departments.map((dept) {
+                return _buildDepartmentNode(dept, level, tree);
+              }).toList(),
+            ),
+          ],
+        );
       }).toList(),
     );
   }
@@ -104,145 +212,131 @@ class DepartmentTreeGraph extends StatelessWidget {
     final children = tree[department.id] ?? [];
     final hasChildren = children.isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Отступ для уровня вложенности
-            SizedBox(width: level * 40.0),
-            // Узел подразделения
-            GestureDetector(
-              onTap: () => onDepartmentTap?.call(department.id),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 12.0,
-                ),
-                decoration: BoxDecoration(
-                  color: _getDepartmentColor(level),
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 200,
-                  maxWidth: 250,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      department.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (department.description != null &&
-                        department.description!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        department.description!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (department.manager != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              department.manager!.fullName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[700],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (department.employeesCount != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${department.employeesCount}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (hasChildren) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.folder,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${children.length} подразделений',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: () => onDepartmentTap?.call(department.id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 12.0,
+        ),
+        decoration: BoxDecoration(
+          color: _getDepartmentColor(level),
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        // Дочерние подразделения
-        if (hasChildren) ...[
-          const SizedBox(height: 16),
-          ...children.map((child) {
-            return _buildDepartmentNode(child, level + 1, tree);
-          }),
-        ],
-      ],
+        constraints: const BoxConstraints(
+          minWidth: 180,
+          maxWidth: 220,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              department.name,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+            if (department.description != null &&
+                department.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                department.description!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (department.manager != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.person,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      department.manager!.fullName,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (department.employeesCount != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.people,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${department.employeesCount}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (hasChildren) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${children.length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

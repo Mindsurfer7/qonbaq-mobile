@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../providers/department_provider.dart';
+import '../providers/profile_provider.dart';
 import 'assign_manager_dialog.dart';
 import 'assign_employees_dialog.dart';
+import 'create_department_dialog.dart';
 
 /// Детальная страница подразделения
 class DepartmentDetailPage extends StatefulWidget {
@@ -38,6 +40,24 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          Consumer<DepartmentProvider>(
+            builder: (context, provider, child) {
+              final department = provider.currentDepartment;
+              if (department == null) return const SizedBox.shrink();
+              
+              return IconButton(
+                icon: const Icon(Icons.add_business),
+                tooltip: 'Создать дочернее подразделение',
+                onPressed: () => _showCreateChildDepartmentDialog(
+                  context,
+                  department,
+                  provider,
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<DepartmentProvider>(
         builder: (context, provider, child) {
@@ -582,6 +602,41 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
         );
       }
     }
+  }
+
+  void _showCreateChildDepartmentDialog(
+    BuildContext context,
+    Department department,
+    DepartmentProvider provider,
+  ) {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Компания не выбрана'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => CreateDepartmentDialog(
+        businessId: selectedBusiness.id,
+        parentId: department.id, // Передаем ID текущего подразделения как родителя
+        onDepartmentCreated: () {
+          // Перезагружаем детальную информацию о подразделении
+          provider.loadDepartmentDetails(department.id);
+          // Перезагружаем дерево подразделений
+          provider.loadDepartmentsTree(selectedBusiness.id);
+        },
+      ),
+    );
   }
 }
 

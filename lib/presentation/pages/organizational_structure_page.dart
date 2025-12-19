@@ -240,28 +240,13 @@ class _OrganizationalStructurePageState
             fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (department.description != null &&
-                department.description!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  department.description!,
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-            const SizedBox(height: 4),
-            Text(
-              'ID: ${department.id}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
+        subtitle: department.description != null &&
+                department.description!.isNotEmpty
+            ? Text(
+                department.description!,
+                style: const TextStyle(fontSize: 14),
+              )
+            : null,
         onTap: () {
           Navigator.of(context).pushNamed(
             '/department_detail',
@@ -318,8 +303,10 @@ class _OrganizationalStructurePageState
       context: context,
       builder: (context) => CreateDepartmentDialog(
         businessId: businessId,
+        // parentId не передается - создается корневое подразделение
         onDepartmentCreated: () {
           provider.loadDepartments(businessId);
+          provider.loadDepartmentsTree(businessId);
         },
       ),
     );
@@ -368,8 +355,12 @@ class _OrganizationalStructurePageState
       );
     }
 
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final businessName = profileProvider.selectedBusiness?.name;
+
     return DepartmentTreeGraph(
       departments: tree,
+      businessName: businessName,
       onDepartmentTap: (departmentId) {
         Navigator.of(context).pushNamed(
           '/department_detail',

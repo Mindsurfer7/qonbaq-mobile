@@ -6,11 +6,13 @@ import '../providers/department_provider.dart';
 /// Диалог для создания подразделения
 class CreateDepartmentDialog extends StatefulWidget {
   final String businessId;
+  final String? parentId; // ID родительского подразделения (для дочерних)
   final VoidCallback onDepartmentCreated;
 
   const CreateDepartmentDialog({
     super.key,
     required this.businessId,
+    this.parentId,
     required this.onDepartmentCreated,
   });
 
@@ -34,7 +36,11 @@ class _CreateDepartmentDialogState extends State<CreateDepartmentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Создать подразделение'),
+      title: Text(
+        widget.parentId != null
+            ? 'Создать дочернее подразделение'
+            : 'Создать подразделение',
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -70,6 +76,33 @@ class _CreateDepartmentDialogState extends State<CreateDepartmentDialog> {
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,
               ),
+              const SizedBox(height: 16),
+              // Информация о родительском подразделении
+              if (widget.parentId != null)
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Будет создано дочернее подразделение',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade900,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 16),
               // Примечание о менеджере
               Text(
@@ -121,6 +154,7 @@ class _CreateDepartmentDialogState extends State<CreateDepartmentDialog> {
           ? null
           : _descriptionController.text.trim(),
       businessId: widget.businessId,
+      parentId: widget.parentId, // ID родительского подразделения
       managerId: _selectedManagerId,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
