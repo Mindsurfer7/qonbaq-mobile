@@ -95,4 +95,3 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
     );
   }
 }
-

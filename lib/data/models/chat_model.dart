@@ -29,7 +29,9 @@ class ChatModel extends Chat implements Model {
     User participant2;
 
     // Если есть otherUser, значит API вернул упрощенную структуру
-    if (json.containsKey('otherUser') && currentUserId != null && currentUserName != null) {
+    if (json.containsKey('otherUser') &&
+        currentUserId != null &&
+        currentUserName != null) {
       // Текущий пользователь - participant1
       participant1 = User(
         id: currentUserId,
@@ -165,4 +167,3 @@ class ChatModel extends Chat implements Model {
     );
   }
 }
-
