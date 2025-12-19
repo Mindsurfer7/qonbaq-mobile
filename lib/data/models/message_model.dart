@@ -15,6 +15,10 @@ class MessageModel extends Message implements Model {
     super.taskCommentId,
     super.task,
     super.isTaskComment,
+    super.approvalId,
+    super.approvalCommentId,
+    super.approval,
+    super.isApprovalComment,
     super.replyToMessage,
   });
 
@@ -59,6 +63,16 @@ class MessageModel extends Message implements Model {
       );
     }
 
+    // Парсинг согласования (если есть)
+    MessageApproval? approval;
+    if (json['approval'] != null) {
+      final approvalJson = json['approval'] as Map<String, dynamic>;
+      approval = MessageApproval(
+        id: approvalJson['id'] as String,
+        title: approvalJson['title'] as String,
+      );
+    }
+
     // Парсинг реплая (если есть)
     ReplyToMessage? replyToMessage;
     if (json['replyToMessage'] != null) {
@@ -71,12 +85,23 @@ class MessageModel extends Message implements Model {
           title: replyTaskJson['title'] as String,
         );
       }
+      MessageApproval? replyApproval;
+      if (replyJson['approval'] != null) {
+        final replyApprovalJson = replyJson['approval'] as Map<String, dynamic>;
+        replyApproval = MessageApproval(
+          id: replyApprovalJson['id'] as String,
+          title: replyApprovalJson['title'] as String,
+        );
+      }
       replyToMessage = ReplyToMessage(
         id: replyJson['id'] as String,
         text: replyJson['text'] as String,
         taskId: replyJson['taskId'] as String?,
         task: replyTask,
         isTaskComment: replyJson['isTaskComment'] as bool? ?? false,
+        approvalId: replyJson['approvalId'] as String?,
+        approval: replyApproval,
+        isApprovalComment: replyJson['isApprovalComment'] as bool? ?? false,
       );
     }
 
@@ -90,6 +115,10 @@ class MessageModel extends Message implements Model {
       taskCommentId: json['taskCommentId'] as String?,
       task: task,
       isTaskComment: json['isTaskComment'] as bool? ?? false,
+      approvalId: json['approvalId'] as String?,
+      approvalCommentId: json['approvalCommentId'] as String?,
+      approval: approval,
+      isApprovalComment: json['isApprovalComment'] as bool? ?? false,
       replyToMessage: replyToMessage,
     );
   }
@@ -111,6 +140,14 @@ class MessageModel extends Message implements Model {
           'title': task!.title,
         },
       'isTaskComment': isTaskComment,
+      if (approvalId != null) 'approvalId': approvalId,
+      if (approvalCommentId != null) 'approvalCommentId': approvalCommentId,
+      if (approval != null)
+        'approval': {
+          'id': approval!.id,
+          'title': approval!.title,
+        },
+      'isApprovalComment': isApprovalComment,
       if (replyToMessage != null)
         'replyToMessage': {
           'id': replyToMessage!.id,
@@ -123,6 +160,14 @@ class MessageModel extends Message implements Model {
               'title': replyToMessage!.task!.title,
             },
           'isTaskComment': replyToMessage!.isTaskComment,
+          if (replyToMessage!.approvalId != null)
+            'approvalId': replyToMessage!.approvalId,
+          if (replyToMessage!.approval != null)
+            'approval': {
+              'id': replyToMessage!.approval!.id,
+              'title': replyToMessage!.approval!.title,
+            },
+          'isApprovalComment': replyToMessage!.isApprovalComment,
         },
     };
   }
@@ -131,6 +176,8 @@ class MessageModel extends Message implements Model {
   Map<String, dynamic> toSendJson() {
     return {
       'text': text,
+      if (taskId != null) 'taskId': taskId,
+      if (approvalId != null) 'approvalId': approvalId,
       if (replyToMessage != null) 'replyToMessageId': replyToMessage!.id,
     };
   }
@@ -147,6 +194,10 @@ class MessageModel extends Message implements Model {
       taskCommentId: taskCommentId,
       task: task,
       isTaskComment: isTaskComment,
+      approvalId: approvalId,
+      approvalCommentId: approvalCommentId,
+      approval: approval,
+      isApprovalComment: isApprovalComment,
       replyToMessage: replyToMessage,
     );
   }
@@ -163,6 +214,10 @@ class MessageModel extends Message implements Model {
       taskCommentId: message.taskCommentId,
       task: message.task,
       isTaskComment: message.isTaskComment,
+      approvalId: message.approvalId,
+      approvalCommentId: message.approvalCommentId,
+      approval: message.approval,
+      isApprovalComment: message.isApprovalComment,
       replyToMessage: message.replyToMessage,
     );
   }

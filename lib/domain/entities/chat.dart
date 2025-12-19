@@ -15,6 +15,9 @@ class Chat extends Entity {
   
   // Информация о задаче (если последнее сообщение связано с задачей)
   final MessageTask? lastMessageTask;
+  
+  // Информация о согласовании (если последнее сообщение связано с согласованием)
+  final MessageApproval? lastMessageApproval;
 
   const Chat({
     required this.id,
@@ -24,6 +27,7 @@ class Chat extends Entity {
     required this.updatedAt,
     this.lastMessage,
     this.lastMessageTask,
+    this.lastMessageApproval,
   });
 
   /// Получить собеседника для указанного пользователя

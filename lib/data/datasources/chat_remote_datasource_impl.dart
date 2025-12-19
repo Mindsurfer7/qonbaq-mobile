@@ -146,6 +146,8 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
     String chatId,
     String text, {
     String? replyToMessageId,
+    String? taskId,
+    String? approvalId,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -153,6 +155,12 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       };
       if (replyToMessageId != null) {
         body['replyToMessageId'] = replyToMessageId;
+      }
+      if (taskId != null) {
+        body['taskId'] = taskId;
+      }
+      if (approvalId != null) {
+        body['approvalId'] = approvalId;
       }
 
       final response = await apiClient.post(

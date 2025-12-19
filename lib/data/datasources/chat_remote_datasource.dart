@@ -21,6 +21,12 @@ abstract class ChatRemoteDataSource extends DataSource {
   Future<List<MessageModel>> getChatMessages(String chatId);
 
   /// Отправить сообщение в чат
-  Future<MessageModel> sendMessage(String chatId, String text, {String? replyToMessageId});
+  Future<MessageModel> sendMessage(
+    String chatId,
+    String text, {
+    String? replyToMessageId,
+    String? taskId,
+    String? approvalId,
+  });
 }
 

@@ -138,6 +138,7 @@ class ChatWebSocketDataSourceImpl implements ChatWebSocketDataSource {
   Future<void> sendMessage({
     required String text,
     String? taskId,
+    String? approvalId,
     String? replyToMessageId,
   }) async {
     if (!isConnected || _channel == null) {
@@ -149,6 +150,7 @@ class ChatWebSocketDataSourceImpl implements ChatWebSocketDataSource {
       'message': {
         'text': text,
         if (taskId != null) 'taskId': taskId,
+        if (approvalId != null) 'approvalId': approvalId,
         if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
       },
     };

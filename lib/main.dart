@@ -106,6 +106,19 @@ import 'package:qonbaq/domain/usecases/assign_employee_to_department.dart';
 import 'package:qonbaq/domain/usecases/remove_employee_from_department.dart';
 import 'package:qonbaq/domain/usecases/assign_employees_to_department.dart';
 import 'package:qonbaq/presentation/providers/department_provider.dart';
+import 'package:qonbaq/data/datasources/approval_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/approval_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/approval_repository.dart';
+import 'package:qonbaq/domain/usecases/get_approvals.dart';
+import 'package:qonbaq/domain/usecases/get_approval_by_id.dart';
+import 'package:qonbaq/domain/usecases/create_approval.dart';
+import 'package:qonbaq/domain/usecases/decide_approval.dart';
+import 'package:qonbaq/domain/usecases/create_approval_comment.dart';
+import 'package:qonbaq/domain/usecases/get_approval_comments.dart';
+import 'package:qonbaq/domain/usecases/update_approval_comment.dart';
+import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
+import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
+import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -258,6 +271,23 @@ class MyApp extends StatelessWidget {
       departmentRepository: departmentRepository,
     );
 
+    // Инициализация зависимостей для согласований
+    final approvalRemoteDataSource = ApprovalRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final ApprovalRepository approvalRepository = ApprovalRepositoryImpl(
+      remoteDataSource: approvalRemoteDataSource,
+    );
+    final getApprovals = GetApprovals(approvalRepository);
+    final getApprovalById = GetApprovalById(approvalRepository);
+    final createApproval = CreateApproval(approvalRepository);
+    final decideApproval = DecideApproval(approvalRepository);
+    final createApprovalComment = CreateApprovalComment(approvalRepository);
+    final getApprovalComments = GetApprovalComments(approvalRepository);
+    final updateApprovalComment = UpdateApprovalComment(approvalRepository);
+    final deleteApprovalComment = DeleteApprovalComment(approvalRepository);
+    final getApprovalTemplates = GetApprovalTemplates(approvalRepository);
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
@@ -278,6 +308,15 @@ class MyApp extends StatelessWidget {
         Provider<MarkAbsent>(create: (_) => markAbsent),
         Provider<GetWorkDayStatus>(create: (_) => getWorkDayStatus),
         Provider<GetWorkDayStatistics>(create: (_) => getWorkDayStatistics),
+        Provider<GetApprovals>(create: (_) => getApprovals),
+        Provider<GetApprovalById>(create: (_) => getApprovalById),
+        Provider<CreateApproval>(create: (_) => createApproval),
+        Provider<DecideApproval>(create: (_) => decideApproval),
+        Provider<CreateApprovalComment>(create: (_) => createApprovalComment),
+        Provider<GetApprovalComments>(create: (_) => getApprovalComments),
+        Provider<UpdateApprovalComment>(create: (_) => updateApprovalComment),
+        Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
+        Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -384,6 +423,16 @@ class MyApp extends StatelessWidget {
             return TaskDetailPage(taskId: taskId);
           },
           '/approvals': (context) => const ApprovalsPage(),
+          '/approvals/detail': (context) {
+            final approvalId =
+                ModalRoute.of(context)!.settings.arguments as String?;
+            if (approvalId == null) {
+              return const Scaffold(
+                body: Center(child: Text('ID согласования не указан')),
+              );
+            }
+            return ApprovalDetailPage(approvalId: approvalId);
+          },
           '/remember': (context) => const RememberPage(),
           '/favorites': (context) => const FavoritesPage(),
         },

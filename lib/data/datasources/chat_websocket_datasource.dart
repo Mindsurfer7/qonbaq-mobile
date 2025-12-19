@@ -70,6 +70,7 @@ abstract class ChatWebSocketDataSource extends DataSource {
   Future<void> sendMessage({
     required String text,
     String? taskId,
+    String? approvalId,
     String? replyToMessageId,
   });
 

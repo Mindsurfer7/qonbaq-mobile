@@ -5,6 +5,7 @@ import '../../domain/repositories/chat_repository.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/entities/chat.dart';
 import '../providers/auth_provider.dart';
+import 'approval_detail_page.dart';
 
 /// Страница детального чата с конкретным пользователем
 class ChatDetailPage extends StatefulWidget {
@@ -814,6 +815,75 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
                   ],
 
+                  // Показываем информацию о согласовании, если сообщение связано с согласованием
+                  if (message.isApprovalComment && message.approval != null) ...[
+                    GestureDetector(
+                      onTap: () {
+                        // Переход на страницу согласования
+                        if (message.approvalId != null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ApprovalDetailPage(
+                                approvalId: message.approvalId!,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color:
+                              isMyMessage
+                                  ? Colors.white.withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.verified_user_outlined,
+                              size: 16,
+                              color:
+                                  isMyMessage
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                message.approval!.title,
+                                style: TextStyle(
+                                  color:
+                                      isMyMessage
+                                          ? Colors.white
+                                          : Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color:
+                                  isMyMessage
+                                      ? Colors.white70
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.7),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
                   // Показываем реплай, если есть
                   if (message.replyToMessage != null) ...[
                     Container(
@@ -852,7 +922,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               Text(
                                 message.replyToMessage!.isTaskComment
                                     ? 'Ответ на комментарий к задаче'
-                                    : 'Ответ на сообщение',
+                                    : message.replyToMessage!.isApprovalComment
+                                        ? 'Ответ на комментарий к согласованию'
+                                        : 'Ответ на сообщение',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -903,6 +975,60 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                   Expanded(
                                     child: Text(
                                       message.replyToMessage!.task!.title,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color:
+                                            isMyMessage
+                                                ? Colors.white60
+                                                : Colors.black54,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 10,
+                                    color:
+                                        isMyMessage
+                                            ? Colors.white.withOpacity(0.5)
+                                            : Colors.black38,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          // Показываем согласование в реплае, если есть
+                          if (message.replyToMessage!.approval != null) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () {
+                                // Переход на страницу согласования из реплая
+                                if (message.replyToMessage!.approvalId != null) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => ApprovalDetailPage(
+                                        approvalId: message.replyToMessage!.approvalId!,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 12,
+                                    color:
+                                        isMyMessage
+                                            ? Colors.white60
+                                            : Colors.black54,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      message.replyToMessage!.approval!.title,
                                       style: TextStyle(
                                         fontSize: 11,
                                         color:

@@ -28,6 +28,8 @@ abstract class ChatRepository extends Repository {
     String chatId,
     String text, {
     String? replyToMessageId,
+    String? taskId,
+    String? approvalId,
   });
 
   // WebSocket методы
@@ -49,6 +51,7 @@ abstract class ChatRepository extends Repository {
   Future<Either<Failure, void>> sendMessageViaWebSocket({
     required String text,
     String? taskId,
+    String? approvalId,
     String? replyToMessageId,
   });
 

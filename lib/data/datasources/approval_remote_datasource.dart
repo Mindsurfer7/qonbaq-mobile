@@ -1,0 +1,82 @@
+import '../datasources/datasource.dart';
+import '../../domain/entities/approval.dart';
+import '../../domain/entities/approval_decision.dart';
+import '../models/approval_model.dart';
+import '../models/approval_template_model.dart';
+import '../models/approval_comment_model.dart';
+import '../models/approval_attachment_model.dart';
+import '../models/approval_decision_model.dart';
+
+/// Удаленный источник данных для согласований (API)
+abstract class ApprovalRemoteDataSource extends DataSource {
+  // Шаблоны согласований
+  /// Создать шаблон
+  Future<ApprovalTemplateModel> createTemplate(ApprovalTemplateModel template);
+
+  /// Получить список шаблонов
+  Future<List<ApprovalTemplateModel>> getTemplates({String? businessId});
+
+  /// Получить шаблон по ID
+  Future<ApprovalTemplateModel> getTemplateById(String templateId);
+
+  /// Получить шаблон по коду
+  Future<ApprovalTemplateModel> getTemplateByCode(String code);
+
+  // Согласования
+  /// Создать согласование
+  Future<ApprovalModel> createApproval(ApprovalModel approval);
+
+  /// Получить список согласований
+  Future<List<ApprovalModel>> getApprovals({
+    String? businessId,
+    ApprovalStatus? status,
+    String? createdBy,
+    bool? canApprove, // Если true, возвращает только те, которые пользователь может одобрить
+    int? page,
+    int? limit,
+  });
+
+  /// Получить согласование по ID
+  Future<ApprovalModel> getApprovalById(String id);
+
+  /// Принять решение по согласованию
+  Future<ApprovalDecisionModel> decideApproval(
+    String id,
+    ApprovalDecisionType decision,
+    String? comment,
+  );
+
+  // Комментарии
+  /// Создать комментарий
+  Future<ApprovalCommentModel> createComment(String approvalId, String text);
+
+  /// Получить список комментариев
+  Future<List<ApprovalCommentModel>> getComments(String approvalId);
+
+  /// Обновить комментарий
+  Future<ApprovalCommentModel> updateComment(
+    String approvalId,
+    String commentId,
+    String text,
+  );
+
+  /// Удалить комментарий
+  Future<void> deleteComment(String approvalId, String commentId);
+
+  // Вложения
+  /// Добавить вложение
+  Future<ApprovalAttachmentModel> addAttachment(
+    String approvalId,
+    String fileUrl,
+    String? fileName,
+    String? fileType,
+    int? fileSize,
+  );
+
+  /// Получить список вложений
+  Future<List<ApprovalAttachmentModel>> getAttachments(String approvalId);
+
+  /// Удалить вложение
+  Future<void> deleteAttachment(String approvalId, String attachmentId);
+}
+

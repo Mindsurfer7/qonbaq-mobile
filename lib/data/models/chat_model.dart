@@ -15,6 +15,7 @@ class ChatModel extends Chat implements Model {
     required super.updatedAt,
     super.lastMessage,
     super.lastMessageTask,
+    super.lastMessageApproval,
   });
 
   /// Создание модели из JSON
@@ -90,6 +91,16 @@ class ChatModel extends Chat implements Model {
       );
     }
 
+    // Парсинг согласования последнего сообщения (если есть)
+    MessageApproval? lastMessageApproval;
+    if (json['lastMessageApproval'] != null) {
+      final approvalJson = json['lastMessageApproval'] as Map<String, dynamic>;
+      lastMessageApproval = MessageApproval(
+        id: approvalJson['id'] as String,
+        title: approvalJson['title'] as String,
+      );
+    }
+
     return ChatModel(
       id: json['id'] as String,
       participant1: participant1,
@@ -98,6 +109,7 @@ class ChatModel extends Chat implements Model {
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       lastMessage: lastMessage,
       lastMessageTask: lastMessageTask,
+      lastMessageApproval: lastMessageApproval,
     );
   }
 
@@ -117,6 +129,11 @@ class ChatModel extends Chat implements Model {
           'id': lastMessageTask!.id,
           'title': lastMessageTask!.title,
         },
+      if (lastMessageApproval != null)
+        'lastMessageApproval': {
+          'id': lastMessageApproval!.id,
+          'title': lastMessageApproval!.title,
+        },
     };
   }
 
@@ -130,6 +147,7 @@ class ChatModel extends Chat implements Model {
       updatedAt: updatedAt,
       lastMessage: lastMessage,
       lastMessageTask: lastMessageTask,
+      lastMessageApproval: lastMessageApproval,
     );
   }
 
@@ -143,6 +161,7 @@ class ChatModel extends Chat implements Model {
       updatedAt: chat.updatedAt,
       lastMessage: chat.lastMessage,
       lastMessageTask: chat.lastMessageTask,
+      lastMessageApproval: chat.lastMessageApproval,
     );
   }
 }

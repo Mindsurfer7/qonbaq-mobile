@@ -72,10 +72,17 @@ class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
     String chatId,
     String text, {
     String? replyToMessageId,
+    String? taskId,
+    String? approvalId,
   }) async {
     try {
-      final message =
-          await remoteDataSource.sendMessage(chatId, text, replyToMessageId: replyToMessageId);
+      final message = await remoteDataSource.sendMessage(
+        chatId,
+        text,
+        replyToMessageId: replyToMessageId,
+        taskId: taskId,
+        approvalId: approvalId,
+      );
       return Right(message.toEntity());
     } on ValidationException catch (e) {
       return Left(ValidationFailure(
@@ -161,6 +168,7 @@ class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
   Future<Either<Failure, void>> sendMessageViaWebSocket({
     required String text,
     String? taskId,
+    String? approvalId,
     String? replyToMessageId,
   }) async {
     if (webSocketDataSource == null) {
@@ -171,6 +179,7 @@ class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
       await webSocketDataSource!.sendMessage(
         text: text,
         taskId: taskId,
+        approvalId: approvalId,
         replyToMessageId: replyToMessageId,
       );
       return const Right(null);
