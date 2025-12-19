@@ -27,7 +27,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Message> _messages = [];
-  
+
   Chat? _chat;
   bool _isLoading = true;
   bool _isSending = false;
@@ -111,7 +111,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         // Прокручиваем к последнему сообщению
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients && _messages.isNotEmpty) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
           }
         });
       },
@@ -247,7 +249,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       wsResult.fold(
         (failure) {
           // Если WebSocket не сработал, пробуем через POST
-          print('⚠️ Ошибка отправки через WebSocket: ${failure.message}, пробуем POST');
+          print(
+            '⚠️ Ошибка отправки через WebSocket: ${failure.message}, пробуем POST',
+          );
           _sendMessageViaPost(text, replyToMessageId);
         },
         (_) {
@@ -267,7 +271,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   /// Отправить сообщение через POST (fallback)
-  Future<void> _sendMessageViaPost(String text, String? replyToMessageId) async {
+  Future<void> _sendMessageViaPost(
+    String text,
+    String? replyToMessageId,
+  ) async {
     final result = await widget.chatRepository.sendMessage(
       _chat!.id,
       text,
@@ -280,9 +287,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           _error = failure.message;
           _isSending = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_error!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_error!)));
       },
       (message) {
         setState(() {
@@ -316,7 +323,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   void _showMessageContextMenu(BuildContext context, Message message) {
     final isMyMessage = message.sender.id == _currentUserId;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -344,7 +351,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 // Показываем превью сообщения
                 if (!isMyMessage)
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
@@ -354,7 +364,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.3),
                           child: Text(
                             message.sender.name.isNotEmpty
                                 ? message.sender.name[0].toUpperCase()
@@ -491,9 +503,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey[300]!),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
               ),
               child: Row(
                 children: [
@@ -506,7 +516,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.reply, color: Theme.of(context).colorScheme.primary, size: 20),
+                  Icon(
+                    Icons.reply,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -516,8 +530,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           _replyToMessage!.sender.id == _currentUserId
                               ? 'Вы'
                               : _replyToMessage!.sender.name.isNotEmpty
-                                  ? _replyToMessage!.sender.name
-                                  : 'Пользователь',
+                              ? _replyToMessage!.sender.name
+                              : 'Пользователь',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -550,60 +564,60 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
           // Список сообщений
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _error!,
-                              style: TextStyle(color: Colors.red[700]),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadChat,
-                              child: const Text('Повторить'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Пока нет сообщений\nНачните переписку!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 16,
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            itemCount: _messages.length,
-                            itemBuilder: (context, index) {
-                              final message = _messages[index];
-                              final isMyMessage = message.sender.id == _currentUserId;
-                              final showAvatar = index == 0 ||
-                                  _messages[index - 1].sender.id != message.sender.id;
-
-                              return GestureDetector(
-                                onLongPress: () => _showMessageContextMenu(context, message),
-                                child: _buildMessageBubble(
-                                  message,
-                                  isMyMessage,
-                                  showAvatar,
-                                ),
-                              );
-                            },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _error!,
+                            style: TextStyle(color: Colors.red[700]),
+                            textAlign: TextAlign.center,
                           ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadChat,
+                            child: const Text('Повторить'),
+                          ),
+                        ],
+                      ),
+                    )
+                    : _messages.isEmpty
+                    ? Center(
+                      child: Text(
+                        'Пока нет сообщений\nНачните переписку!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      ),
+                    )
+                    : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isMyMessage = message.sender.id == _currentUserId;
+                        final showAvatar =
+                            index == 0 ||
+                            _messages[index - 1].sender.id != message.sender.id;
+
+                        return GestureDetector(
+                          onLongPress:
+                              () => _showMessageContextMenu(context, message),
+                          child: _buildMessageBubble(
+                            message,
+                            isMyMessage,
+                            showAvatar,
+                          ),
+                        );
+                      },
+                    ),
           ),
 
           // Поле ввода сообщения
@@ -618,10 +632,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: SafeArea(
               child: Row(
                 children: [
@@ -652,25 +663,27 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: _isSending
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                    child:
+                        _isSending
+                            ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
                               ),
+                            )
+                            : IconButton(
+                              icon: const Icon(Icons.send, color: Colors.white),
+                              onPressed: _sendMessage,
+                              padding: const EdgeInsets.all(12),
+                              constraints: const BoxConstraints(),
                             ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.send, color: Colors.white),
-                            onPressed: _sendMessage,
-                            padding: const EdgeInsets.all(12),
-                            constraints: const BoxConstraints(),
-                          ),
                   ),
                 ],
               ),
@@ -696,8 +709,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           if (!isMyMessage && showAvatar) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor:
-                  Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withOpacity(0.3),
               child: Text(
                 message.sender.name.isNotEmpty
                     ? message.sender.name[0].toUpperCase()
@@ -718,14 +732,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isMyMessage
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey[300],
+                color:
+                    isMyMessage
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[300],
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -752,9 +764,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         padding: const EdgeInsets.all(8),
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: isMyMessage
-                              ? Colors.white.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.5),
+                          color:
+                              isMyMessage
+                                  ? Colors.white.withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -762,18 +775,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             Icon(
                               Icons.work_outline,
                               size: 16,
-                              color: isMyMessage
-                                  ? Colors.white
-                                  : Theme.of(context).colorScheme.primary,
+                              color:
+                                  isMyMessage
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 message.task!.title,
                                 style: TextStyle(
-                                  color: isMyMessage
-                                      ? Colors.white
-                                      : Theme.of(context).colorScheme.primary,
+                                  color:
+                                      isMyMessage
+                                          ? Colors.white
+                                          : Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -784,9 +801,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             Icon(
                               Icons.arrow_forward_ios,
                               size: 12,
-                              color: isMyMessage
-                                  ? Colors.white70
-                                  : Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                              color:
+                                  isMyMessage
+                                      ? Colors.white70
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.7),
                             ),
                           ],
                         ),
@@ -800,15 +820,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       padding: const EdgeInsets.all(8),
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: isMyMessage
-                            ? Colors.white.withOpacity(0.15)
-                            : Colors.grey[400],
+                        color:
+                            isMyMessage
+                                ? Colors.white.withOpacity(0.15)
+                                : Colors.grey[400],
                         borderRadius: BorderRadius.circular(8),
                         border: Border(
                           left: BorderSide(
-                            color: isMyMessage
-                                ? Colors.white.withOpacity(0.5)
-                                : Colors.grey[600]!,
+                            color:
+                                isMyMessage
+                                    ? Colors.white.withOpacity(0.5)
+                                    : Colors.grey[600]!,
                             width: 3,
                           ),
                         ),
@@ -821,9 +843,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               Icon(
                                 Icons.reply,
                                 size: 14,
-                                color: isMyMessage
-                                    ? Colors.white70
-                                    : Colors.black54,
+                                color:
+                                    isMyMessage
+                                        ? Colors.white70
+                                        : Colors.black54,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -833,9 +856,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isMyMessage
-                                      ? Colors.white70
-                                      : Colors.black54,
+                                  color:
+                                      isMyMessage
+                                          ? Colors.white70
+                                          : Colors.black54,
                                 ),
                               ),
                             ],
@@ -847,9 +871,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
-                              color: isMyMessage
-                                  ? Colors.white70
-                                  : Colors.black87,
+                              color:
+                                  isMyMessage ? Colors.white70 : Colors.black87,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -871,9 +894,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                   Icon(
                                     Icons.work_outline,
                                     size: 12,
-                                    color: isMyMessage
-                                        ? Colors.white60
-                                        : Colors.black54,
+                                    color:
+                                        isMyMessage
+                                            ? Colors.white60
+                                            : Colors.black54,
                                   ),
                                   const SizedBox(width: 4),
                                   Expanded(
@@ -881,9 +905,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                       message.replyToMessage!.task!.title,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isMyMessage
-                                            ? Colors.white60
-                                            : Colors.black54,
+                                        color:
+                                            isMyMessage
+                                                ? Colors.white60
+                                                : Colors.black54,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -892,9 +917,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                   Icon(
                                     Icons.arrow_forward_ios,
                                     size: 10,
-                                    color: isMyMessage
-                                        ? Colors.white.withOpacity(0.5)
-                                        : Colors.black38,
+                                    color:
+                                        isMyMessage
+                                            ? Colors.white.withOpacity(0.5)
+                                            : Colors.black38,
                                   ),
                                 ],
                               ),
@@ -950,4 +976,3 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 }
-
