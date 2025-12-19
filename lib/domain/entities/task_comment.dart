@@ -35,3 +35,4 @@ class TaskComment extends Entity {
   String toString() => 'TaskComment(id: $id, text: ${text.substring(0, text.length > 20 ? 20 : text.length)}...)';
 }
 
+

@@ -59,6 +59,9 @@ dependencies:
   
   # QR-коды
   qr_flutter: ^4.1.0
+  
+  # WebSocket
+  web_socket_channel: ^2.4.0
 
 dev_dependencies:
   flutter_test:

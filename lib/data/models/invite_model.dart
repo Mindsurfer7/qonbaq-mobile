@@ -115,3 +115,4 @@ class CreateInviteResultModel extends CreateInviteResult implements Model {
 }
 
 
+

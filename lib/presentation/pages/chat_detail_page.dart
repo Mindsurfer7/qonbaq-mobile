@@ -34,6 +34,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   String? _error;
   Message? _replyToMessage; // Сообщение, на которое отвечаем
   String? _currentUserId;
+  bool _isWebSocketConnected = false;
+  bool _useWebSocket = true; // Флаг для использования WebSocket
 
   @override
   void initState() {
@@ -80,6 +82,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
         // Загружаем сообщения
         await _loadMessages(chat.id);
+
+        // Подключаемся к WebSocket после загрузки сообщений
+        if (_useWebSocket) {
+          await _connectWebSocket(chat.id);
+        }
       },
     );
   }
@@ -111,8 +118,110 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
+  /// Подключиться к WebSocket
+  Future<void> _connectWebSocket(String chatId) async {
+    final result = await widget.chatRepository.connectWebSocket(
+      chatId,
+      onNewMessage: (message) {
+        // Добавляем новое сообщение от другого пользователя
+        if (mounted) {
+          setState(() {
+            // Проверяем, нет ли уже такого сообщения (избегаем дубликатов)
+            if (!_messages.any((m) => m.id == message.id)) {
+              _messages.add(message);
+            }
+          });
+
+          // Прокручиваем к последнему сообщению
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      },
+      onMessageSent: (message) {
+        // Подтверждение отправки нашего сообщения
+        if (mounted) {
+          setState(() {
+            // Заменяем временное сообщение на подтвержденное
+            final index = _messages.indexWhere((m) => m.id == message.id);
+            if (index != -1) {
+              _messages[index] = message;
+            } else {
+              // Если сообщения еще нет, добавляем
+              if (!_messages.any((m) => m.id == message.id)) {
+                _messages.add(message);
+              }
+            }
+            _isSending = false;
+          });
+
+          // Прокручиваем к последнему сообщению
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      },
+      onConnected: () {
+        if (mounted) {
+          setState(() {
+            _isWebSocketConnected = true;
+          });
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          print('⚠️ WebSocket ошибка: $error');
+          // Если WebSocket не работает, переключаемся на POST
+          if (!_isWebSocketConnected) {
+            setState(() {
+              _useWebSocket = false;
+            });
+          }
+        }
+      },
+      onDisconnected: () {
+        if (mounted) {
+          setState(() {
+            _isWebSocketConnected = false;
+          });
+        }
+      },
+    );
+
+    result.fold(
+      (failure) {
+        print('⚠️ Не удалось подключиться к WebSocket: ${failure.message}');
+        // Переключаемся на POST, если WebSocket не работает
+        if (mounted) {
+          setState(() {
+            _useWebSocket = false;
+          });
+        }
+      },
+      (_) {
+        // Успешное подключение
+      },
+    );
+  }
+
   @override
   void dispose() {
+    // Отключаемся от WebSocket при закрытии страницы
+    if (_chat != null && _isWebSocketConnected) {
+      widget.chatRepository.disconnectWebSocket();
+    }
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -128,6 +237,37 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
     final replyToMessageId = _replyToMessage?.id;
 
+    // Пытаемся отправить через WebSocket, если подключен
+    if (_useWebSocket && _isWebSocketConnected) {
+      final wsResult = await widget.chatRepository.sendMessageViaWebSocket(
+        text: text,
+        replyToMessageId: replyToMessageId,
+      );
+
+      wsResult.fold(
+        (failure) {
+          // Если WebSocket не сработал, пробуем через POST
+          print('⚠️ Ошибка отправки через WebSocket: ${failure.message}, пробуем POST');
+          _sendMessageViaPost(text, replyToMessageId);
+        },
+        (_) {
+          // Сообщение отправлено через WebSocket, очищаем поле ввода
+          // Ответ придет через onMessageSent callback
+          setState(() {
+            _messageController.clear();
+            _replyToMessage = null;
+            // _isSending будет установлен в false в onMessageSent
+          });
+        },
+      );
+    } else {
+      // Используем POST запрос
+      _sendMessageViaPost(text, replyToMessageId);
+    }
+  }
+
+  /// Отправить сообщение через POST (fallback)
+  Future<void> _sendMessageViaPost(String text, String? replyToMessageId) async {
     final result = await widget.chatRepository.sendMessage(
       _chat!.id,
       text,
@@ -162,9 +302,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             );
           }
         });
-
-        // Обновляем чат (чтобы последнее сообщение обновилось)
-        _loadMessages(_chat!.id);
       },
     );
   }

@@ -4,16 +4,19 @@ import '../../domain/entities/message.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../core/error/failures.dart';
 import '../datasources/chat_remote_datasource.dart';
+import '../datasources/chat_websocket_datasource.dart';
 import '../repositories/repository_impl.dart';
 import '../datasources/chat_remote_datasource_impl.dart';
 
 /// Реализация репозитория чатов
-/// Использует Remote DataSource
+/// Использует Remote DataSource и WebSocket DataSource
 class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
   final ChatRemoteDataSource remoteDataSource;
+  final ChatWebSocketDataSource? webSocketDataSource;
 
   ChatRepositoryImpl({
     required this.remoteDataSource,
+    this.webSocketDataSource,
   });
 
   @override
@@ -83,6 +86,102 @@ class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
     } catch (e) {
       return Left(ServerFailure('Ошибка при отправке сообщения: $e'));
     }
+  }
+
+  // WebSocket методы
+
+  @override
+  Future<Either<Failure, void>> connectWebSocket(
+    String chatId, {
+    required void Function(Message) onNewMessage,
+    required void Function(Message) onMessageSent,
+    required void Function() onConnected,
+    void Function(String)? onError,
+    void Function()? onDisconnected,
+  }) async {
+    if (webSocketDataSource == null) {
+      return Left(ServerFailure('WebSocket datasource не настроен'));
+    }
+
+    try {
+      await webSocketDataSource!.connect(
+        chatId,
+        onMessage: (event) {
+          switch (event.type) {
+            case WebSocketEventType.connected:
+              onConnected();
+              break;
+            case WebSocketEventType.newMessage:
+              if (event.message != null) {
+                onNewMessage(event.message!.toEntity());
+              }
+              break;
+            case WebSocketEventType.messageSent:
+              if (event.message != null) {
+                onMessageSent(event.message!.toEntity());
+              }
+              break;
+            case WebSocketEventType.error:
+              if (event.error != null) {
+                onError?.call(event.error!);
+              }
+              break;
+            case WebSocketEventType.pong:
+              // Игнорируем pong
+              break;
+          }
+        },
+        onError: (error) {
+          onError?.call(error);
+        },
+        onConnected: onConnected,
+        onDisconnected: onDisconnected,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка подключения к WebSocket: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> disconnectWebSocket() async {
+    if (webSocketDataSource == null) {
+      return Left(ServerFailure('WebSocket datasource не настроен'));
+    }
+
+    try {
+      await webSocketDataSource!.disconnect();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка отключения от WebSocket: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> sendMessageViaWebSocket({
+    required String text,
+    String? taskId,
+    String? replyToMessageId,
+  }) async {
+    if (webSocketDataSource == null) {
+      return Left(ServerFailure('WebSocket datasource не настроен'));
+    }
+
+    try {
+      await webSocketDataSource!.sendMessage(
+        text: text,
+        taskId: taskId,
+        replyToMessageId: replyToMessageId,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка отправки сообщения через WebSocket: $e'));
+    }
+  }
+
+  @override
+  bool get isWebSocketConnected {
+    return webSocketDataSource?.isConnected ?? false;
   }
 }
 

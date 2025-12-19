@@ -46,3 +46,4 @@ class Chat extends Entity {
       'Chat(id: $id, participant1: ${participant1.name}, participant2: ${participant2.name})';
 }
 
+

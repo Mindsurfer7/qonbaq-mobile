@@ -84,3 +84,4 @@ class Message extends Entity {
       'Message(id: $id, text: ${text.length > 30 ? text.substring(0, 30) : text}..., isTaskComment: $isTaskComment)';
 }
 
+

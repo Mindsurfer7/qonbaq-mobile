@@ -19,3 +19,4 @@ abstract class WorkDayRemoteDataSource extends DataSource {
   Future<WorkDayStatisticsModel> getStatistics(String businessId, String month);
 }
 
+

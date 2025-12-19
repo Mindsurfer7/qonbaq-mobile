@@ -88,6 +88,7 @@ import 'package:qonbaq/domain/usecases/mark_absent.dart';
 import 'package:qonbaq/domain/usecases/get_workday_status.dart';
 import 'package:qonbaq/domain/usecases/get_workday_statistics.dart';
 import 'package:qonbaq/data/datasources/chat_remote_datasource_impl.dart';
+import 'package:qonbaq/data/datasources/chat_websocket_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/chat_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/chat_repository.dart';
 
@@ -195,8 +196,10 @@ class MyApp extends StatelessWidget {
 
     // Инициализация зависимостей для чатов
     final chatRemoteDataSource = ChatRemoteDataSourceImpl(apiClient: apiClient);
+    final chatWebSocketDataSource = ChatWebSocketDataSourceImpl();
     final ChatRepository chatRepository = ChatRepositoryImpl(
       remoteDataSource: chatRemoteDataSource,
+      webSocketDataSource: chatWebSocketDataSource,
     );
 
     return MultiProvider(

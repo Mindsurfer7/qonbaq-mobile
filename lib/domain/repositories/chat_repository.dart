@@ -23,11 +23,36 @@ abstract class ChatRepository extends Repository {
   /// Получить сообщения чата
   Future<Either<Failure, List<Message>>> getChatMessages(String chatId);
 
-  /// Отправить сообщение в чат
+  /// Отправить сообщение в чат (REST API - для обратной совместимости)
   Future<Either<Failure, Message>> sendMessage(
     String chatId,
     String text, {
     String? replyToMessageId,
   });
+
+  // WebSocket методы
+
+  /// Подключиться к WebSocket чата
+  Future<Either<Failure, void>> connectWebSocket(
+    String chatId, {
+    required void Function(Message) onNewMessage,
+    required void Function(Message) onMessageSent,
+    required void Function() onConnected,
+    void Function(String)? onError,
+    void Function()? onDisconnected,
+  });
+
+  /// Отключиться от WebSocket чата
+  Future<Either<Failure, void>> disconnectWebSocket();
+
+  /// Отправить сообщение через WebSocket
+  Future<Either<Failure, void>> sendMessageViaWebSocket({
+    required String text,
+    String? taskId,
+    String? replyToMessageId,
+  });
+
+  /// Проверить, подключен ли WebSocket
+  bool get isWebSocketConnected;
 }
 
