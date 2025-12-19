@@ -126,28 +126,28 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-
   @override
   Widget build(BuildContext context) {
     // Инициализация зависимостей
     // Сначала создаем базовый ApiClient для auth (без интерсептора, чтобы избежать рекурсии)
     final baseApiClient = ApiClient(baseUrl: AppConstants.apiBaseUrl);
     final authRemoteDataSource = AuthRemoteDataSource(apiClient: baseApiClient);
-    
+
     // Создаем интерсептор (использует baseApiClient для обновления токена)
     final authInterceptor = AuthInterceptor(
       authDataSource: authRemoteDataSource,
       navigatorKey: navigatorKey,
     );
-    
+
     // Создаем ApiClient с интерсептором для всех остальных запросов
     final apiClient = ApiClient(
       baseUrl: AppConstants.apiBaseUrl,
       authInterceptor: authInterceptor,
     );
-    
+
     final AuthRepository authRepository = AuthRepositoryImpl(
-      remoteDataSource: authRemoteDataSource, // Используем baseApiClient для auth
+      remoteDataSource:
+          authRemoteDataSource, // Используем baseApiClient для auth
     );
     final registerUser = RegisterUser(authRepository);
     final loginUser = LoginUser(authRepository);
@@ -187,7 +187,9 @@ class MyApp extends StatelessWidget {
     final deleteTaskComment = DeleteTaskComment(taskRepository);
 
     // Инициализация зависимостей для приглашений
-    final inviteRemoteDataSource = InviteRemoteDataSourceImpl(apiClient: apiClient);
+    final inviteRemoteDataSource = InviteRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final InviteRepository inviteRepository = InviteRepositoryImpl(
       remoteDataSource: inviteRemoteDataSource,
     );
@@ -199,7 +201,9 @@ class MyApp extends StatelessWidget {
     );
 
     // Инициализация зависимостей для рабочего дня
-    final workDayRemoteDataSource = WorkDayRemoteDataSourceImpl(apiClient: apiClient);
+    final workDayRemoteDataSource = WorkDayRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final WorkDayRepository workDayRepository = WorkDayRepositoryImpl(
       remoteDataSource: workDayRemoteDataSource,
     );
@@ -218,7 +222,9 @@ class MyApp extends StatelessWidget {
     );
 
     // Инициализация зависимостей для подразделений
-    final departmentRemoteDataSource = DepartmentRemoteDataSourceImpl(apiClient: apiClient);
+    final departmentRemoteDataSource = DepartmentRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final DepartmentRepository departmentRepository = DepartmentRepositoryImpl(
       remoteDataSource: departmentRemoteDataSource,
     );
@@ -227,10 +233,18 @@ class MyApp extends StatelessWidget {
     final updateDepartment = UpdateDepartment(departmentRepository);
     final deleteDepartment = DeleteDepartment(departmentRepository);
     final setDepartmentManager = SetDepartmentManager(departmentRepository);
-    final removeDepartmentManager = RemoveDepartmentManager(departmentRepository);
-    final assignEmployeeToDepartment = AssignEmployeeToDepartment(departmentRepository);
-    final removeEmployeeFromDepartment = RemoveEmployeeFromDepartment(departmentRepository);
-    final assignEmployeesToDepartment = AssignEmployeesToDepartment(departmentRepository);
+    final removeDepartmentManager = RemoveDepartmentManager(
+      departmentRepository,
+    );
+    final assignEmployeeToDepartment = AssignEmployeeToDepartment(
+      departmentRepository,
+    );
+    final removeEmployeeFromDepartment = RemoveEmployeeFromDepartment(
+      departmentRepository,
+    );
+    final assignEmployeesToDepartment = AssignEmployeesToDepartment(
+      departmentRepository,
+    );
     final departmentProvider = DepartmentProvider(
       getBusinessDepartments: getBusinessDepartments,
       createDepartment: createDepartment,
@@ -338,8 +352,7 @@ class MyApp extends StatelessWidget {
           '/business/admin/hr_documents': (context) => const HrDocumentsPage(),
           '/business/admin/staff_schedule':
               (context) => const StaffSchedulePage(),
-          '/business/admin/timesheet':
-              (context) => const TimesheetPage(),
+          '/business/admin/timesheet': (context) => const TimesheetPage(),
           // Аналитический блок
           '/business/analytics': (context) => const AnalyticsBlockPage(),
           // Общие разделы
@@ -347,9 +360,11 @@ class MyApp extends StatelessWidget {
           '/chats_email': (context) => const ChatsEmailPage(),
           '/calendar': (context) => const CalendarPage(),
           '/profile_settings': (context) => const ProfileSettingsPage(),
-          '/organizational_structure': (context) => const OrganizationalStructurePage(),
+          '/organizational_structure':
+              (context) => const OrganizationalStructurePage(),
           '/department_detail': (context) {
-            final departmentId = ModalRoute.of(context)!.settings.arguments as String?;
+            final departmentId =
+                ModalRoute.of(context)!.settings.arguments as String?;
             if (departmentId == null) {
               return const Scaffold(
                 body: Center(child: Text('ID подразделения не указан')),
@@ -359,7 +374,8 @@ class MyApp extends StatelessWidget {
           },
           '/tasks': (context) => const TasksPage(),
           '/tasks/detail': (context) {
-            final taskId = ModalRoute.of(context)!.settings.arguments as String?;
+            final taskId =
+                ModalRoute.of(context)!.settings.arguments as String?;
             if (taskId == null) {
               return const Scaffold(
                 body: Center(child: Text('ID задачи не указан')),

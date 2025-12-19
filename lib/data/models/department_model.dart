@@ -27,9 +27,9 @@ class DepartmentModel extends Department implements Model {
     if (json['manager'] != null) {
       final managerJson = json['manager'] as Map<String, dynamic>;
       manager = DepartmentManager(
-        id: managerJson['id'] as String,
-        email: managerJson['email'] as String,
-        username: managerJson['username'] as String,
+        id: managerJson['id'] as String? ?? '',
+        email: managerJson['email'] as String? ?? '',
+        username: managerJson['username'] as String? ?? '',
         firstName: managerJson['firstName'] as String?,
         lastName: managerJson['lastName'] as String?,
         patronymic: managerJson['patronymic'] as String?,
@@ -41,8 +41,8 @@ class DepartmentModel extends Department implements Model {
     if (json['business'] != null) {
       final businessJson = json['business'] as Map<String, dynamic>;
       business = BusinessInfo(
-        id: businessJson['id'] as String,
-        name: businessJson['name'] as String,
+        id: businessJson['id'] as String? ?? '',
+        name: businessJson['name'] as String? ?? '',
       );
     }
 
@@ -51,8 +51,8 @@ class DepartmentModel extends Department implements Model {
     if (json['parent'] != null) {
       final parentJson = json['parent'] as Map<String, dynamic>;
       parent = DepartmentInfo(
-        id: parentJson['id'] as String,
-        name: parentJson['name'] as String,
+        id: parentJson['id'] as String? ?? '',
+        name: parentJson['name'] as String? ?? '',
         description: parentJson['description'] as String?,
       );
     }
@@ -65,8 +65,8 @@ class DepartmentModel extends Department implements Model {
           .map((item) {
             final childJson = item as Map<String, dynamic>;
             return DepartmentInfo(
-              id: childJson['id'] as String,
-              name: childJson['name'] as String,
+              id: childJson['id'] as String? ?? '',
+              name: childJson['name'] as String? ?? '',
               description: childJson['description'] as String?,
             );
           })
@@ -81,9 +81,9 @@ class DepartmentModel extends Department implements Model {
           .map((item) {
             final empJson = item as Map<String, dynamic>;
             return DepartmentEmployee(
-              id: empJson['id'] as String,
-              email: empJson['email'] as String,
-              username: empJson['username'] as String,
+              id: empJson['id'] as String? ?? '',
+              email: empJson['email'] as String? ?? '',
+              username: empJson['username'] as String? ?? '',
               firstName: empJson['firstName'] as String?,
               lastName: empJson['lastName'] as String?,
               patronymic: empJson['patronymic'] as String?,
@@ -95,11 +95,31 @@ class DepartmentModel extends Department implements Model {
           .toList();
     }
 
+    // Парсим основные поля с безопасной обработкой null
+    final id = json['id'] as String? ?? '';
+    final name = json['name'] as String? ?? '';
+    final businessId = json['businessId'] as String? ?? '';
+    
+    // Парсим даты с безопасной обработкой
+    DateTime createdAt;
+    DateTime updatedAt;
+    try {
+      createdAt = json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now();
+      updatedAt = json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now();
+    } catch (e) {
+      createdAt = DateTime.now();
+      updatedAt = DateTime.now();
+    }
+
     return DepartmentModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: id,
+      name: name,
       description: json['description'] as String?,
-      businessId: json['businessId'] as String,
+      businessId: businessId,
       parentId: json['parentId'] as String?,
       managerId: manager?.id ?? json['managerId'] as String?,
       manager: manager,
@@ -109,8 +129,8 @@ class DepartmentModel extends Department implements Model {
       parent: parent,
       children: children,
       employees: employees,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 

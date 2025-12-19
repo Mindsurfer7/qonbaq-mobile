@@ -303,10 +303,16 @@ class DepartmentProvider with ChangeNotifier {
       (updatedDepartment) {
         // Обновляем текущее подразделение
         if (_currentDepartment?.id == departmentId) {
-          _currentDepartment = updatedDepartment;
+          // Если ответ неполный (нет businessId), перезагружаем полную информацию
+          if (updatedDepartment.businessId.isEmpty) {
+            // Перезагружаем асинхронно, не блокируя возврат
+            loadDepartmentDetails(departmentId);
+          } else {
+            _currentDepartment = updatedDepartment;
+          }
         }
-        // Обновляем в списке
-        if (_departments != null) {
+        // Обновляем в списке только если ответ полный
+        if (_departments != null && updatedDepartment.businessId.isNotEmpty) {
           final index = _departments!.indexWhere((d) => d.id == departmentId);
           if (index != -1) {
             _departments![index] = updatedDepartment;
@@ -340,10 +346,16 @@ class DepartmentProvider with ChangeNotifier {
       (updatedDepartment) {
         // Обновляем текущее подразделение
         if (_currentDepartment?.id == departmentId) {
-          _currentDepartment = updatedDepartment;
+          // Если ответ неполный (нет businessId), перезагружаем полную информацию
+          if (updatedDepartment.businessId.isEmpty) {
+            // Перезагружаем асинхронно, не блокируя возврат
+            loadDepartmentDetails(departmentId);
+          } else {
+            _currentDepartment = updatedDepartment;
+          }
         }
-        // Обновляем в списке
-        if (_departments != null) {
+        // Обновляем в списке только если ответ полный
+        if (_departments != null && updatedDepartment.businessId.isNotEmpty) {
           final index = _departments!.indexWhere((d) => d.id == departmentId);
           if (index != -1) {
             _departments![index] = updatedDepartment;
