@@ -738,40 +738,58 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 children: [
                   // Показываем информацию о задаче, если сообщение связано с задачей
                   if (message.isTaskComment && message.task != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: isMyMessage
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.white.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.work_outline,
-                            size: 16,
-                            color: isMyMessage
-                                ? Colors.white
-                                : Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              message.task!.title,
-                              style: TextStyle(
-                                color: isMyMessage
-                                    ? Colors.white
-                                    : Theme.of(context).colorScheme.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                    GestureDetector(
+                      onTap: () {
+                        // Переход на страницу задачи
+                        if (message.taskId != null) {
+                          Navigator.of(context).pushNamed(
+                            '/tasks/detail',
+                            arguments: message.taskId,
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isMyMessage
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.work_outline,
+                              size: 16,
+                              color: isMyMessage
+                                  ? Colors.white
+                                  : Theme.of(context).colorScheme.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                message.task!.title,
+                                style: TextStyle(
+                                  color: isMyMessage
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color: isMyMessage
+                                  ? Colors.white70
+                                  : Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -838,30 +856,48 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           // Показываем задачу в реплае, если есть
                           if (message.replyToMessage!.task != null) ...[
                             const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.work_outline,
-                                  size: 12,
-                                  color: isMyMessage
-                                      ? Colors.white60
-                                      : Colors.black54,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    message.replyToMessage!.task!.title,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isMyMessage
-                                          ? Colors.white60
-                                          : Colors.black54,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                            GestureDetector(
+                              onTap: () {
+                                // Переход на страницу задачи из реплая
+                                if (message.replyToMessage!.taskId != null) {
+                                  Navigator.of(context).pushNamed(
+                                    '/tasks/detail',
+                                    arguments: message.replyToMessage!.taskId,
+                                  );
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.work_outline,
+                                    size: 12,
+                                    color: isMyMessage
+                                        ? Colors.white60
+                                        : Colors.black54,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      message.replyToMessage!.task!.title,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isMyMessage
+                                            ? Colors.white60
+                                            : Colors.black54,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 10,
+                                    color: isMyMessage
+                                        ? Colors.white.withOpacity(0.5)
+                                        : Colors.black38,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ],
