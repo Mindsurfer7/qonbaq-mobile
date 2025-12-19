@@ -6,10 +6,7 @@ class MessageTask extends Entity {
   final String id;
   final String title;
 
-  const MessageTask({
-    required this.id,
-    required this.title,
-  });
+  const MessageTask({required this.id, required this.title});
 
   @override
   bool operator ==(Object other) =>
@@ -46,13 +43,13 @@ class Message extends Entity {
   final User sender;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Информация о задаче
   final String? taskId;
   final String? taskCommentId;
   final MessageTask? task;
   final bool isTaskComment;
-  
+
   // Информация о реплае
   final ReplyToMessage? replyToMessage;
 
@@ -72,9 +69,7 @@ class Message extends Entity {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Message &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      other is Message && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
@@ -83,5 +78,3 @@ class Message extends Entity {
   String toString() =>
       'Message(id: $id, text: ${text.length > 30 ? text.substring(0, 30) : text}..., isTaskComment: $isTaskComment)';
 }
-
-

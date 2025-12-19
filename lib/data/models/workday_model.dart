@@ -102,7 +102,7 @@ class WorkDayDetailModel extends WorkDayDetail {
   factory WorkDayDetailModel.fromJson(Map<String, dynamic> json) {
     return WorkDayDetailModel(
       date: DateTime.parse(json['date'] as String),
-      hours: (json['hours'] as num).toDouble(),
+      hours: (json['hours'] as num?)?.toDouble() ?? 0.0,
       status: WorkDayModel._parseStatus(json['status'] as String),
     );
   }
@@ -122,7 +122,7 @@ class WorkDayNormModel extends WorkDayNorm {
 
   factory WorkDayNormModel.fromJson(Map<String, dynamic> json) {
     return WorkDayNormModel(
-      days: json['days'] as int,
+      days: json['days'] as int? ?? 22,
     );
   }
 
@@ -158,8 +158,8 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
   }) {
     // Извлекаем данные из вложенной структуры
     final period = json['period'] as Map<String, dynamic>?;
-    final statistics = json['statistics'] as Map<String, dynamic>? ?? {};
-    final normJson = json['norm'] as Map<String, dynamic>? ?? {'days': 22};
+    final statistics = json['statistics'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    final normJson = json['norm'] as Map<String, dynamic>? ?? <String, dynamic>{'days': 22};
     final workDaysJson = json['workDays'] as List<dynamic>? ?? [];
     
     // Месяц из period или из корня
@@ -170,22 +170,35 @@ class WorkDayStatisticsModel extends WorkDayStatistics implements Model {
     // businessId должен передаваться извне, так как его нет в ответе API
     final finalBusinessId = businessId ?? json['businessId'] as String? ?? '';
     
+    // Безопасное извлечение числовых значений
+    int? _getInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return null;
+    }
+    
+    double? _getDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is num) return value.toDouble();
+      return null;
+    }
+    
     return WorkDayStatisticsModel(
       businessId: finalBusinessId,
       month: month,
-      workedDays: statistics['workedDays'] as int? ?? 0,
-      absentDays: statistics['absentDays'] as int? ?? 0,
-      totalHours: (statistics['totalHours'] as num?)?.toDouble() ?? 0.0,
-      avgHoursPerDay: statistics['avgHoursPerDay'] != null
-          ? (statistics['avgHoursPerDay'] as num).toDouble()
-          : null,
-      daysDifference: statistics['daysDifference'] as int? ?? 0,
+      workedDays: _getInt(statistics['workedDays']) ?? 0,
+      absentDays: _getInt(statistics['absentDays']) ?? 0,
+      totalHours: _getDouble(statistics['totalHours']) ?? 0.0,
+      avgHoursPerDay: _getDouble(statistics['avgHoursPerDay']),
+      daysDifference: _getInt(statistics['daysDifference']) ?? 0,
       isOverNorm: statistics['isOverNorm'] as bool? ?? false,
       isUnderNorm: statistics['isUnderNorm'] as bool? ?? false,
-      completionPercentage: (statistics['completionPercentage'] as num?)?.toDouble() ?? 0.0,
+      completionPercentage: _getDouble(statistics['completionPercentage']) ?? 0.0,
       norm: WorkDayNormModel.fromJson(normJson),
-      completedDays: statistics['completedDays'] as int? ?? 0,
-      startedDays: statistics['startedDays'] as int? ?? 0,
+      completedDays: _getInt(statistics['completedDays']) ?? 0,
+      startedDays: _getInt(statistics['startedDays']) ?? 0,
       days: workDaysJson
           .map((day) => WorkDayDetailModel.fromJson(day as Map<String, dynamic>))
           .toList(),

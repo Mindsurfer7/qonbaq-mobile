@@ -22,28 +22,19 @@ class OperationalTasksPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: ListTile(
-              title: const Text('Задача 1'),
-              subtitle: const Text('Пример задачи'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed('/business/operational/tasks/task_card');
-              },
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'Нет задач',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
-
-
-
-

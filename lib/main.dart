@@ -52,6 +52,8 @@ import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
 import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
+import 'package:qonbaq/presentation/pages/organizational_structure_page.dart';
+import 'package:qonbaq/presentation/pages/department_detail_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
 import 'package:qonbaq/presentation/providers/profile_provider.dart';
 import 'package:qonbaq/presentation/providers/invite_provider.dart';
@@ -91,6 +93,19 @@ import 'package:qonbaq/data/datasources/chat_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/chat_websocket_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/chat_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/chat_repository.dart';
+import 'package:qonbaq/data/datasources/department_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/department_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/department_repository.dart';
+import 'package:qonbaq/domain/usecases/get_business_departments.dart';
+import 'package:qonbaq/domain/usecases/create_department.dart';
+import 'package:qonbaq/domain/usecases/update_department.dart';
+import 'package:qonbaq/domain/usecases/delete_department.dart';
+import 'package:qonbaq/domain/usecases/set_department_manager.dart';
+import 'package:qonbaq/domain/usecases/remove_department_manager.dart';
+import 'package:qonbaq/domain/usecases/assign_employee_to_department.dart';
+import 'package:qonbaq/domain/usecases/remove_employee_from_department.dart';
+import 'package:qonbaq/domain/usecases/assign_employees_to_department.dart';
+import 'package:qonbaq/presentation/providers/department_provider.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -202,11 +217,39 @@ class MyApp extends StatelessWidget {
       webSocketDataSource: chatWebSocketDataSource,
     );
 
+    // Инициализация зависимостей для подразделений
+    final departmentRemoteDataSource = DepartmentRemoteDataSourceImpl(apiClient: apiClient);
+    final DepartmentRepository departmentRepository = DepartmentRepositoryImpl(
+      remoteDataSource: departmentRemoteDataSource,
+    );
+    final getBusinessDepartments = GetBusinessDepartments(departmentRepository);
+    final createDepartment = CreateDepartment(departmentRepository);
+    final updateDepartment = UpdateDepartment(departmentRepository);
+    final deleteDepartment = DeleteDepartment(departmentRepository);
+    final setDepartmentManager = SetDepartmentManager(departmentRepository);
+    final removeDepartmentManager = RemoveDepartmentManager(departmentRepository);
+    final assignEmployeeToDepartment = AssignEmployeeToDepartment(departmentRepository);
+    final removeEmployeeFromDepartment = RemoveEmployeeFromDepartment(departmentRepository);
+    final assignEmployeesToDepartment = AssignEmployeesToDepartment(departmentRepository);
+    final departmentProvider = DepartmentProvider(
+      getBusinessDepartments: getBusinessDepartments,
+      createDepartment: createDepartment,
+      updateDepartment: updateDepartment,
+      deleteDepartment: deleteDepartment,
+      setDepartmentManager: setDepartmentManager,
+      removeDepartmentManager: removeDepartmentManager,
+      assignEmployeeToDepartment: assignEmployeeToDepartment,
+      removeEmployeeFromDepartment: removeEmployeeFromDepartment,
+      assignEmployeesToDepartment: assignEmployeesToDepartment,
+      departmentRepository: departmentRepository,
+    );
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
         ChangeNotifierProvider(create: (_) => profileProvider),
         ChangeNotifierProvider(create: (_) => inviteProvider),
+        ChangeNotifierProvider(create: (_) => departmentProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
@@ -304,6 +347,16 @@ class MyApp extends StatelessWidget {
           '/chats_email': (context) => const ChatsEmailPage(),
           '/calendar': (context) => const CalendarPage(),
           '/profile_settings': (context) => const ProfileSettingsPage(),
+          '/organizational_structure': (context) => const OrganizationalStructurePage(),
+          '/department_detail': (context) {
+            final departmentId = ModalRoute.of(context)!.settings.arguments as String?;
+            if (departmentId == null) {
+              return const Scaffold(
+                body: Center(child: Text('ID подразделения не указан')),
+              );
+            }
+            return DepartmentDetailPage(departmentId: departmentId);
+          },
           '/tasks': (context) => const TasksPage(),
           '/tasks/detail': (context) {
             final taskId = ModalRoute.of(context)!.settings.arguments as String?;

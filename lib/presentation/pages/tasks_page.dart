@@ -8,8 +8,15 @@ import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/create_task_form.dart';
 import '../widgets/business_selector_widget.dart';
+
+/// Тип фильтра задач
+enum TaskFilter {
+  myTasks, // Мои задачи
+  allTasks, // Все задачи
+}
 
 /// Страница задач
 class TasksPage extends StatefulWidget {
@@ -23,6 +30,7 @@ class _TasksPageState extends State<TasksPage> {
   bool _isLoadingTasks = false;
   String? _error;
   List<Task> _tasks = [];
+  TaskFilter _taskFilter = TaskFilter.myTasks; // По умолчанию "Мои задачи"
 
   void _showCreateTaskDialog(
     CreateTask createTaskUseCase,
@@ -37,7 +45,7 @@ class _TasksPageState extends State<TasksPage> {
             userRepository: userRepository,
             createTaskUseCase: createTaskUseCase,
             onSuccess: () {
-              // Обновляем список задач
+              // Обновляем список задач после создания
               final profileProvider = Provider.of<ProfileProvider>(
                 context,
                 listen: false,
@@ -70,8 +78,35 @@ class _TasksPageState extends State<TasksPage> {
       _error = null;
     });
 
+    // Получаем информацию о пользователе для определения прав
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    final profile = profileProvider.profile;
+    
+    // Определяем, является ли пользователь админом или директором
+    final isAdminOrDirector = currentUser?.isAdmin == true || 
+                              profile?.orgStructure.isGeneralDirector == true;
+    
+    // Определяем, нужно ли передавать assignedTo
+    String? assignedTo;
+    if (_taskFilter == TaskFilter.myTasks && isAdminOrDirector) {
+      // Для админов/директоров при выборе "Мои задачи" передаем ID пользователя
+      assignedTo = currentUser?.id;
+    } else if (_taskFilter == TaskFilter.allTasks && isAdminOrDirector) {
+      // Для админов/директоров при выборе "Все задачи" НЕ передаем assignedTo
+      // чтобы бэкенд вернул все задачи компании
+      assignedTo = null;
+    }
+    // Для обычных пользователей не передаем assignedTo
+    // (бэкенд сам отфильтрует и вернет только их задачи и задачи, за которыми они наблюдают)
+
     final result = await getTasksUseCase.call(
-      GetTasksParams(businessId: businessId, limit: 50),
+      GetTasksParams(
+        businessId: businessId,
+        assignedTo: assignedTo,
+        limit: 50,
+      ),
     );
 
     result.fold(
@@ -103,16 +138,54 @@ class _TasksPageState extends State<TasksPage> {
     super.initState();
     // Загружаем задачи после инициализации виджета
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(
         context,
         listen: false,
       );
+      final currentUser = authProvider.user;
+      final profile = profileProvider.profile;
+      
+      // Для директоров и админов по умолчанию показываем "Все задачи"
+      final isAdminOrDirector = currentUser?.isAdmin == true || 
+                                profile?.orgStructure.isGeneralDirector == true;
+      if (isAdminOrDirector) {
+        _taskFilter = TaskFilter.allTasks;
+      }
+      
       final selectedBusiness = profileProvider.selectedBusiness;
       final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
       if (selectedBusiness != null) {
         _loadTasks(getTasksUseCase, selectedBusiness.id);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Проверяем, нужно ли обновить фильтр при загрузке профиля
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    final profile = profileProvider.profile;
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final isAdminOrDirector = currentUser?.isAdmin == true || 
+                             profile?.orgStructure.isGeneralDirector == true;
+    
+    // Если профиль загрузился и пользователь директор, но фильтр еще "Мои задачи",
+    // обновляем фильтр на "Все задачи" и перезагружаем задачи
+    if (isAdminOrDirector && _taskFilter == TaskFilter.myTasks && selectedBusiness != null && _tasks.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _taskFilter = TaskFilter.allTasks;
+          });
+          final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
+          _loadTasks(getTasksUseCase, selectedBusiness.id);
+        }
+      });
+    }
   }
 
   @override
@@ -131,6 +204,52 @@ class _TasksPageState extends State<TasksPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          // Фильтр задач (только для админов/директоров)
+          if (_canViewAllTasks())
+            PopupMenuButton<TaskFilter>(
+              icon: const Icon(Icons.filter_list),
+              tooltip: 'Фильтр задач',
+              onSelected: (TaskFilter filter) {
+                setState(() {
+                  _taskFilter = filter;
+                });
+                if (selectedBusiness != null) {
+                  _loadTasks(getTasksUseCase, selectedBusiness.id);
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem<TaskFilter>(
+                  value: TaskFilter.myTasks,
+                  child: Row(
+                    children: [
+                      Icon(
+                        _taskFilter == TaskFilter.myTasks
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Мои задачи'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<TaskFilter>(
+                  value: TaskFilter.allTasks,
+                  child: Row(
+                    children: [
+                      Icon(
+                        _taskFilter == TaskFilter.allTasks
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Все задачи'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -242,7 +361,68 @@ class _TasksPageState extends State<TasksPage> {
       );
     }
 
+    // Получаем ID текущего пользователя
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+    final isAdminOrDirector = _canViewAllTasks();
+    
+    // Если админ/директор выбрал "Все задачи", показываем два списка: "Мои задачи" и "Задачи сотрудников"
+    final shouldShowAllTasks = isAdminOrDirector && _taskFilter == TaskFilter.allTasks;
+
     if (_tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Нет задач',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Нажмите + чтобы создать задачу',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Разделяем задачи на группы
+    final List<Task> myTasks = [];
+    final List<Task> employeeTasks = []; // Задачи сотрудников (для директоров)
+    final List<Task> observedTasks = []; // Задачи, за которыми наблюдаю (для обычных пользователей)
+
+    for (final task in _tasks) {
+      // Проверяем, является ли пользователь исполнителем задачи
+      final isMyTask = task.assignedTo == currentUserId;
+      
+      // Проверяем, является ли пользователь наблюдателем задачи
+      final isObserver = currentUserId != null &&
+          task.observerIds != null &&
+          task.observerIds!.contains(currentUserId);
+
+      if (isMyTask) {
+        myTasks.add(task);
+      } else if (shouldShowAllTasks) {
+        // Для директоров при "Все задачи" - все остальные задачи идут в "Задачи сотрудников"
+        // (исключаем задачи без исполнителя и задачи, где пользователь наблюдатель)
+        if (task.assignedTo != null && task.assignedTo != currentUserId) {
+          employeeTasks.add(task);
+        }
+      } else if (isObserver) {
+        // Для обычных пользователей - задачи, за которыми они наблюдают
+        observedTasks.add(task);
+      }
+    }
+
+    // Проверяем, есть ли задачи для отображения
+    final hasTasksToShow = myTasks.isNotEmpty || 
+                          (shouldShowAllTasks ? employeeTasks.isNotEmpty : observedTasks.isNotEmpty);
+
+    if (!hasTasksToShow) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -267,97 +447,77 @@ class _TasksPageState extends State<TasksPage> {
       onRefresh: () async {
         await _loadTasks(getTasksUseCase, selectedBusiness.id);
       },
-      child: ListView.builder(
-        itemCount: _tasks.length,
+      child: ListView(
         padding: const EdgeInsets.all(8),
-        itemBuilder: (context, index) {
-          final task = _tasks[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: ListTile(
-              leading: _getStatusIcon(task.status),
-              title: Text(
-                task.title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  decoration:
-                      task.status == TaskStatus.completed
-                          ? TextDecoration.lineThrough
-                          : null,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Секция "Мои задачи"
+          if (myTasks.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: Row(
                 children: [
-                  if (task.description != null && task.description!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        task.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  Icon(Icons.person, size: 20, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Мои задачи',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
                     ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (task.priority != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getPriorityColor(task.priority!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getPriorityText(task.priority!),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      if (task.priority != null) const SizedBox(width: 8),
-                      if (task.isImportant)
-                        const Icon(Icons.star, size: 16, color: Colors.amber),
-                      if (task.deadline != null) ...[
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.event,
-                          size: 16,
-                          color:
-                              _isDeadlineOverdue(task.deadline!)
-                                  ? Colors.red
-                                  : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDate(task.deadline!),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                _isDeadlineOverdue(task.deadline!)
-                                    ? Colors.red
-                                    : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ],
                   ),
                 ],
               ),
-              trailing: _getStatusChip(task.status),
-              onTap: () {
-                Navigator.of(context).pushNamed(
-                  '/tasks/detail',
-                  arguments: task.id,
-                );
-              },
             ),
-          );
-        },
+            ...myTasks.map((task) => _buildTaskCard(task)),
+          ],
+
+          // Для директоров при "Все задачи" - секция "Задачи сотрудников"
+          if (shouldShowAllTasks && employeeTasks.isNotEmpty) ...[
+            if (myTasks.isNotEmpty) const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.people, size: 20, color: Colors.green),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Задачи сотрудников',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...employeeTasks.map((task) => _buildTaskCard(task)),
+          ],
+
+          // Для обычных пользователей - секция "Задачи, за которыми я наблюдаю"
+          if (!shouldShowAllTasks && observedTasks.isNotEmpty) ...[
+            if (myTasks.isNotEmpty) const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.visibility, size: 20, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Задачи, за которыми я наблюдаю',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...observedTasks.map((task) => _buildTaskCard(task)),
+          ],
+        ],
       ),
     );
   }
@@ -464,6 +624,107 @@ class _TasksPageState extends State<TasksPage> {
 
   bool _isDeadlineOverdue(DateTime deadline) {
     return deadline.isBefore(DateTime.now());
+  }
+
+  /// Строит карточку задачи
+  Widget _buildTaskCard(Task task) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ListTile(
+        leading: _getStatusIcon(task.status),
+        title: Text(
+          task.title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            decoration:
+                task.status == TaskStatus.completed
+                    ? TextDecoration.lineThrough
+                    : null,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (task.description != null && task.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  task.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                if (task.priority != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getPriorityColor(task.priority!),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _getPriorityText(task.priority!),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                if (task.priority != null) const SizedBox(width: 8),
+                if (task.isImportant)
+                  const Icon(Icons.star, size: 16, color: Colors.amber),
+                if (task.deadline != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.event,
+                    size: 16,
+                    color:
+                        _isDeadlineOverdue(task.deadline!)
+                            ? Colors.red
+                            : Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDate(task.deadline!),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color:
+                          _isDeadlineOverdue(task.deadline!)
+                              ? Colors.red
+                              : Colors.grey,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+        trailing: _getStatusChip(task.status),
+        onTap: () {
+          Navigator.of(context).pushNamed(
+            '/tasks/detail',
+            arguments: task.id,
+          );
+        },
+      ),
+    );
+  }
+
+  /// Проверяет, может ли пользователь видеть все задачи
+  bool _canViewAllTasks() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    final profile = profileProvider.profile;
+    
+    // Админы и директоры могут видеть все задачи
+    return currentUser?.isAdmin == true || 
+           profile?.orgStructure.isGeneralDirector == true;
   }
 }
 
