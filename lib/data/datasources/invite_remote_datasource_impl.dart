@@ -3,6 +3,7 @@ import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../datasources/invite_remote_datasource.dart';
 import '../models/invite_model.dart';
+import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для приглашений
 class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
@@ -45,7 +46,11 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return CreateInviteResultModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => CreateInviteResultModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -73,7 +78,11 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return CreateInviteResultModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => CreateInviteResultModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 404) {
         // Активного инвайта нет - это нормальная ситуация
         return null;

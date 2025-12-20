@@ -1,0 +1,45 @@
+# Правила разработки проекта Qonbaq Mobile
+
+## Архитектура
+- Проект использует Clean Architecture с тремя слоями: domain, data, presentation
+- Domain - независимый слой (только бизнес-логика, entities, usecases, repository интерфейсы)
+- Data - зависит только от domain (models, datasources, repository реализации)
+- Presentation - зависит от domain и data (pages, widgets, bloc, providers)
+- Core - общий функционал для всех слоев
+
+## Правила зависимостей
+- Domain НЕ должен импортировать data или presentation
+- Data может импортировать только domain и core
+- Presentation может импортировать domain, data и core
+- Всегда используй Use Cases для бизнес-логики, не вызывай репозитории напрямую из UI
+
+## Обработка ошибок
+- Используй Either<Failure, Type> для возврата результатов из Use Cases
+- Всегда обрабатывай ошибки через result.fold() в presentation слое
+- Используй Failure классы из core/error для типизированных ошибок
+
+## State Management
+- Используй BLoC или Provider для управления состоянием
+- Храни бизнес-логику в Use Cases, а не в BLoC/Provider
+- BLoC/Provider должны только вызывать Use Cases и управлять UI состоянием
+
+## Структура API ответов
+- Все успешные ответы API используют стандартную обертку с полем `data`
+- Для одиночных объектов: `{ "data": { ... } }`
+- Для списков: `{ "data": [...], "meta": { "total": 100, "page": 1, "limit": 20, "totalPages": 5 } }`
+- Всегда используй `ApiResponse<T>` из `lib/data/models/api_response.dart` для парсинга ответов
+- В datasources используй `ApiResponse.fromJson()` с функцией-парсером для одиночных объектов или списков
+- Метаданные пагинации доступны через `apiResponse.meta` (может быть null)
+- Никогда не парси напрямую `json['tasks']`, `json['approvals']` и т.д. - всегда используй `json['data']`
+
+## Стиль кода
+- Следуй Dart style guide
+- Используй именование: Entity для domain, Model для data, Page для экранов
+- Всегда добавляй документацию для публичных классов и методов
+- Используй const конструкторы где возможно
+- Группируй импорты: dart, flutter, packages, local
+- Предпочитай краткий и лаконичный код, если это не ухудшает читаемость
+- Используй синтаксический сахар Dart (spread операторы, collection if/for, extension methods) для упрощения кода
+
+
+

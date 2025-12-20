@@ -10,6 +10,7 @@ import '../models/approval_comment_model.dart';
 import '../models/approval_attachment_model.dart';
 import '../models/approval_decision_model.dart';
 import '../models/validation_error.dart';
+import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для согласований
 class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
@@ -42,7 +43,12 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalTemplateModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) =>
+              ApprovalTemplateModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -81,16 +87,17 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final templatesList =
-            json['templates'] as List<dynamic>? ??
-            json['data'] as List<dynamic>? ??
-            [];
-        return templatesList
-            .map(
-              (item) =>
-                  ApprovalTemplateModel.fromJson(item as Map<String, dynamic>),
-            )
-            .toList();
+        final apiResponse = ApiResponse.fromJson(json, (data) {
+          final templatesList = data as List<dynamic>;
+          return templatesList
+              .map(
+                (item) => ApprovalTemplateModel.fromJson(
+                  item as Map<String, dynamic>,
+                ),
+              )
+              .toList();
+        });
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
@@ -114,7 +121,12 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalTemplateModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) =>
+              ApprovalTemplateModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -140,7 +152,12 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalTemplateModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) =>
+              ApprovalTemplateModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -168,9 +185,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Сервер возвращает объект с полем "approval"
-        final approvalJson = json['approval'] as Map<String, dynamic>? ?? json;
-        return ApprovalModel.fromJson(approvalJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -221,13 +240,15 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final approvalsList =
-            json['approvals'] as List<dynamic>? ??
-            json['data'] as List<dynamic>? ??
-            [];
-        return approvalsList
-            .map((item) => ApprovalModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final apiResponse = ApiResponse.fromJson(json, (data) {
+          final approvalsList = data as List<dynamic>;
+          return approvalsList
+              .map(
+                (item) => ApprovalModel.fromJson(item as Map<String, dynamic>),
+              )
+              .toList();
+        });
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
@@ -251,9 +272,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Сервер может вернуть объект-обёртку { "approval": { ... } }
-        final approvalJson = json['approval'] as Map<String, dynamic>? ?? json;
-        return ApprovalModel.fromJson(approvalJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -289,7 +312,12 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalDecisionModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) =>
+              ApprovalDecisionModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -327,9 +355,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Сервер может вернуть объект-обёртку { "comment": { ... } }
-        final commentJson = json['comment'] as Map<String, dynamic>? ?? json;
-        return ApprovalCommentModel.fromJson(commentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalCommentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -362,16 +392,16 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final commentsList =
-            json['comments'] as List<dynamic>? ??
-            json['data'] as List<dynamic>? ??
-            [];
-        return commentsList
-            .map(
-              (item) =>
-                  ApprovalCommentModel.fromJson(item as Map<String, dynamic>),
-            )
-            .toList();
+        final apiResponse = ApiResponse.fromJson(json, (data) {
+          final commentsList = data as List<dynamic>;
+          return commentsList
+              .map(
+                (item) =>
+                    ApprovalCommentModel.fromJson(item as Map<String, dynamic>),
+              )
+              .toList();
+        });
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -402,9 +432,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Сервер может вернуть объект-обёртку { "comment": { ... } }
-        final commentJson = json['comment'] as Map<String, dynamic>? ?? json;
-        return ApprovalCommentModel.fromJson(commentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalCommentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -475,7 +507,12 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalAttachmentModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) =>
+              ApprovalAttachmentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -510,17 +547,17 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final attachmentsList =
-            json['attachments'] as List<dynamic>? ??
-            json['data'] as List<dynamic>? ??
-            [];
-        return attachmentsList
-            .map(
-              (item) => ApprovalAttachmentModel.fromJson(
-                item as Map<String, dynamic>,
-              ),
-            )
-            .toList();
+        final apiResponse = ApiResponse.fromJson(json, (data) {
+          final attachmentsList = data as List<dynamic>;
+          return attachmentsList
+              .map(
+                (item) => ApprovalAttachmentModel.fromJson(
+                  item as Map<String, dynamic>,
+                ),
+              )
+              .toList();
+        });
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {

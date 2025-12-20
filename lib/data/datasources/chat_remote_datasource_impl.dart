@@ -5,6 +5,7 @@ import '../datasources/chat_remote_datasource.dart';
 import '../models/chat_model.dart';
 import '../models/message_model.dart';
 import '../models/validation_error.dart';
+import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для чатов
 class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
@@ -33,11 +34,17 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final chatsList = json['chats'] as List<dynamic>? ?? json as List<dynamic>;
-        return chatsList
-            .map((item) =>
-                ChatModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final chatsList = data as List<dynamic>;
+            return chatsList
+                .map((item) =>
+                    ChatModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
@@ -65,11 +72,15 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ChatModel.fromJson(
+        final apiResponse = ApiResponse.fromJson(
           json,
-          currentUserId: currentUserId,
-          currentUserName: currentUserName,
+          (data) => ChatModel.fromJson(
+            data as Map<String, dynamic>,
+            currentUserId: currentUserId,
+            currentUserName: currentUserName,
+          ),
         );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -95,7 +106,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ChatModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ChatModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -121,11 +136,17 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final messagesList = json['messages'] as List<dynamic>? ?? json as List<dynamic>;
-        return messagesList
-            .map((item) =>
-                MessageModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final messagesList = data as List<dynamic>;
+            return messagesList
+                .map((item) =>
+                    MessageModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -171,7 +192,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return MessageModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => MessageModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {

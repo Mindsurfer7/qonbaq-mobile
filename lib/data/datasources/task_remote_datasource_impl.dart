@@ -6,6 +6,7 @@ import '../datasources/task_remote_datasource.dart';
 import '../models/task_model.dart';
 import '../models/task_comment_model.dart';
 import '../models/validation_error.dart';
+import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для задач
 class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
@@ -35,7 +36,11 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return TaskModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TaskModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -66,7 +71,11 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return TaskModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TaskModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -129,11 +138,17 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final tasksList = json['tasks'] as List<dynamic>;
-        return tasksList
-            .map((item) =>
-                TaskModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final tasksList = data as List<dynamic>;
+            return tasksList
+                .map((item) =>
+                    TaskModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
@@ -158,7 +173,11 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return TaskModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TaskModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -243,7 +262,11 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return TaskCommentModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TaskCommentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -277,7 +300,11 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return TaskCommentModel.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TaskCommentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {

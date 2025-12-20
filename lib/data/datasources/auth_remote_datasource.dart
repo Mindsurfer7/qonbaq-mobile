@@ -3,6 +3,7 @@ import '../../core/utils/api_client.dart';
 import '../models/register_request.dart';
 import '../models/login_request.dart';
 import '../models/auth_response.dart';
+import '../models/api_response.dart';
 import '../datasources/datasource.dart';
 
 /// Удаленный источник данных для аутентификации
@@ -21,7 +22,11 @@ class AuthRemoteDataSource extends DataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return AuthResponse.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => AuthResponse.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final details = json['details'] as List<dynamic>?;
@@ -55,7 +60,11 @@ class AuthRemoteDataSource extends DataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return AuthResponse.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => AuthResponse.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final details = json['details'] as List<dynamic>?;
@@ -87,7 +96,11 @@ class AuthRemoteDataSource extends DataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return AuthResponse.fromJson(json);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => AuthResponse.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Refresh токен недействителен');
       } else {

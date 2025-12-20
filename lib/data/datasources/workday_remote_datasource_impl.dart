@@ -3,6 +3,7 @@ import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../models/workday_model.dart';
 import '../models/validation_error.dart';
+import '../models/api_response.dart';
 import 'workday_remote_datasource.dart';
 
 /// Реализация удаленного источника данных для рабочего дня
@@ -33,13 +34,18 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Извлекаем workDay из обертки {success: true, workDay: {...}}
-        final workDayJson = json['workDay'] as Map<String, dynamic>? ?? json;
-        // Добавляем businessId, если его нет в ответе
-        if (!workDayJson.containsKey('businessId')) {
-          workDayJson['businessId'] = businessId;
-        }
-        return WorkDayModel.fromJson(workDayJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final workDayJson = data as Map<String, dynamic>;
+            // Добавляем businessId, если его нет в ответе
+            if (!workDayJson.containsKey('businessId')) {
+              workDayJson['businessId'] = businessId;
+            }
+            return WorkDayModel.fromJson(workDayJson);
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -71,13 +77,18 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Извлекаем workDay из обертки {success: true, workDay: {...}}
-        final workDayJson = json['workDay'] as Map<String, dynamic>? ?? json;
-        // Добавляем businessId, если его нет в ответе
-        if (!workDayJson.containsKey('businessId')) {
-          workDayJson['businessId'] = businessId;
-        }
-        return WorkDayModel.fromJson(workDayJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final workDayJson = data as Map<String, dynamic>;
+            // Добавляем businessId, если его нет в ответе
+            if (!workDayJson.containsKey('businessId')) {
+              workDayJson['businessId'] = businessId;
+            }
+            return WorkDayModel.fromJson(workDayJson);
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -112,13 +123,18 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Извлекаем workDay из обертки {success: true, workDay: {...}}
-        final workDayJson = json['workDay'] as Map<String, dynamic>? ?? json;
-        // Добавляем businessId, если его нет в ответе
-        if (!workDayJson.containsKey('businessId')) {
-          workDayJson['businessId'] = businessId;
-        }
-        return WorkDayModel.fromJson(workDayJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final workDayJson = data as Map<String, dynamic>;
+            // Добавляем businessId, если его нет в ответе
+            if (!workDayJson.containsKey('businessId')) {
+              workDayJson['businessId'] = businessId;
+            }
+            return WorkDayModel.fromJson(workDayJson);
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -149,18 +165,23 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // Извлекаем workDay из обертки, если есть
-        final workDayJson = json['workDay'] as Map<String, dynamic>? ?? json;
-        // Если есть рабочий день, возвращаем его
-        if (workDayJson.containsKey('id')) {
-          // Добавляем businessId, если его нет в ответе
-          if (!workDayJson.containsKey('businessId')) {
-            workDayJson['businessId'] = businessId;
-          }
-          return WorkDayModel.fromJson(workDayJson);
-        }
-        // Если рабочего дня нет, возвращаем null
-        return null;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final workDayJson = data as Map<String, dynamic>;
+            // Если есть рабочий день, возвращаем его
+            if (workDayJson.containsKey('id')) {
+              // Добавляем businessId, если его нет в ответе
+              if (!workDayJson.containsKey('businessId')) {
+                workDayJson['businessId'] = businessId;
+              }
+              return WorkDayModel.fromJson(workDayJson);
+            }
+            // Если рабочего дня нет, возвращаем null
+            return null;
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -188,7 +209,14 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return WorkDayStatisticsModel.fromJson(json, businessId: businessId);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => WorkDayStatisticsModel.fromJson(
+            data as Map<String, dynamic>,
+            businessId: businessId,
+          ),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {

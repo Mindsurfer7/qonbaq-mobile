@@ -4,6 +4,7 @@ import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../datasources/department_remote_datasource.dart';
 import '../models/department_model.dart';
+import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для подразделений
 class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
@@ -34,17 +35,20 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final departmentsList = json['departments'] as List<dynamic>? ??
-            (json['data'] as List<dynamic>?) ??
-            json['items'] as List<dynamic>? ??
-            (json as List<dynamic>);
-        return departmentsList
-            .map(
-              (item) => DepartmentModel.fromJson(
-                item as Map<String, dynamic>,
-              ),
-            )
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final departmentsList = data as List<dynamic>;
+            return departmentsList
+                .map(
+                  (item) => DepartmentModel.fromJson(
+                    item as Map<String, dynamic>,
+                  ),
+                )
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 403) {
@@ -70,9 +74,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // API возвращает { "department": {...} }
-        final departmentJson = json['department'] as Map<String, dynamic>? ?? json;
-        return DepartmentModel.fromJson(departmentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => DepartmentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -135,9 +141,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // API возвращает { "department": {...} }
-        final departmentJson = json['department'] as Map<String, dynamic>? ?? json;
-        return DepartmentModel.fromJson(departmentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => DepartmentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -194,13 +202,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final employeesList = json['employees'] as List<dynamic>? ??
-            (json['data'] as List<dynamic>?) ??
-            json['items'] as List<dynamic>? ??
-            (json as List<dynamic>);
-        return employeesList
-            .map((item) => item as Map<String, dynamic>)
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final employeesList = data as List<dynamic>;
+            return employeesList
+                .map((item) => item as Map<String, dynamic>)
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -230,9 +241,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // API возвращает { "department": {...} }
-        final departmentJson = json['department'] as Map<String, dynamic>? ?? json;
-        return DepartmentModel.fromJson(departmentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => DepartmentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -264,9 +277,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        // API возвращает { "department": {...} }
-        final departmentJson = json['department'] as Map<String, dynamic>? ?? json;
-        return DepartmentModel.fromJson(departmentJson);
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => DepartmentModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -395,16 +410,20 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final departmentsList = json['departments'] as List<dynamic>? ??
-            (json['data'] as List<dynamic>?) ??
-            (json as List<dynamic>);
-        return departmentsList
-            .map(
-              (item) => DepartmentModel.fromJson(
-                item as Map<String, dynamic>,
-              ),
-            )
-            .toList();
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final departmentsList = data as List<dynamic>;
+            return departmentsList
+                .map(
+                  (item) => DepartmentModel.fromJson(
+                    item as Map<String, dynamic>,
+                  ),
+                )
+                .toList();
+          },
+        );
+        return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 403) {
