@@ -30,7 +30,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
   // Шаблоны согласований
   @override
-  Future<ApprovalTemplateModel> createTemplate(ApprovalTemplateModel template) async {
+  Future<ApprovalTemplateModel> createTemplate(
+    ApprovalTemplateModel template,
+  ) async {
     try {
       final response = await apiClient.post(
         '/api/approvals/templates',
@@ -67,9 +69,10 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       final queryParams = <String, String>{};
       if (businessId != null) queryParams['businessId'] = businessId;
 
-      final queryString = queryParams.isEmpty
-          ? ''
-          : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      final queryString =
+          queryParams.isEmpty
+              ? ''
+              : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
       final response = await apiClient.get(
         '/api/approvals/templates$queryString',
@@ -78,9 +81,15 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final templatesList = json['templates'] as List<dynamic>? ?? json['data'] as List<dynamic>? ?? [];
+        final templatesList =
+            json['templates'] as List<dynamic>? ??
+            json['data'] as List<dynamic>? ??
+            [];
         return templatesList
-            .map((item) => ApprovalTemplateModel.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) =>
+                  ApprovalTemplateModel.fromJson(item as Map<String, dynamic>),
+            )
             .toList();
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
@@ -200,9 +209,10 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();
 
-      final queryString = queryParams.isEmpty
-          ? ''
-          : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      final queryString =
+          queryParams.isEmpty
+              ? ''
+              : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
       final response = await apiClient.get(
         '/api/approvals$queryString',
@@ -211,7 +221,10 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final approvalsList = json['approvals'] as List<dynamic>? ?? json['data'] as List<dynamic>? ?? [];
+        final approvalsList =
+            json['approvals'] as List<dynamic>? ??
+            json['data'] as List<dynamic>? ??
+            [];
         return approvalsList
             .map((item) => ApprovalModel.fromJson(item as Map<String, dynamic>))
             .toList();
@@ -263,9 +276,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     String? comment,
   ) async {
     try {
-      final body = <String, dynamic>{
-        'decision': _decisionToString(decision),
-      };
+      final body = <String, dynamic>{'decision': _decisionToString(decision)};
       if (comment != null && comment.isNotEmpty) {
         body['comment'] = comment;
       }
@@ -303,7 +314,10 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
   // Комментарии
   @override
-  Future<ApprovalCommentModel> createComment(String approvalId, String text) async {
+  Future<ApprovalCommentModel> createComment(
+    String approvalId,
+    String text,
+  ) async {
     try {
       final response = await apiClient.post(
         '/api/approvals/$approvalId/comments',
@@ -313,7 +327,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalCommentModel.fromJson(json);
+        // Сервер может вернуть объект-обёртку { "comment": { ... } }
+        final commentJson = json['comment'] as Map<String, dynamic>? ?? json;
+        return ApprovalCommentModel.fromJson(commentJson);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -346,9 +362,15 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final commentsList = json['comments'] as List<dynamic>? ?? json['data'] as List<dynamic>? ?? [];
+        final commentsList =
+            json['comments'] as List<dynamic>? ??
+            json['data'] as List<dynamic>? ??
+            [];
         return commentsList
-            .map((item) => ApprovalCommentModel.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) =>
+                  ApprovalCommentModel.fromJson(item as Map<String, dynamic>),
+            )
             .toList();
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
@@ -380,7 +402,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalCommentModel.fromJson(json);
+        // Сервер может вернуть объект-обёртку { "comment": { ... } }
+        final commentJson = json['comment'] as Map<String, dynamic>? ?? json;
+        return ApprovalCommentModel.fromJson(commentJson);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -438,9 +462,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     int? fileSize,
   ) async {
     try {
-      final body = <String, dynamic>{
-        'fileUrl': fileUrl,
-      };
+      final body = <String, dynamic>{'fileUrl': fileUrl};
       if (fileName != null) body['fileName'] = fileName;
       if (fileType != null) body['fileType'] = fileType;
       if (fileSize != null) body['fileSize'] = fileSize;
@@ -477,7 +499,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   }
 
   @override
-  Future<List<ApprovalAttachmentModel>> getAttachments(String approvalId) async {
+  Future<List<ApprovalAttachmentModel>> getAttachments(
+    String approvalId,
+  ) async {
     try {
       final response = await apiClient.get(
         '/api/approvals/$approvalId/attachments',
@@ -486,9 +510,16 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final attachmentsList = json['attachments'] as List<dynamic>? ?? json['data'] as List<dynamic>? ?? [];
+        final attachmentsList =
+            json['attachments'] as List<dynamic>? ??
+            json['data'] as List<dynamic>? ??
+            [];
         return attachmentsList
-            .map((item) => ApprovalAttachmentModel.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => ApprovalAttachmentModel.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
             .toList();
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
@@ -568,4 +599,3 @@ class ValidationException implements Exception {
   @override
   String toString() => validationResponse.message ?? validationResponse.error;
 }
-
