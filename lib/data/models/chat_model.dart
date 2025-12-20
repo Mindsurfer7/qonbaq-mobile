@@ -107,8 +107,14 @@ class ChatModel extends Chat implements Model {
       id: json['id'] as String,
       participant1: participant1,
       participant2: participant2,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      // В некоторых ответах (например, вложенные/упрощенные DTO) createdAt/updatedAt могут отсутствовать.
+      // Не падаем на парсинге — подставляем epoch.
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       lastMessage: lastMessage,
       lastMessageTask: lastMessageTask,
       lastMessageApproval: lastMessageApproval,

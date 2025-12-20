@@ -56,8 +56,9 @@ class ApprovalModel extends Approval implements Model {
     }
 
     ProfileUser? creator;
-    if (json['creator'] != null) {
-      final creatorJson = json['creator'] as Map<String, dynamic>;
+    // Поддерживаем оба варианта: creator и initiator
+    final creatorJson = json['creator'] as Map<String, dynamic>? ?? json['initiator'] as Map<String, dynamic>?;
+    if (creatorJson != null) {
       creator = ProfileUser(
         id: creatorJson['id'] as String,
         email: creatorJson['email'] as String,
@@ -140,21 +141,44 @@ class ApprovalModel extends Approval implements Model {
       }
     }
 
+    // Поддерживаем оба варианта: createdBy и initiatorId
+    final createdById = json['createdBy'] as String? ?? json['initiatorId'] as String?;
+    if (createdById == null || createdById.isEmpty) {
+      throw FormatException('Поле createdBy или initiatorId обязательно для Approval. JSON: $json');
+    }
+
+    // Проверяем обязательные поля
+    final id = json['id'];
+    if (id == null || id is! String) {
+      throw FormatException('Поле id обязательно и должно быть String, получено: $id (${id.runtimeType})');
+    }
+    
+    final businessIdValue = json['businessId'];
+    if (businessIdValue == null || businessIdValue is! String) {
+      throw FormatException('Поле businessId обязательно и должно быть String, получено: $businessIdValue (${businessIdValue.runtimeType})');
+    }
+    
     return ApprovalModel(
-      id: json['id'] as String,
-      businessId: json['businessId'] as String,
+      id: id,
+      businessId: businessIdValue,
       templateId: json['templateId'] as String?,
       templateCode: json['templateCode'] as String?,
       title: json['title'] as String? ?? 'Без названия',
       description: json['description'] as String?,
-      status: _parseStatus(json['status'] as String),
-      createdBy: json['createdBy'] as String,
+      status: json['status'] != null 
+          ? _parseStatus(json['status'] as String)
+          : ApprovalStatus.pending, // По умолчанию, если статус не указан
+      createdBy: createdById,
       requestDate: json['requestDate'] != null
           ? DateTime.parse(json['requestDate'] as String)
           : null,
       formData: formData,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(), // По умолчанию текущее время, если не указано
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(), // По умолчанию текущее время, если не указано
       processType: processType,
       business: business,
       template: template,

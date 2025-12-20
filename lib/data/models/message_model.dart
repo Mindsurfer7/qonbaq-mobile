@@ -109,8 +109,14 @@ class MessageModel extends Message implements Model {
       id: json['id'] as String,
       text: json['text'] as String,
       sender: sender,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      // В некоторых ответах (например, вложенные/упрощенные DTO) createdAt/updatedAt могут отсутствовать.
+      // Не падаем на парсинге — подставляем epoch.
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       taskId: json['taskId'] as String?,
       taskCommentId: json['taskCommentId'] as String?,
       task: task,

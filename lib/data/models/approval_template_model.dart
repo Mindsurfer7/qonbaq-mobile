@@ -96,8 +96,14 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
       executorAction: json['executorAction'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       steps: steps,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      // В списках согласований сервер может отдавать "короткий" template без createdAt/updatedAt.
+      // В этом случае используем дефолтные значения, чтобы не падать на парсинге.
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       business: business,
     );
   }
