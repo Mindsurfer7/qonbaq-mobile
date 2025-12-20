@@ -10,6 +10,9 @@ import '../../domain/usecases/create_approval_comment.dart';
 import '../../domain/usecases/delete_approval_comment.dart';
 import '../../core/error/failures.dart';
 import '../providers/auth_provider.dart';
+import '../providers/profile_provider.dart';
+import '../../domain/repositories/chat_repository.dart';
+import 'chat_detail_page.dart';
 
 /// Страница детального согласования
 class ApprovalDetailPage extends StatefulWidget {
@@ -80,7 +83,9 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   }
 
   String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
+    if (failure is ForbiddenFailure) {
+      return failure.message;
+    } else if (failure is ServerFailure) {
       return failure.message;
     } else if (failure is NetworkFailure) {
       return failure.message;
@@ -147,8 +152,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
       builder: (context) => _DecisionDialog(decision: decision),
     );
 
-    if (comment == null && decision == ApprovalDecisionType.rejected) {
-      // Для отклонения комментарий обязателен
+    if (comment == null &&
+        (decision == ApprovalDecisionType.rejected ||
+            decision == ApprovalDecisionType.requestChanges)) {
+      // Для отклонения и запроса изменений комментарий обязателен
       return;
     }
 
@@ -194,9 +201,16 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
               content: Text(
                 decision.decision == ApprovalDecisionType.approved
                     ? 'Согласование одобрено'
-                    : 'Согласование отклонено',
+                    : decision.decision == ApprovalDecisionType.rejected
+                    ? 'Согласование отклонено'
+                    : 'Запрошены изменения',
               ),
-              backgroundColor: Colors.green,
+              backgroundColor:
+                  decision.decision == ApprovalDecisionType.approved
+                      ? Colors.green
+                      : decision.decision == ApprovalDecisionType.rejected
+                      ? Colors.red
+                      : Colors.orange,
             ),
           );
         }
@@ -339,16 +353,41 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   bool _canApprove() {
     if (_approval == null) return false;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final currentUser = authProvider.user;
     if (currentUser == null) return false;
 
     // Если согласование уже не в статусе pending, нельзя одобрить
     if (_approval!.status != ApprovalStatus.pending) return false;
 
+    // Проверяем привилегированные права (уполномоченный или гендиректор)
+    final selectedBusiness = profileProvider.selectedBusiness;
+    if (selectedBusiness != null) {
+      final permission = currentUser.getPermissionsForBusiness(
+        selectedBusiness.id,
+      );
+      if (permission != null &&
+          (permission.isAuthorizedApprover || permission.isGeneralDirector)) {
+        // Привилегированные пользователи могут одобрять в любом случае
+        return true;
+      }
+    }
+
+    // Проверяем currentApprover - если текущий пользователь является текущим одобряющим
+    if (_approval!.currentApprover != null &&
+        _approval!.currentApprover!.id == currentUser.id) {
+      return true;
+    }
+
     // Проверяем, есть ли пользователь в списке тех, кто может одобрить
     if (_approval!.approvers != null && _approval!.approvers!.isNotEmpty) {
       return _approval!.approvers!.any(
-        (approver) => approver.userId == currentUser.id,
+        (approver) =>
+            approver.userId == currentUser.id &&
+            approver.approvalId == _approval!.id,
       );
     }
 
@@ -492,12 +531,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                               ),
 
                             // Создатель
-                            if (_approval!.creator != null)
-                              _buildInfoRow(
-                                'Создал',
-                                _getUserDisplayName(_approval!.creator!),
-                                Icons.person,
-                              ),
+                            if (_approval!.creator != null) _buildCreatorRow(),
 
                             // Дата создания
                             _buildInfoRow(
@@ -552,6 +586,108 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                 ],
                               ),
 
+                            // Кнопки действий (если можно одобрить)
+                            if (_approval!.status ==
+                                ApprovalStatus.pending) ...[
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              _canApprove() && !_hasAlreadyDecided()
+                                  ? Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed:
+                                              _isDeciding
+                                                  ? null
+                                                  : () => _decideApproval(
+                                                    ApprovalDecisionType
+                                                        .rejected,
+                                                  ),
+                                          icon: const Icon(Icons.close),
+                                          label: const Text('Отклонить'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed:
+                                              _isDeciding
+                                                  ? null
+                                                  : () => _decideApproval(
+                                                    ApprovalDecisionType
+                                                        .requestChanges,
+                                                  ),
+                                          icon: const Icon(Icons.edit),
+                                          label: const Text('На доработку'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.orange,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed:
+                                              _isDeciding
+                                                  ? null
+                                                  : () => _decideApproval(
+                                                    ApprovalDecisionType
+                                                        .approved,
+                                                  ),
+                                          icon: const Icon(Icons.check),
+                                          label: const Text('Одобрить'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                  : Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _hasAlreadyDecided()
+                                              ? 'Вы уже приняли решение по этому согласованию'
+                                              : 'У вас нет прав для принятия решения',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              const SizedBox(height: 16),
+                            ],
+
                             // Комментарии
                             const Divider(),
                             const Text(
@@ -581,93 +717,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                       ),
                     ),
                   ),
-
-                  // Кнопки действий (если можно одобрить)
-                  if (_approval!.status == ApprovalStatus.pending)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child:
-                          _canApprove() && !_hasAlreadyDecided()
-                              ? Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed:
-                                          _isDeciding
-                                              ? null
-                                              : () => _decideApproval(
-                                                ApprovalDecisionType.rejected,
-                                              ),
-                                      icon: const Icon(Icons.close),
-                                      label: const Text('Отклонить'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed:
-                                          _isDeciding
-                                              ? null
-                                              : () => _decideApproval(
-                                                ApprovalDecisionType.approved,
-                                              ),
-                                      icon: const Icon(Icons.check),
-                                      label: const Text('Одобрить'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                              : Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _hasAlreadyDecided()
-                                          ? 'Вы уже приняли решение по этому согласованию'
-                                          : 'У вас нет прав для принятия решения',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade700,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                    ),
 
                   // Поле ввода комментария
                   Container(
@@ -758,23 +807,122 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     );
   }
 
+  Widget _buildCreatorRow() {
+    if (_approval!.creator == null) return const SizedBox.shrink();
+
+    final creatorName = _getUserDisplayName(_approval!.creator!);
+    final creatorId = _approval!.creator!.id;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.person, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Создал',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        creatorName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      iconSize: 20,
+                      color: Colors.blue,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed:
+                          () => _openChatWithCreator(creatorId, creatorName),
+                      tooltip: 'Открыть чат',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openChatWithCreator(String creatorId, String creatorName) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+
+    // Не открываем чат с самим собой
+    if (currentUserId != null && currentUserId == creatorId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нельзя начать чат с самим собой')),
+      );
+      return;
+    }
+
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => ChatDetailPage(
+              interlocutorName: creatorName,
+              interlocutorId: creatorId,
+              chatRepository: chatRepository,
+            ),
+      ),
+    );
+  }
+
   Widget _buildDecisionCard(ApprovalDecision decision) {
+    Color cardColor;
+    IconData icon;
+    Color iconColor;
+    String statusText;
+    Color statusColor;
+
+    switch (decision.decision) {
+      case ApprovalDecisionType.approved:
+        cardColor = Colors.green.shade50;
+        icon = Icons.check_circle;
+        iconColor = Colors.green;
+        statusText = 'Одобрено';
+        statusColor = Colors.green;
+        break;
+      case ApprovalDecisionType.rejected:
+        cardColor = Colors.red.shade50;
+        icon = Icons.cancel;
+        iconColor = Colors.red;
+        statusText = 'Отклонено';
+        statusColor = Colors.red;
+        break;
+      case ApprovalDecisionType.requestChanges:
+        cardColor = Colors.orange.shade50;
+        icon = Icons.edit;
+        iconColor = Colors.orange;
+        statusText = 'На доработку';
+        statusColor = Colors.orange;
+        break;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color:
-          decision.decision == ApprovalDecisionType.approved
-              ? Colors.green.shade50
-              : Colors.red.shade50,
+      color: cardColor,
       child: ListTile(
-        leading: Icon(
-          decision.decision == ApprovalDecisionType.approved
-              ? Icons.check_circle
-              : Icons.cancel,
-          color:
-              decision.decision == ApprovalDecisionType.approved
-                  ? Colors.green
-                  : Colors.red,
-        ),
+        leading: Icon(icon, color: iconColor),
         title: Text(
           decision.user != null
               ? _getUserDisplayName(decision.user!)
@@ -796,40 +944,53 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
           ],
         ),
         trailing: Text(
-          decision.decision == ApprovalDecisionType.approved
-              ? 'Одобрено'
-              : 'Отклонено',
-          style: TextStyle(
-            color:
-                decision.decision == ApprovalDecisionType.approved
-                    ? Colors.green
-                    : Colors.red,
-            fontWeight: FontWeight.bold,
-          ),
+          statusText,
+          style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
   Widget _buildCommentCard(ApprovalComment comment) {
+    final commentUser = comment.user;
+    final canOpenChat = commentUser != null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         leading: CircleAvatar(
           child: Text(
-            comment.user != null
-                ? _getUserDisplayName(
-                  comment.user!,
-                ).substring(0, 1).toUpperCase()
+            commentUser != null
+                ? _getUserDisplayName(commentUser).substring(0, 1).toUpperCase()
                 : '?',
           ),
         ),
-        title: Text(
-          comment.user != null
-              ? _getUserDisplayName(comment.user!)
-              : 'Пользователь',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                commentUser != null
+                    ? _getUserDisplayName(commentUser)
+                    : 'Пользователь',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            if (canOpenChat)
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                iconSize: 18,
+                color: Colors.blue,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed:
+                    () => _openChatWithCommentAuthor(
+                      commentUser.id,
+                      _getUserDisplayName(commentUser),
+                    ),
+                tooltip: 'Открыть чат',
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -848,6 +1009,32 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
           onPressed: () => _deleteComment(comment),
           tooltip: 'Удалить',
         ),
+      ),
+    );
+  }
+
+  void _openChatWithCommentAuthor(String userId, String userName) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+
+    // Не открываем чат с самим собой
+    if (currentUserId != null && currentUserId == userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нельзя начать чат с самим собой')),
+      );
+      return;
+    }
+
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => ChatDetailPage(
+              interlocutorName: userName,
+              interlocutorId: userId,
+              chatRepository: chatRepository,
+            ),
       ),
     );
   }
@@ -874,19 +1061,42 @@ class _DecisionDialogState extends State<_DecisionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    String title;
+    String labelText;
+    String buttonText;
+    Color buttonColor;
+    bool isCommentRequired;
+
+    switch (widget.decision) {
+      case ApprovalDecisionType.approved:
+        title = 'Одобрить согласование';
+        labelText = 'Комментарий (необязательно)';
+        buttonText = 'Одобрить';
+        buttonColor = Colors.green;
+        isCommentRequired = false;
+        break;
+      case ApprovalDecisionType.rejected:
+        title = 'Отклонить согласование';
+        labelText = 'Комментарий (обязательно)';
+        buttonText = 'Отклонить';
+        buttonColor = Colors.red;
+        isCommentRequired = true;
+        break;
+      case ApprovalDecisionType.requestChanges:
+        title = 'Запросить изменения';
+        labelText = 'Комментарий (обязательно)';
+        buttonText = 'Отправить на доработку';
+        buttonColor = Colors.orange;
+        isCommentRequired = true;
+        break;
+    }
+
     return AlertDialog(
-      title: Text(
-        widget.decision == ApprovalDecisionType.approved
-            ? 'Одобрить согласование'
-            : 'Отклонить согласование',
-      ),
+      title: Text(title),
       content: TextField(
         controller: _commentController,
         decoration: InputDecoration(
-          labelText:
-              widget.decision == ApprovalDecisionType.approved
-                  ? 'Комментарий (необязательно)'
-                  : 'Комментарий (обязательно)',
+          labelText: labelText,
           hintText: 'Введите комментарий...',
           border: const OutlineInputBorder(),
         ),
@@ -899,21 +1109,13 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         ),
         ElevatedButton(
           onPressed:
-              widget.decision == ApprovalDecisionType.rejected &&
-                      _commentController.text.trim().isEmpty
+              isCommentRequired && _commentController.text.trim().isEmpty
                   ? null
                   : () =>
                       Navigator.of(context).pop(_commentController.text.trim()),
-          child: Text(
-            widget.decision == ApprovalDecisionType.approved
-                ? 'Одобрить'
-                : 'Отклонить',
-          ),
+          child: Text(buttonText),
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-                widget.decision == ApprovalDecisionType.approved
-                    ? Colors.green
-                    : Colors.red,
+            backgroundColor: buttonColor,
             foregroundColor: Colors.white,
           ),
         ),

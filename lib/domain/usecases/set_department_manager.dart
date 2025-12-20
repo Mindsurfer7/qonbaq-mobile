@@ -8,10 +8,12 @@ import '../repositories/department_repository.dart';
 class SetDepartmentManagerParams {
   final String departmentId;
   final String managerId;
+  final bool isGeneralDirector;
 
   SetDepartmentManagerParams({
     required this.departmentId,
     required this.managerId,
+    required this.isGeneralDirector,
   });
 }
 
@@ -26,6 +28,13 @@ class SetDepartmentManager
   Future<Either<Failure, Department>> call(
     SetDepartmentManagerParams params,
   ) async {
+    // Проверка прав: только генеральный директор может назначать менеджеров
+    if (!params.isGeneralDirector) {
+      return Left(GeneralFailure(
+        'Только генеральный директор может назначать менеджеров подразделений',
+      ));
+    }
+
     return await repository.setDepartmentManager(
       params.departmentId,
       params.managerId,

@@ -130,9 +130,15 @@ class _AssignManagerDialogState extends State<AssignManagerDialog> {
   Future<void> _assignManager(DepartmentProvider provider) async {
     if (_selectedEmployee == null) return;
 
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final isGeneralDirector =
+        profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+
     final success = await provider.setManager(
       widget.department.id,
       _selectedEmployee!.id,
+      isGeneralDirector,
     );
 
     if (!mounted) return;

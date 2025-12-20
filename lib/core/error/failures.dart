@@ -41,3 +41,8 @@ class NetworkFailure extends Failure {
 class GeneralFailure extends Failure {
   const GeneralFailure(super.message);
 }
+
+/// Ошибки доступа (403 Forbidden)
+class ForbiddenFailure extends Failure {
+  const ForbiddenFailure(super.message);
+}

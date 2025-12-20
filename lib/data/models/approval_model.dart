@@ -32,6 +32,7 @@ class ApprovalModel extends Approval implements Model {
     super.business,
     super.template,
     super.creator,
+    super.currentApprover,
     super.decisions,
     super.comments,
     super.attachments,
@@ -66,6 +67,19 @@ class ApprovalModel extends Approval implements Model {
         lastName: creatorJson['lastName'] as String?,
         patronymic: creatorJson['patronymic'] as String?,
         phone: creatorJson['phone'] as String?,
+      );
+    }
+
+    ProfileUser? currentApprover;
+    if (json['currentApprover'] != null) {
+      final currentApproverJson = json['currentApprover'] as Map<String, dynamic>;
+      currentApprover = ProfileUser(
+        id: currentApproverJson['id'] as String,
+        email: currentApproverJson['email'] as String,
+        firstName: currentApproverJson['firstName'] as String?,
+        lastName: currentApproverJson['lastName'] as String?,
+        patronymic: currentApproverJson['patronymic'] as String?,
+        phone: currentApproverJson['phone'] as String?,
       );
     }
 
@@ -166,8 +180,12 @@ class ApprovalModel extends Approval implements Model {
       title: json['title'] as String? ?? 'Без названия',
       description: json['description'] as String?,
       status: json['status'] != null 
-          ? _parseStatus(json['status'] as String)
-          : ApprovalStatus.pending, // По умолчанию, если статус не указан
+          ? _parseStatus(json['status'].toString()) // Используем toString() для надежности
+          : (() {
+              // Если статус не указан, выводим предупреждение
+              print('⚠️ Статус согласования не указан в JSON. ID: ${json['id']}. Используется статус по умолчанию: pending');
+              return ApprovalStatus.pending;
+            })(), // По умолчанию, если статус не указан
       createdBy: createdById,
       requestDate: json['requestDate'] != null
           ? DateTime.parse(json['requestDate'] as String)
@@ -183,6 +201,7 @@ class ApprovalModel extends Approval implements Model {
       business: business,
       template: template,
       creator: creator,
+      currentApprover: currentApprover,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
@@ -191,7 +210,10 @@ class ApprovalModel extends Approval implements Model {
   }
 
   static ApprovalStatus _parseStatus(String status) {
-    switch (status.toUpperCase()) {
+    // Убираем пробелы и приводим к верхнему регистру
+    final normalizedStatus = status.trim().toUpperCase();
+    
+    switch (normalizedStatus) {
       case 'DRAFT':
         return ApprovalStatus.draft;
       case 'PENDING':
@@ -201,12 +223,16 @@ class ApprovalModel extends Approval implements Model {
       case 'REJECTED':
         return ApprovalStatus.rejected;
       case 'IN_EXECUTION':
+      case 'INEXECUTION':
         return ApprovalStatus.inExecution;
       case 'COMPLETED':
         return ApprovalStatus.completed;
       case 'CANCELLED':
+      case 'CANCELED':
         return ApprovalStatus.cancelled;
       default:
+        // Если статус не распознан, выводим предупреждение и возвращаем pending
+        print('⚠️ Неизвестный статус согласования: "$status" (нормализован: "$normalizedStatus"). Используется статус по умолчанию: pending');
         return ApprovalStatus.pending;
     }
   }
@@ -277,6 +303,7 @@ class ApprovalModel extends Approval implements Model {
       business: business,
       template: template,
       creator: creator,
+      currentApprover: currentApprover,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
@@ -302,6 +329,7 @@ class ApprovalModel extends Approval implements Model {
       business: approval.business,
       template: approval.template,
       creator: approval.creator,
+      currentApprover: approval.currentApprover,
       decisions: approval.decisions,
       comments: approval.comments,
       attachments: approval.attachments,

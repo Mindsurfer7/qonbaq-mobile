@@ -38,6 +38,7 @@ class Approval extends Entity {
   final Business? business;
   final ApprovalTemplate? template;
   final ProfileUser? creator;
+  final ProfileUser? currentApprover; // Текущий одобряющий (кто должен принять решение сейчас)
   final List<ApprovalDecision>? decisions;
   final List<ApprovalComment>? comments;
   final List<ApprovalAttachment>? attachments;
@@ -60,6 +61,7 @@ class Approval extends Entity {
     this.business,
     this.template,
     this.creator,
+    this.currentApprover,
     this.decisions,
     this.comments,
     this.attachments,

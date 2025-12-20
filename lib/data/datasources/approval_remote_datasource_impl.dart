@@ -18,6 +18,17 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
   ApprovalRemoteDataSourceImpl({required this.apiClient});
 
+  /// Парсит сообщение об ошибке из body ответа
+  /// Возвращает сообщение из поля 'error' или дефолтное сообщение
+  String _parseErrorMessage(String body, String defaultMessage) {
+    try {
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      return json['error'] as String? ?? defaultMessage;
+    } catch (e) {
+      return defaultMessage;
+    }
+  }
+
   Map<String, String> _getAuthHeaders() {
     final token = TokenStorage.instance.getAccessToken();
     if (token == null || token.isEmpty) {
@@ -280,13 +291,34 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         );
         return apiResponse.data;
       } else if (response.statusCode == 401) {
-        throw Exception('Не авторизован');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Не авторизован',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Нет доступа к этому согласованию',
+        );
+        throw ForbiddenException(errorMessage);
       } else if (response.statusCode == 404) {
-        throw Exception('Согласование не найдено');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Согласование не найдено',
+        );
+        throw Exception(errorMessage);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Произошла ошибка при загрузке согласования',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
+      if (e is ForbiddenException) {
+        rethrow;
+      }
       if (e is Exception) {
         rethrow;
       }
@@ -316,10 +348,29 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final apiResponse = ApiResponse.fromJson(
           json,
-          (data) =>
-              ApprovalDecisionModel.fromJson(data as Map<String, dynamic>),
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
         );
-        return apiResponse.data;
+        final approval = apiResponse.data;
+        
+        // API возвращает полный объект Approval, нужно извлечь последнее решение
+        if (approval.decisions != null && approval.decisions!.isNotEmpty) {
+          // Берем последнее решение (самое свежее)
+          final lastDecision = approval.decisions!.last;
+          // Преобразуем в модель - решение уже парсится в ApprovalModel
+          return ApprovalDecisionModel(
+            id: lastDecision.id,
+            approvalId: lastDecision.approvalId,
+            decision: lastDecision.decision,
+            comment: lastDecision.comment,
+            userId: lastDecision.userId,
+            createdAt: lastDecision.createdAt,
+            user: lastDecision.user,
+          );
+        } else {
+          // Если решений нет, но статус 200, значит решение принято успешно
+          // Создаем фиктивное решение для обратной совместимости
+          throw Exception('Решение не найдено в ответе сервера. Статус согласования: ${approval.status}');
+        }
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
@@ -622,9 +673,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   String _decisionToString(ApprovalDecisionType decision) {
     switch (decision) {
       case ApprovalDecisionType.approved:
-        return 'APPROVED';
+        return 'APPROVE';
       case ApprovalDecisionType.rejected:
-        return 'REJECTED';
+        return 'REJECT';
+      case ApprovalDecisionType.requestChanges:
+        return 'REQUEST_CHANGES';
     }
   }
 }
@@ -637,4 +690,14 @@ class ValidationException implements Exception {
 
   @override
   String toString() => validationResponse.message ?? validationResponse.error;
+}
+
+/// Исключение для ошибок доступа (403 Forbidden)
+class ForbiddenException implements Exception {
+  final String message;
+
+  ForbiddenException(this.message);
+
+  @override
+  String toString() => message;
 }

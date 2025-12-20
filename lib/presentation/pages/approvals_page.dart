@@ -493,6 +493,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     return RefreshIndicator(
       onRefresh: _loadApprovals,
       child: ListView.builder(
+        padding: const EdgeInsets.only(top: 20),
         itemCount: approvals.length,
         itemBuilder: (context, index) => _buildApprovalCard(approvals[index]),
       ),
@@ -512,11 +513,12 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     return RefreshIndicator(
       onRefresh: () => _loadApprovalsForTab(0),
       child: ListView(
+        padding: const EdgeInsets.only(top: 20),
         children: [
           // Основной список (свои согласования)
           if (_canApproveApprovals.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
                 'Мои согласования (${_canApproveApprovals.length})',
                 style: const TextStyle(
@@ -526,6 +528,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 ),
               ),
             ),
+            const SizedBox(height: 20),
             ..._canApproveApprovals.map((approval) => _buildApprovalCard(approval)),
           ] else
             Padding(
@@ -538,43 +541,46 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             ),
 
           // Аккордеон для всех согласований
-          ExpansionTile(
-            title: const Text(
-              'Все согласования в бизнесе',
-              style: TextStyle(fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: ExpansionTile(
+              title: const Text(
+                'Все согласования в бизнесе',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: _isLoadingAllApprovals
+                  ? const Text('Загрузка...')
+                  : Text('${_allCanApproveApprovals.length} согласований'),
+              leading: const Icon(Icons.business),
+              initiallyExpanded: false,
+              onExpansionChanged: (expanded) {
+                if (expanded &&
+                    _allCanApproveApprovals.isEmpty &&
+                    !_isLoadingAllApprovals) {
+                  // Загружаем только при первом раскрытии
+                  _loadAllApprovals();
+                }
+              },
+              children: [
+                if (_isLoadingAllApprovals)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_allCanApproveApprovals.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Нет согласований',
+                      style: TextStyle(color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ..._allCanApproveApprovals
+                      .map((approval) => _buildApprovalCard(approval)),
+              ],
             ),
-            subtitle: _isLoadingAllApprovals
-                ? const Text('Загрузка...')
-                : Text('${_allCanApproveApprovals.length} согласований'),
-            leading: const Icon(Icons.business),
-            initiallyExpanded: false,
-            onExpansionChanged: (expanded) {
-              if (expanded &&
-                  _allCanApproveApprovals.isEmpty &&
-                  !_isLoadingAllApprovals) {
-                // Загружаем только при первом раскрытии
-                _loadAllApprovals();
-              }
-            },
-            children: [
-              if (_isLoadingAllApprovals)
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_allCanApproveApprovals.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Нет согласований',
-                    style: TextStyle(color: Colors.grey.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else
-                ..._allCanApproveApprovals
-                    .map((approval) => _buildApprovalCard(approval)),
-            ],
           ),
         ],
       ),

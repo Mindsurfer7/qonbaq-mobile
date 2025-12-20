@@ -281,7 +281,11 @@ class DepartmentProvider with ChangeNotifier {
   }
 
   /// Назначить менеджера подразделения
-  Future<bool> setManager(String departmentId, String managerId) async {
+  Future<bool> setManager(
+    String departmentId,
+    String managerId,
+    bool isGeneralDirector,
+  ) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -290,6 +294,7 @@ class DepartmentProvider with ChangeNotifier {
       SetDepartmentManagerParams(
         departmentId: departmentId,
         managerId: managerId,
+        isGeneralDirector: isGeneralDirector,
       ),
     );
 
@@ -327,13 +332,19 @@ class DepartmentProvider with ChangeNotifier {
   }
 
   /// Убрать менеджера подразделения
-  Future<bool> removeManager(String departmentId) async {
+  Future<bool> removeManager(
+    String departmentId,
+    bool isGeneralDirector,
+  ) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     final result = await removeDepartmentManager.call(
-      RemoveDepartmentManagerParams(departmentId: departmentId),
+      RemoveDepartmentManagerParams(
+        departmentId: departmentId,
+        isGeneralDirector: isGeneralDirector,
+      ),
     );
 
     return result.fold(

@@ -39,5 +39,6 @@ class ApprovalDecision extends Entity {
 enum ApprovalDecisionType {
   approved, // Одобрено
   rejected, // Отклонено
+  requestChanges, // Запросить изменения
 }
 

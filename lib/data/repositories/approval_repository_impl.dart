@@ -117,6 +117,11 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
     try {
       final approval = await remoteDataSource.getApprovalById(id);
       return Right(approval.toEntity());
+    } on ForbiddenException catch (e) {
+      return Left(ForbiddenFailure(e.message));
+    } on Exception catch (e) {
+      // Используем сообщение из Exception напрямую (оно уже парсится из error в body)
+      return Left(ServerFailure(e.toString()));
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении согласования: $e'));
     }

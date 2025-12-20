@@ -214,18 +214,31 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            TextButton.icon(
-                              onPressed: () => _showAssignManagerDialog(
-                                context,
-                                department,
-                                provider,
-                              ),
-                              icon: const Icon(Icons.person_add),
-                              label: Text(
-                                department.managerId == null
-                                    ? 'Назначить'
-                                    : 'Изменить',
-                              ),
+                            Consumer<ProfileProvider>(
+                              builder: (context, profileProvider, child) {
+                                final isGeneralDirector =
+                                    profileProvider.profile?.orgStructure
+                                            .isGeneralDirector ??
+                                        false;
+                                
+                                if (!isGeneralDirector) {
+                                  return const SizedBox.shrink();
+                                }
+                                
+                                return TextButton.icon(
+                                  onPressed: () => _showAssignManagerDialog(
+                                    context,
+                                    department,
+                                    provider,
+                                  ),
+                                  icon: const Icon(Icons.person_add),
+                                  label: Text(
+                                    department.managerId == null
+                                        ? 'Назначить'
+                                        : 'Изменить',
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -250,17 +263,34 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () => _removeManager(
-                              context,
-                              department,
-                              provider,
-                            ),
-                            child: const Text(
-                              'Убрать менеджера',
-                              style: TextStyle(color: Colors.red),
-                            ),
+                          Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              final isGeneralDirector =
+                                  profileProvider.profile?.orgStructure
+                                          .isGeneralDirector ??
+                                      false;
+                              
+                              if (!isGeneralDirector) {
+                                return const SizedBox.shrink();
+                              }
+                              
+                              return Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () => _removeManager(
+                                      context,
+                                      department,
+                                      provider,
+                                    ),
+                                    child: const Text(
+                                      'Убрать менеджера',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ] else if (department.managerId != null) ...[
                           const SizedBox(height: 8),
@@ -271,17 +301,34 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                               color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () => _removeManager(
-                              context,
-                              department,
-                              provider,
-                            ),
-                            child: const Text(
-                              'Убрать менеджера',
-                              style: TextStyle(color: Colors.red),
-                            ),
+                          Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              final isGeneralDirector =
+                                  profileProvider.profile?.orgStructure
+                                          .isGeneralDirector ??
+                                      false;
+                              
+                              if (!isGeneralDirector) {
+                                return const SizedBox.shrink();
+                              }
+                              
+                              return Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () => _removeManager(
+                                      context,
+                                      department,
+                                      provider,
+                                    ),
+                                    child: const Text(
+                                      'Убрать менеджера',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ] else
                           Padding(
@@ -532,7 +579,15 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
     );
 
     if (confirmed == true && context.mounted) {
-      final success = await provider.removeManager(department.id);
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
+      final isGeneralDirector =
+          profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+      
+      final success = await provider.removeManager(
+        department.id,
+        isGeneralDirector,
+      );
       if (success && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

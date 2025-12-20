@@ -15,9 +15,10 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
   });
 
   factory ApprovalDecisionModel.fromJson(Map<String, dynamic> json) {
+    // Поддерживаем оба варианта: user и approver
     ProfileUser? user;
-    if (json['user'] != null) {
-      final userJson = json['user'] as Map<String, dynamic>;
+    final userJson = json['user'] as Map<String, dynamic>? ?? json['approver'] as Map<String, dynamic>?;
+    if (userJson != null) {
       user = ProfileUser(
         id: userJson['id'] as String,
         email: userJson['email'] as String,
@@ -28,12 +29,18 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
       );
     }
 
+    // Поддерживаем оба варианта: userId и approverId
+    final userId = json['userId'] as String? ?? json['approverId'] as String?;
+    if (userId == null) {
+      throw FormatException('Поле userId или approverId обязательно для ApprovalDecision');
+    }
+
     return ApprovalDecisionModel(
       id: json['id'] as String,
       approvalId: json['approvalId'] as String,
       decision: _parseDecision(json['decision'] as String),
       comment: json['comment'] as String?,
-      userId: json['userId'] as String,
+      userId: userId,
       createdAt: DateTime.parse(json['createdAt'] as String),
       user: user,
     );
@@ -42,9 +49,13 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
   static ApprovalDecisionType _parseDecision(String decision) {
     switch (decision.toUpperCase()) {
       case 'APPROVED':
+      case 'APPROVE':
         return ApprovalDecisionType.approved;
       case 'REJECTED':
+      case 'REJECT':
         return ApprovalDecisionType.rejected;
+      case 'REQUEST_CHANGES':
+        return ApprovalDecisionType.requestChanges;
       default:
         return ApprovalDecisionType.approved;
     }
@@ -56,6 +67,8 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
         return 'APPROVED';
       case ApprovalDecisionType.rejected:
         return 'REJECTED';
+      case ApprovalDecisionType.requestChanges:
+        return 'REQUEST_CHANGES';
     }
   }
 
