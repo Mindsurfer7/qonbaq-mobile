@@ -9,7 +9,7 @@ import '../../domain/usecases/get_approval_templates.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/dynamic_approval_form.dart';
+import '../widgets/dynamic_block_form.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -20,13 +20,15 @@ class ApprovalsPage extends StatefulWidget {
   State<ApprovalsPage> createState() => _ApprovalsPageState();
 }
 
-class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProviderStateMixin {
+class _ApprovalsPageState extends State<ApprovalsPage>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   String? _error;
   List<Approval> _pendingApprovals = [];
   List<Approval> _approvedApprovals = [];
   List<Approval> _rejectedApprovals = [];
-  List<Approval> _canApproveApprovals = []; // Согласования, которые пользователь может одобрить
+  List<Approval> _canApproveApprovals =
+      []; // Согласования, которые пользователь может одобрить
   late TabController _tabController;
 
   @override
@@ -48,7 +50,10 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
       _error = null;
     });
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final selectedBusiness = profileProvider.selectedBusiness;
     final currentUser = authProvider.user;
@@ -61,14 +66,14 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
       return;
     }
 
-    final getApprovalsUseCase = Provider.of<GetApprovals>(context, listen: false);
+    final getApprovalsUseCase = Provider.of<GetApprovals>(
+      context,
+      listen: false,
+    );
 
     // Загружаем согласования, которые пользователь может одобрить
     final canApproveResult = await getApprovalsUseCase.call(
-      GetApprovalsParams(
-        businessId: selectedBusiness.id,
-        canApprove: true,
-      ),
+      GetApprovalsParams(businessId: selectedBusiness.id, canApprove: true),
     );
 
     // Загружаем pending согласования
@@ -126,7 +131,10 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
   }
 
   void _showCreateApprovalDialog() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.user;
@@ -143,13 +151,14 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
 
     showDialog(
       context: context,
-      builder: (context) => _CreateApprovalDialog(
-        businessId: selectedBusiness.id,
-        currentUserId: currentUser.id,
-        onSuccess: () {
-          _loadApprovals();
-        },
-      ),
+      builder:
+          (context) => _CreateApprovalDialog(
+            businessId: selectedBusiness.id,
+            currentUserId: currentUser.id,
+            onSuccess: () {
+              _loadApprovals();
+            },
+          ),
     );
   }
 
@@ -206,7 +215,8 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (approval.description != null && approval.description!.isNotEmpty)
+            if (approval.description != null &&
+                approval.description!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
@@ -219,7 +229,10 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getStatusColor(approval.status),
                     borderRadius: BorderRadius.circular(12),
@@ -236,10 +249,7 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
                 const SizedBox(width: 8),
                 Text(
                   _formatDateTime(approval.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -311,94 +321,103 @@ class _ApprovalsPageState extends State<ApprovalsPage> with SingleTickerProvider
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadApprovals,
-                        child: const Text('Повторить'),
-                      ),
-                    ],
-                  ),
-                )
-              : TabBarView(
-                  controller: _tabController,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Вкладка "Требуют решения" - показываем согласования, которые пользователь может одобрить
-                    _buildApprovalsList(_canApproveApprovals),
-                    // Вкладка "Ожидают" - показываем pending согласования
-                    _buildApprovalsList(_pendingApprovals),
-                    // Вкладка "Завершенные" - показываем одобренные и отклоненные
-                    Column(
-                      children: [
-                        if (_approvedApprovals.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.check_circle, color: Colors.green),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Одобренные (${_approvedApprovals.length})',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: _buildApprovalsList(_approvedApprovals),
-                          ),
-                        ],
-                        if (_rejectedApprovals.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.cancel, color: Colors.red),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Отклоненные (${_rejectedApprovals.length})',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: _buildApprovalsList(_rejectedApprovals),
-                          ),
-                        ],
-                        if (_approvedApprovals.isEmpty && _rejectedApprovals.isEmpty)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32.0),
-                              child: Text(
-                                'Нет завершенных согласований',
-                                style: TextStyle(color: Colors.grey.shade600),
-                              ),
-                            ),
-                          ),
-                      ],
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadApprovals,
+                      child: const Text('Повторить'),
                     ),
                   ],
                 ),
+              )
+              : TabBarView(
+                controller: _tabController,
+                children: [
+                  // Вкладка "Требуют решения" - показываем согласования, которые пользователь может одобрить
+                  _buildApprovalsList(_canApproveApprovals),
+                  // Вкладка "Ожидают" - показываем pending согласования
+                  _buildApprovalsList(_pendingApprovals),
+                  // Вкладка "Завершенные" - показываем одобренные и отклоненные
+                  Column(
+                    children: [
+                      if (_approvedApprovals.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Одобренные (${_approvedApprovals.length})',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildApprovalsList(_approvedApprovals),
+                        ),
+                      ],
+                      if (_rejectedApprovals.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cancel, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Отклоненные (${_rejectedApprovals.length})',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildApprovalsList(_rejectedApprovals),
+                        ),
+                      ],
+                      if (_approvedApprovals.isEmpty &&
+                          _rejectedApprovals.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Text(
+                              'Нет завершенных согласований',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateApprovalDialog,
         child: const Icon(Icons.add),
@@ -453,7 +472,10 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       _error = null;
     });
 
-    final getTemplatesUseCase = Provider.of<GetApprovalTemplates>(context, listen: false);
+    final getTemplatesUseCase = Provider.of<GetApprovalTemplates>(
+      context,
+      listen: false,
+    );
     final result = await getTemplatesUseCase.call(
       GetApprovalTemplatesParams(businessId: widget.businessId),
     );
@@ -480,7 +502,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     }
 
     final formValues = _formKey.currentState!.value;
-    
+
     // Получаем выбранный шаблон из формы
     final selectedTemplate = formValues['template'] as ApprovalTemplate?;
     if (selectedTemplate == null) {
@@ -491,14 +513,18 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     }
 
     // Получаем title и description из формы
-    final title = (formValues['title'] as String?)?.trim() ?? selectedTemplate.name;
+    final title =
+        (formValues['title'] as String?)?.trim() ?? selectedTemplate.name;
     final description = (formValues['description'] as String?)?.trim();
 
     // Получаем данные из динамической формы (исключаем системные поля)
     final dynamicFormData = <String, dynamic>{};
     formValues.forEach((key, value) {
       // Исключаем системные поля формы
-      if (key != 'template' && key != 'title' && key != 'description' && value != null) {
+      if (key != 'template' &&
+          key != 'title' &&
+          key != 'description' &&
+          value != null) {
         dynamicFormData[key] = value;
       }
     });
@@ -521,7 +547,10 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       _error = null;
     });
 
-    final createApprovalUseCase = Provider.of<CreateApproval>(context, listen: false);
+    final createApprovalUseCase = Provider.of<CreateApproval>(
+      context,
+      listen: false,
+    );
 
     final approval = Approval(
       id: '', // Будет создан на сервере
@@ -576,151 +605,156 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Создать согласование'),
-      content: SingleChildScrollView(
-        child: FormBuilder(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_isLoadingTemplates)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (_templates.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: const Text(
-                    'Нет доступных шаблонов согласований',
-                    style: TextStyle(color: Colors.orange),
-                  ),
-                )
-              else ...[
-                FormBuilderDropdown<ApprovalTemplate>(
-                  name: 'template',
-                  initialValue: _selectedTemplate,
-                  decoration: const InputDecoration(
-                    labelText: 'Шаблон согласования *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _templates.map((template) {
-                    return DropdownMenuItem<ApprovalTemplate>(
-                      value: template,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            template.name,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          if (template.description != null && template.description!.isNotEmpty)
-                            Text(
-                              template.description!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: SingleChildScrollView(
+          child: FormBuilder(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_isLoadingTemplates)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_templates.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: const Text(
+                      'Нет доступных шаблонов согласований',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  )
+                else ...[
+                  FormBuilderDropdown<ApprovalTemplate>(
+                    name: 'template',
+                    initialValue: _selectedTemplate,
+                    decoration: const InputDecoration(
+                      labelText: 'Шаблон согласования *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items:
+                        _templates.map((template) {
+                          return DropdownMenuItem<ApprovalTemplate>(
+                            value: template,
+                            child: Text(
+                              template.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      final oldTemplate = _selectedTemplate;
-                      _selectedTemplate = value;
-                      _error = null; // Очищаем ошибку при выборе
-                      
-                      // Автоматически заполняем title из шаблона
-                      if (value != null && _titleController.text.isEmpty) {
-                        _titleController.text = value.name;
-                      }
-                      
-                      // Очищаем значения полей динамической формы при смене шаблона
-                      if (oldTemplate != null && oldTemplate != value && _formKey.currentState != null) {
-                        final oldSchema = oldTemplate.formSchema;
-                        if (oldSchema != null) {
-                          final oldProperties = oldSchema['properties'] as Map<String, dynamic>?;
-                          if (oldProperties != null) {
-                            for (var fieldName in oldProperties.keys) {
-                              // Очищаем поля из старого шаблона
-                              _formKey.currentState?.fields[fieldName]?.didChange(null);
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        final oldTemplate = _selectedTemplate;
+                        _selectedTemplate = value;
+                        _error = null; // Очищаем ошибку при выборе
+
+                        // Автоматически заполняем title из шаблона
+                        if (value != null && _titleController.text.isEmpty) {
+                          _titleController.text = value.name;
+                        }
+
+                        // Очищаем значения полей динамической формы при смене шаблона
+                        if (oldTemplate != null &&
+                            oldTemplate != value &&
+                            _formKey.currentState != null) {
+                          final oldSchema = oldTemplate.formSchema;
+                          if (oldSchema != null) {
+                            final oldProperties =
+                                oldSchema['properties']
+                                    as Map<String, dynamic>?;
+                            if (oldProperties != null) {
+                              for (var fieldName in oldProperties.keys) {
+                                // Очищаем поля из старого шаблона
+                                _formKey.currentState?.fields[fieldName]
+                                    ?.didChange(null);
+                              }
                             }
                           }
                         }
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Выберите шаблон согласования';
                       }
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Выберите шаблон согласования';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                FormBuilderTextField(
-                  name: 'title',
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Название *',
-                    border: OutlineInputBorder(),
-                    helperText: 'Можно оставить название из шаблона или изменить',
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Название обязательно';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                FormBuilderTextField(
-                  name: 'description',
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Описание',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  FormBuilderTextField(
+                    name: 'title',
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Название *',
+                      border: OutlineInputBorder(),
+                      helperText:
+                          'Можно оставить название из шаблона или изменить',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Название обязательно';
+                      }
+                      return null;
+                    },
                   ),
-                  maxLines: 4,
-                ),
-                // Динамическая форма на основе formSchema
-                if (_selectedTemplate?.formSchema != null) ...[
                   const SizedBox(height: 16),
-                  const Divider(),
+                  FormBuilderTextField(
+                    name: 'description',
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Описание',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 4,
+                  ),
+                  // Динамическая форма на основе formSchema
+                  if (_selectedTemplate?.formSchema != null) ...[
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    DynamicBlockForm(
+                      key: ValueKey(
+                        _selectedTemplate!.code,
+                      ), // Уникальный key для пересоздания виджета при смене шаблона
+                      formSchema: _selectedTemplate!.formSchema,
+                      formKey: _formKey,
+                    ),
+                  ],
+                ],
+                if (_error != null) ...[
                   const SizedBox(height: 16),
-                  DynamicApprovalForm(
-                    key: ValueKey(_selectedTemplate!.code), // Уникальный key для пересоздания виджета при смене шаблона
-                    formSchema: _selectedTemplate!.formSchema,
-                    formKey: _formKey,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
                   ),
                 ],
               ],
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: TextStyle(color: Colors.red.shade700),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -731,13 +765,14 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _submit,
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Создать'),
+          child:
+              _isLoading
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Создать'),
         ),
       ],
     );
