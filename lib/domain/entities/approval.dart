@@ -9,9 +9,12 @@ import 'approval_process_type.dart';
 
 /// Статус согласования
 enum ApprovalStatus {
-  pending, // Ожидает согласования
-  approved, // Одобрено
+  draft, // Черновик
+  pending, // На согласовании
+  approved, // Утверждено
   rejected, // Отклонено
+  inExecution, // В исполнении
+  completed, // Завершено
   cancelled, // Отменено
 }
 

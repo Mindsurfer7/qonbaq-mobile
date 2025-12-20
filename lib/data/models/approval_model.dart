@@ -145,7 +145,7 @@ class ApprovalModel extends Approval implements Model {
       businessId: json['businessId'] as String,
       templateId: json['templateId'] as String?,
       templateCode: json['templateCode'] as String?,
-      title: json['title'] as String,
+      title: json['title'] as String? ?? 'Без названия',
       description: json['description'] as String?,
       status: _parseStatus(json['status'] as String),
       createdBy: json['createdBy'] as String,
@@ -168,12 +168,18 @@ class ApprovalModel extends Approval implements Model {
 
   static ApprovalStatus _parseStatus(String status) {
     switch (status.toUpperCase()) {
+      case 'DRAFT':
+        return ApprovalStatus.draft;
       case 'PENDING':
         return ApprovalStatus.pending;
       case 'APPROVED':
         return ApprovalStatus.approved;
       case 'REJECTED':
         return ApprovalStatus.rejected;
+      case 'IN_EXECUTION':
+        return ApprovalStatus.inExecution;
+      case 'COMPLETED':
+        return ApprovalStatus.completed;
       case 'CANCELLED':
         return ApprovalStatus.cancelled;
       default:
@@ -183,12 +189,18 @@ class ApprovalModel extends Approval implements Model {
 
   static String _statusToString(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return 'DRAFT';
       case ApprovalStatus.pending:
         return 'PENDING';
       case ApprovalStatus.approved:
         return 'APPROVED';
       case ApprovalStatus.rejected:
         return 'REJECTED';
+      case ApprovalStatus.inExecution:
+        return 'IN_EXECUTION';
+      case ApprovalStatus.completed:
+        return 'COMPLETED';
       case ApprovalStatus.cancelled:
         return 'CANCELLED';
     }
@@ -217,7 +229,7 @@ class ApprovalModel extends Approval implements Model {
       if (templateCode != null) 'templateCode': templateCode,
       'title': title,
       if (description != null && description!.isNotEmpty) 'description': description,
-      if (requestDate != null) 'requestDate': requestDate!.toIso8601String(),
+      if (requestDate != null) 'requestDate': requestDate!.toUtc().toIso8601String(),
       if (formData != null) 'formData': formData,
       if (processType != null) 'processType': processType!.code,
     };

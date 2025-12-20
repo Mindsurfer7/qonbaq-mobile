@@ -99,13 +99,17 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
     properties.forEach((fieldName, fieldSchema) {
       if (fieldSchema is! Map<String, dynamic>) return;
 
+      // Пропускаем processName - бэкенд автоматически удаляет его из formData
+      // Можно скрыть поле или оставить только для чтения
+      final isProcessName = fieldName == 'processName';
+
       final fieldType = fieldSchema['type'] as String? ?? 'string';
       final fieldTitle = fieldSchema['title'] as String? ?? fieldName;
       final fieldFormat = fieldSchema['format'] as String?;
       final isRequired = requiredFields.contains(fieldName);
       final defaultValue = fieldSchema['default'];
       final initialValue = widget.initialValues?[fieldName] ?? defaultValue;
-      final readOnly = fieldSchema['readOnly'] == true;
+      final readOnly = fieldSchema['readOnly'] == true || isProcessName; // processName всегда только для чтения
       final description = fieldSchema['description'] as String?;
       final minLength = fieldSchema['minLength'] as int?;
       final maxLength = fieldSchema['maxLength'] as int?;

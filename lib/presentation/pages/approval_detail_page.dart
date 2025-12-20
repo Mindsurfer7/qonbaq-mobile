@@ -253,12 +253,18 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
 
   String _getStatusText(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return 'Черновик';
       case ApprovalStatus.pending:
-        return 'Ожидает';
+        return 'На согласовании';
       case ApprovalStatus.approved:
-        return 'Одобрено';
+        return 'Утверждено';
       case ApprovalStatus.rejected:
         return 'Отклонено';
+      case ApprovalStatus.inExecution:
+        return 'В исполнении';
+      case ApprovalStatus.completed:
+        return 'Завершено';
       case ApprovalStatus.cancelled:
         return 'Отменено';
     }
@@ -266,12 +272,18 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
 
   Color _getStatusColor(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return Colors.grey;
       case ApprovalStatus.pending:
         return Colors.orange;
       case ApprovalStatus.approved:
         return Colors.green;
       case ApprovalStatus.rejected:
         return Colors.red;
+      case ApprovalStatus.inExecution:
+        return Colors.blue;
+      case ApprovalStatus.completed:
+        return Colors.teal;
       case ApprovalStatus.cancelled:
         return Colors.grey;
     }

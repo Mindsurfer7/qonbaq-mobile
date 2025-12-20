@@ -159,7 +159,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalModel.fromJson(json);
+        // Сервер возвращает объект с полем "approval"
+        final approvalJson = json['approval'] as Map<String, dynamic>? ?? json;
+        return ApprovalModel.fromJson(approvalJson);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
@@ -528,12 +530,18 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
   String _statusToString(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return 'DRAFT';
       case ApprovalStatus.pending:
         return 'PENDING';
       case ApprovalStatus.approved:
         return 'APPROVED';
       case ApprovalStatus.rejected:
         return 'REJECTED';
+      case ApprovalStatus.inExecution:
+        return 'IN_EXECUTION';
+      case ApprovalStatus.completed:
+        return 'COMPLETED';
       case ApprovalStatus.cancelled:
         return 'CANCELLED';
     }

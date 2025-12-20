@@ -24,27 +24,63 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   String? _error;
-  List<Approval> _pendingApprovals = [];
-  List<Approval> _approvedApprovals = [];
-  List<Approval> _rejectedApprovals = [];
+  List<Approval> _pendingApprovals = []; // Ожидают (status = PENDING)
   List<Approval> _canApproveApprovals =
-      []; // Согласования, которые пользователь может одобрить
+      []; // Требуют решения (canApprove = true)
+  List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
+  List<Approval> _approvedApprovals = []; // Утвержденные (APPROVED)
+  List<Approval> _rejectedApprovals = []; // Отклоненные (REJECTED)
   late TabController _tabController;
+  bool _canApproveInCurrentBusiness = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadApprovals();
+    // Количество вкладок зависит от прав пользователя
+    _checkPermissions();
+    _tabController = TabController(
+      length: _canApproveInCurrentBusiness ? 3 : 2,
+      vsync: this,
+    );
+    // Слушаем изменения вкладки
+    _tabController.addListener(_onTabChanged);
+    // Загружаем данные для первой вкладки после инициализации
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadApprovalsForTab(0);
+    });
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging && mounted) {
+      _loadApprovalsForTab(_tabController.index);
+    }
+  }
+
+  void _checkPermissions() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final currentUser = authProvider.user;
+
+    if (currentUser != null && selectedBusiness != null) {
+      _canApproveInCurrentBusiness = currentUser.canApproveInBusiness(
+        selectedBusiness.id,
+      );
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadApprovals() async {
+  /// Загрузка согласований для конкретной вкладки
+  Future<void> _loadApprovalsForTab(int tabIndex) async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -71,54 +107,125 @@ class _ApprovalsPageState extends State<ApprovalsPage>
       listen: false,
     );
 
-    // Загружаем согласования, которые пользователь может одобрить
-    final canApproveResult = await getApprovalsUseCase.call(
-      GetApprovalsParams(businessId: selectedBusiness.id, canApprove: true),
-    );
+    // Определяем, какая вкладка активна
+    // Если есть права: 0 = Требуют решения, 1 = Ожидают, 2 = Завершенные
+    // Если нет прав: 0 = Ожидают, 1 = Завершенные
+    int actualTabIndex;
+    if (_canApproveInCurrentBusiness) {
+      // Есть права: tabIndex соответствует actualTabIndex
+      actualTabIndex = tabIndex;
+    } else {
+      // Нет прав: tabIndex 0 = Ожидают (actualTabIndex 1), tabIndex 1 = Завершенные (actualTabIndex 2)
+      actualTabIndex = tabIndex + 1;
+    }
 
-    // Загружаем pending согласования
-    final pendingResult = await getApprovalsUseCase.call(
-      GetApprovalsParams(
-        businessId: selectedBusiness.id,
-        status: ApprovalStatus.pending,
-      ),
-    );
+    try {
+      if (actualTabIndex == 0) {
+        // Вкладка "Требуют решения" - используем canApprove=true
+        // Бэкенд должен вернуть согласования со статусами PENDING и IN_EXECUTION
+        final result = await getApprovalsUseCase.call(
+          GetApprovalsParams(businessId: selectedBusiness.id, canApprove: true),
+        );
+        result.fold(
+          (failure) {
+            setState(() {
+              _isLoading = false;
+              _error = _getErrorMessage(failure);
+            });
+          },
+          (approvals) {
+            setState(() {
+              _isLoading = false;
+              _canApproveApprovals = approvals;
+            });
+          },
+        );
+      } else if (actualTabIndex == 1) {
+        // Вкладка "Ожидают" - загружаем DRAFT и PENDING
+        final draftResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.draft,
+          ),
+        );
+        final pendingResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.pending,
+          ),
+        );
 
-    // Загружаем одобренные согласования
-    final approvedResult = await getApprovalsUseCase.call(
-      GetApprovalsParams(
-        businessId: selectedBusiness.id,
-        status: ApprovalStatus.approved,
-      ),
-    );
+        List<Approval> allPending = [];
+        draftResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (approvals) => allPending.addAll(approvals),
+        );
+        pendingResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (approvals) => allPending.addAll(approvals),
+        );
 
-    // Загружаем отклоненные согласования
-    final rejectedResult = await getApprovalsUseCase.call(
-      GetApprovalsParams(
-        businessId: selectedBusiness.id,
-        status: ApprovalStatus.rejected,
-      ),
-    );
+        setState(() {
+          _isLoading = false;
+          _pendingApprovals = allPending;
+        });
+      } else if (actualTabIndex == 2) {
+        // Вкладка "Завершенные" - загружаем COMPLETED, APPROVED, REJECTED
+        final completedResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.completed,
+          ),
+        );
+        final approvedResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.approved,
+          ),
+        );
+        final rejectedResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.rejected,
+          ),
+        );
 
-    setState(() {
-      _isLoading = false;
-      canApproveResult.fold(
-        (failure) => _error = _getErrorMessage(failure),
-        (approvals) => _canApproveApprovals = approvals,
-      );
-      pendingResult.fold(
-        (failure) => _error = _getErrorMessage(failure),
-        (approvals) => _pendingApprovals = approvals,
-      );
-      approvedResult.fold(
-        (failure) => _error = _getErrorMessage(failure),
-        (approvals) => _approvedApprovals = approvals,
-      );
-      rejectedResult.fold(
-        (failure) => _error = _getErrorMessage(failure),
-        (approvals) => _rejectedApprovals = approvals,
-      );
-    });
+        List<Approval> completed = [];
+        List<Approval> approved = [];
+        List<Approval> rejected = [];
+
+        completedResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (approvals) => completed = approvals,
+        );
+        approvedResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (approvals) => approved = approvals,
+        );
+        rejectedResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (approvals) => rejected = approvals,
+        );
+
+        setState(() {
+          _isLoading = false;
+          _completedApprovals = completed;
+          _approvedApprovals = approved;
+          _rejectedApprovals = rejected;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Ошибка при загрузке: $e';
+      });
+    }
+  }
+
+  /// Старый метод для обратной совместимости (используется при обновлении после создания)
+  Future<void> _loadApprovals() async {
+    // Загружаем данные для текущей активной вкладки
+    _loadApprovalsForTab(_tabController.index);
   }
 
   String _getErrorMessage(Failure failure) {
@@ -151,12 +258,25 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
     showDialog(
       context: context,
+      barrierDismissible: false, // Предотвращаем закрытие при клике вне диалога
       builder:
-          (context) => _CreateApprovalDialog(
+          (dialogContext) => _CreateApprovalDialog(
             businessId: selectedBusiness.id,
             currentUserId: currentUser.id,
             onSuccess: () {
+              // Обновляем список согласований после успешного создания
               _loadApprovals();
+            },
+            onApprovalCreated: (approval) {
+              // Оптимистично добавляем созданное согласование в список
+              // Если статус DRAFT или PENDING, добавляем во вкладку "Ожидают"
+              if (approval.status == ApprovalStatus.draft ||
+                  approval.status == ApprovalStatus.pending) {
+                setState(() {
+                  // Добавляем в начало списка pending
+                  _pendingApprovals.insert(0, approval);
+                });
+              }
             },
           ),
     );
@@ -164,12 +284,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
   String _getStatusText(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return 'Черновик';
       case ApprovalStatus.pending:
-        return 'Ожидает';
+        return 'На согласовании';
       case ApprovalStatus.approved:
-        return 'Одобрено';
+        return 'Утверждено';
       case ApprovalStatus.rejected:
         return 'Отклонено';
+      case ApprovalStatus.inExecution:
+        return 'В исполнении';
+      case ApprovalStatus.completed:
+        return 'Завершено';
       case ApprovalStatus.cancelled:
         return 'Отменено';
     }
@@ -177,12 +303,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
   Color _getStatusColor(ApprovalStatus status) {
     switch (status) {
+      case ApprovalStatus.draft:
+        return Colors.grey;
       case ApprovalStatus.pending:
         return Colors.orange;
       case ApprovalStatus.approved:
         return Colors.green;
       case ApprovalStatus.rejected:
         return Colors.red;
+      case ApprovalStatus.inExecution:
+        return Colors.blue;
+      case ApprovalStatus.completed:
+        return Colors.teal;
       case ApprovalStatus.cancelled:
         return Colors.grey;
     }
@@ -314,10 +446,14 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Требуют решения', icon: Icon(Icons.pending_actions)),
-            Tab(text: 'Ожидают', icon: Icon(Icons.hourglass_empty)),
-            Tab(text: 'Завершенные', icon: Icon(Icons.check_circle)),
+          tabs: [
+            if (_canApproveInCurrentBusiness)
+              const Tab(
+                text: 'Требуют решения',
+                icon: Icon(Icons.pending_actions),
+              ),
+            const Tab(text: 'Ожидают', icon: Icon(Icons.hourglass_empty)),
+            const Tab(text: 'Завершенные', icon: Icon(Icons.check_circle)),
           ],
         ),
       ),
@@ -351,77 +487,70 @@ class _ApprovalsPageState extends State<ApprovalsPage>
               : TabBarView(
                 controller: _tabController,
                 children: [
-                  // Вкладка "Требуют решения" - показываем согласования, которые пользователь может одобрить
-                  _buildApprovalsList(_canApproveApprovals),
-                  // Вкладка "Ожидают" - показываем pending согласования
+                  if (_canApproveInCurrentBusiness)
+                    _buildApprovalsList(_canApproveApprovals),
                   _buildApprovalsList(_pendingApprovals),
-                  // Вкладка "Завершенные" - показываем одобренные и отклоненные
-                  Column(
-                    children: [
-                      if (_approvedApprovals.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Одобренные (${_approvedApprovals.length})',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildApprovalsList(_approvedApprovals),
-                        ),
-                      ],
-                      if (_rejectedApprovals.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.cancel, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Отклоненные (${_rejectedApprovals.length})',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildApprovalsList(_rejectedApprovals),
-                        ),
-                      ],
-                      if (_approvedApprovals.isEmpty &&
-                          _rejectedApprovals.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Text(
-                              'Нет завершенных согласований',
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  _buildCompletedTab(),
                 ],
               ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateApprovalDialog,
         child: const Icon(Icons.add),
         tooltip: 'Создать согласование',
+      ),
+    );
+  }
+
+  /// Вкладка "Завершенные" с разделением по статусам
+  Widget _buildCompletedTab() {
+    final hasAny =
+        _completedApprovals.isNotEmpty ||
+        _approvedApprovals.isNotEmpty ||
+        _rejectedApprovals.isNotEmpty;
+
+    if (!hasAny) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Text(
+            'Нет завершенных согласований',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadApprovals,
+      child: ListView(
+        children: [
+          if (_completedApprovals.isNotEmpty) ...[
+            _buildSectionHeader('Завершено', _completedApprovals.length),
+            ..._completedApprovals.map(_buildApprovalCard),
+          ],
+          if (_approvedApprovals.isNotEmpty) ...[
+            _buildSectionHeader('Утверждено', _approvedApprovals.length),
+            ..._approvedApprovals.map(_buildApprovalCard),
+          ],
+          if (_rejectedApprovals.isNotEmpty) ...[
+            _buildSectionHeader('Отклонено', _rejectedApprovals.length),
+            ..._rejectedApprovals.map(_buildApprovalCard),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        '$title ($count)',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
       ),
     );
   }
@@ -432,11 +561,14 @@ class _CreateApprovalDialog extends StatefulWidget {
   final String businessId;
   final String currentUserId;
   final VoidCallback onSuccess;
+  final Function(Approval)?
+  onApprovalCreated; // Callback для оптимистичного обновления
 
   const _CreateApprovalDialog({
     required this.businessId,
     required this.currentUserId,
     required this.onSuccess,
+    this.onApprovalCreated,
   });
 
   @override
@@ -497,7 +629,31 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   }
 
   Future<void> _submit() async {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
+    if (_formKey.currentState == null) {
+      setState(() {
+        _error = 'Ошибка формы';
+      });
+      return;
+    }
+
+    // Сохраняем значения формы перед валидацией
+    _formKey.currentState!.save();
+
+    // Валидируем форму
+    if (!_formKey.currentState!.validate()) {
+      // Если валидация не прошла, находим первое поле с ошибкой
+      final fields = _formKey.currentState!.fields;
+      String? firstError;
+      for (var entry in fields.entries) {
+        final field = entry.value;
+        if (field.hasError) {
+          firstError = field.errorText;
+          break;
+        }
+      }
+      setState(() {
+        _error = firstError ?? 'Пожалуйста, заполните все обязательные поля';
+      });
       return;
     }
 
@@ -513,8 +669,8 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     }
 
     // Получаем title и description из формы
-    final title =
-        (formValues['title'] as String?)?.trim() ?? selectedTemplate.name;
+    // title теперь опциональное - если не указано, бэкенд использует название шаблона
+    final title = (formValues['title'] as String?)?.trim();
     final description = (formValues['description'] as String?)?.trim();
 
     // Получаем данные из динамической формы (исключаем системные поля)
@@ -525,22 +681,55 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           key != 'title' &&
           key != 'description' &&
           value != null) {
-        dynamicFormData[key] = value;
+        // Удаляем processName из formData - бэкенд его автоматически удаляет
+        if (key == 'processName') {
+          return; // Пропускаем processName
+        }
+
+        // Преобразуем DateTime в ISO строку для отправки на сервер
+        if (value is DateTime) {
+          dynamicFormData[key] = value.toIso8601String();
+        } else if (value is ApprovalTemplate) {
+          // Пропускаем объекты шаблонов
+        } else {
+          dynamicFormData[key] = value;
+        }
       }
     });
 
-    // Извлекаем requestDate из formData, если он там есть
+    // Проверяем, что есть данные формы
+    if (dynamicFormData.isEmpty && selectedTemplate.formSchema != null) {
+      final schema = selectedTemplate.formSchema!;
+      final properties = schema['properties'] as Map<String, dynamic>?;
+      if (properties != null && properties.isNotEmpty) {
+        // Если есть поля в схеме, но они не заполнены, это может быть проблемой
+        // Но не блокируем отправку, так как некоторые поля могут быть опциональными
+      }
+    }
+
+    // Извлекаем requestDate из formData, ТОЛЬКО если поле есть в форме
+    // requestDate теперь опциональное - если не указано, бэкенд установит текущую дату
     DateTime? requestDate;
     if (dynamicFormData.containsKey('requestDate')) {
       final requestDateValue = dynamicFormData['requestDate'];
       if (requestDateValue is DateTime) {
         requestDate = requestDateValue;
+        // Удаляем из formData, так как requestDate отправляется отдельно
+        dynamicFormData.remove('requestDate');
       } else if (requestDateValue is String) {
+        // Если это уже строка (ISO формат), парсим её
         requestDate = DateTime.tryParse(requestDateValue);
+        if (requestDate != null) {
+          // Удаляем из formData, так как requestDate отправляется отдельно
+          dynamicFormData.remove('requestDate');
+        } else {
+          // Если не удалось распарсить, удаляем из formData, но не отправляем requestDate
+          dynamicFormData.remove('requestDate');
+        }
       }
     }
-    // Если requestDate не найден в formData, используем текущую дату
-    requestDate ??= DateTime.now();
+    // Если requestDate не найден в formData, НЕ устанавливаем его
+    // Бэкенд сам установит текущую дату, если нужно
 
     setState(() {
       _isLoading = true;
@@ -556,12 +745,17 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       id: '', // Будет создан на сервере
       businessId: widget.businessId,
       templateCode: selectedTemplate.code, // Используем код шаблона
-      title: title,
+      title:
+          title ??
+          selectedTemplate
+              .name, // Если title не указан, используем название шаблона (бэкенд тоже так сделает)
       description: description?.isEmpty ?? true ? null : description,
       status: ApprovalStatus.pending,
       createdBy: widget.currentUserId,
-      requestDate: requestDate,
-      formData: dynamicFormData, // Все данные из динамической формы
+      requestDate:
+          requestDate, // Опциональное - бэкенд установит текущую дату, если не указано
+      formData:
+          dynamicFormData, // Все данные из динамической формы (без processName)
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -576,16 +770,38 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           _isLoading = false;
           _error = _getErrorMessage(failure);
         });
+
+        // Если это ошибка валидации, применяем ошибки к полям формы
+        if (failure is ValidationFailure && _formKey.currentState != null) {
+          for (var error in failure.errors) {
+            final fieldName = error.field;
+            final field = _formKey.currentState?.fields[fieldName];
+            if (field != null) {
+              field.invalidate(error.message);
+              field.validate();
+            }
+          }
+        }
       },
       (createdApproval) {
-        Navigator.of(context).pop();
+        // Оптимистично добавляем созданное согласование в список
+        if (widget.onApprovalCreated != null) {
+          widget.onApprovalCreated!(createdApproval);
+        }
+
+        // Закрываем диалог СРАЗУ после успешного создания
+        Navigator.of(context).pop(true);
+
+        // Вызываем onSuccess для обновления списка (перезагрузка с сервера)
+        widget.onSuccess();
+
+        // Показываем уведомление об успехе
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Согласование успешно создано'),
             backgroundColor: Colors.green,
           ),
         );
-        widget.onSuccess();
       },
     );
   }
@@ -611,6 +827,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           maxHeight: MediaQuery.of(context).size.height * 0.7,
         ),
         child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: FormBuilder(
             key: _formKey,
             child: Column(
@@ -702,17 +919,12 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                     name: 'title',
                     controller: _titleController,
                     decoration: const InputDecoration(
-                      labelText: 'Название *',
+                      labelText: 'Название',
                       border: OutlineInputBorder(),
                       helperText:
-                          'Можно оставить название из шаблона или изменить',
+                          'Оставьте пустым, чтобы использовать название из шаблона',
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Название обязательно';
-                      }
-                      return null;
-                    },
+                    // title теперь опциональное - валидация не требуется
                   ),
                   const SizedBox(height: 16),
                   FormBuilderTextField(
@@ -737,6 +949,8 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                       formKey: _formKey,
                     ),
                   ],
+                  // Добавляем отступ снизу для корректного скролла
+                  const SizedBox(height: 8),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),
