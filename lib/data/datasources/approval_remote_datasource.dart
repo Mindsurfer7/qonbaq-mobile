@@ -32,6 +32,7 @@ abstract class ApprovalRemoteDataSource extends DataSource {
     ApprovalStatus? status,
     String? createdBy,
     bool? canApprove, // Если true, возвращает только те, которые пользователь может одобрить
+    bool? showAll, // Если true, возвращает все согласования в бизнесе (только для привилегированных)
     int? page,
     int? limit,
   });

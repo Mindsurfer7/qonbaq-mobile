@@ -10,6 +10,7 @@ class GetApprovalsParams {
   final ApprovalStatus? status;
   final String? createdBy;
   final bool? canApprove;
+  final bool? showAll;
   final int? page;
   final int? limit;
 
@@ -18,6 +19,7 @@ class GetApprovalsParams {
     this.status,
     this.createdBy,
     this.canApprove,
+    this.showAll,
     this.page,
     this.limit,
   });
@@ -36,6 +38,7 @@ class GetApprovals implements UseCase<List<Approval>, GetApprovalsParams> {
       status: params.status,
       createdBy: params.createdBy,
       canApprove: params.canApprove,
+      showAll: params.showAll,
       page: params.page,
       limit: params.limit,
     );

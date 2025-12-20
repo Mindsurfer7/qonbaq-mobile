@@ -27,11 +27,14 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _pendingApprovals = []; // Ожидают (status = PENDING)
   List<Approval> _canApproveApprovals =
       []; // Требуют решения (canApprove = true)
+  List<Approval> _allCanApproveApprovals =
+      []; // Все согласования в бизнесе (showAll=true)
   List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
   List<Approval> _approvedApprovals = []; // Утвержденные (APPROVED)
   List<Approval> _rejectedApprovals = []; // Отклоненные (REJECTED)
   late TabController _tabController;
   bool _canApproveInCurrentBusiness = false;
+  bool _isLoadingAllApprovals = false; // Флаг загрузки расширенного списка
 
   @override
   void initState() {
@@ -70,6 +73,80 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         selectedBusiness.id,
       );
     }
+  }
+
+  /// Проверка привилегированных прав (isAuthorizedApprover или isGeneralDirector)
+  bool _hasPrivilegedPermissions() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final currentUser = authProvider.user;
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (currentUser == null || selectedBusiness == null) return false;
+
+    final permission = currentUser.getPermissionsForBusiness(selectedBusiness.id);
+    if (permission == null) return false;
+
+    return permission.isAuthorizedApprover || permission.isGeneralDirector;
+  }
+
+  /// Загрузка всех согласований в бизнесе (showAll=true)
+  Future<void> _loadAllApprovals() async {
+    if (_isLoadingAllApprovals) return;
+
+    setState(() {
+      _isLoadingAllApprovals = true;
+    });
+
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      setState(() {
+        _isLoadingAllApprovals = false;
+      });
+      return;
+    }
+
+    final getApprovalsUseCase = Provider.of<GetApprovals>(
+      context,
+      listen: false,
+    );
+    final result = await getApprovalsUseCase.call(
+      GetApprovalsParams(
+        businessId: selectedBusiness.id,
+        canApprove: true,
+        showAll: true,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoadingAllApprovals = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getErrorMessage(failure)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      (approvals) {
+        setState(() {
+          _isLoadingAllApprovals = false;
+          _allCanApproveApprovals = approvals;
+        });
+      },
+    );
   }
 
   @override
@@ -422,6 +499,88 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     );
   }
 
+  /// Виджет для вкладки "Требуют решения" с аккордеоном для привилегированных
+  Widget _buildCanApproveTab() {
+    final hasPrivileges = _hasPrivilegedPermissions();
+
+    if (!hasPrivileges) {
+      // Обычный пользователь - просто список
+      return _buildApprovalsList(_canApproveApprovals);
+    }
+
+    // Привилегированный пользователь - аккордеон
+    return RefreshIndicator(
+      onRefresh: () => _loadApprovalsForTab(0),
+      child: ListView(
+        children: [
+          // Основной список (свои согласования)
+          if (_canApproveApprovals.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Мои согласования (${_canApproveApprovals.length})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            ..._canApproveApprovals.map((approval) => _buildApprovalCard(approval)),
+          ] else
+            Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                'Нет согласований',
+                style: TextStyle(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Аккордеон для всех согласований
+          ExpansionTile(
+            title: const Text(
+              'Все согласования в бизнесе',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: _isLoadingAllApprovals
+                ? const Text('Загрузка...')
+                : Text('${_allCanApproveApprovals.length} согласований'),
+            leading: const Icon(Icons.business),
+            initiallyExpanded: false,
+            onExpansionChanged: (expanded) {
+              if (expanded &&
+                  _allCanApproveApprovals.isEmpty &&
+                  !_isLoadingAllApprovals) {
+                // Загружаем только при первом раскрытии
+                _loadAllApprovals();
+              }
+            },
+            children: [
+              if (_isLoadingAllApprovals)
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_allCanApproveApprovals.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Нет согласований',
+                    style: TextStyle(color: Colors.grey.shade600),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else
+                ..._allCanApproveApprovals
+                    .map((approval) => _buildApprovalCard(approval)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -488,7 +647,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 controller: _tabController,
                 children: [
                   if (_canApproveInCurrentBusiness)
-                    _buildApprovalsList(_canApproveApprovals),
+                    _buildCanApproveTab(),
                   _buildApprovalsList(_pendingApprovals),
                   _buildCompletedTab(),
                 ],

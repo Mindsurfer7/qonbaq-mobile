@@ -32,6 +32,7 @@ abstract class ApprovalRepository extends Repository {
     ApprovalStatus? status,
     String? createdBy,
     bool? canApprove,
+    bool? showAll,
     int? page,
     int? limit,
   });

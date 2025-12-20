@@ -92,6 +92,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
     ApprovalStatus? status,
     String? createdBy,
     bool? canApprove,
+    bool? showAll,
     int? page,
     int? limit,
   }) async {
@@ -101,6 +102,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
         status: status,
         createdBy: createdBy,
         canApprove: canApprove,
+        showAll: showAll,
         page: page,
         limit: limit,
       );

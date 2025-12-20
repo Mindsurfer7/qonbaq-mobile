@@ -216,6 +216,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     ApprovalStatus? status,
     String? createdBy,
     bool? canApprove,
+    bool? showAll,
     int? page,
     int? limit,
   }) async {
@@ -225,6 +226,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       if (status != null) queryParams['status'] = _statusToString(status);
       if (createdBy != null) queryParams['createdBy'] = createdBy;
       if (canApprove != null) queryParams['canApprove'] = canApprove.toString();
+      if (showAll != null) queryParams['showAll'] = showAll.toString();
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();
 
