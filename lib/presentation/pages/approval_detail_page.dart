@@ -354,22 +354,32 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadApproval,
+                            child: const Text('Повторить'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadApproval,
-                        child: const Text('Повторить'),
-                      ),
-                    ],
+                    ),
                   ),
                 )
               : _approval == null

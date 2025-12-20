@@ -238,7 +238,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApprovalModel.fromJson(json);
+        // Сервер может вернуть объект-обёртку { "approval": { ... } }
+        final approvalJson = json['approval'] as Map<String, dynamic>? ?? json;
+        return ApprovalModel.fromJson(approvalJson);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 404) {
