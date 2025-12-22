@@ -71,3 +71,4 @@ class ApprovalPermission extends Entity {
       'ApprovalPermission(businessId: $businessId, businessName: $businessName, canApprove: $canApprove, isDepartmentManager: $isDepartmentManager, isGeneralDirector: $isGeneralDirector, isAuthorizedApprover: $isAuthorizedApprover, managedDepartments: $managedDepartments)';
 }
 
+

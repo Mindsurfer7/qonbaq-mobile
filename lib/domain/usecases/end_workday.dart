@@ -24,3 +24,4 @@ class EndWorkDay implements UseCase<WorkDay, EndWorkDayParams> {
 }
 
 
+

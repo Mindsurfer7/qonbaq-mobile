@@ -24,3 +24,4 @@ class GetWorkDayStatus implements UseCase<WorkDay?, GetWorkDayStatusParams> {
 }
 
 
+
