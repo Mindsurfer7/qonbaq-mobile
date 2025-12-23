@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
@@ -1027,9 +1029,12 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                       labelText: 'Шаблон согласования *',
                       border: OutlineInputBorder(),
                     ),
+                    dropdownColor: context.appTheme.backgroundSurface,
+                    borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
                     items:
                         _templates.map((template) {
-                          return DropdownMenuItem<ApprovalTemplate>(
+                          return createStyledDropdownItem<ApprovalTemplate>(
+                            context: context,
                             value: template,
                             child: Text(
                               template.name,

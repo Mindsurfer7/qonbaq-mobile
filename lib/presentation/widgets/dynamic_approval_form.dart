@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/approval_template.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 
 /// Виджет для динамического рендеринга формы согласования на основе formSchema
 class DynamicApprovalForm extends StatefulWidget {
@@ -295,12 +297,14 @@ class _DynamicApprovalFormState extends State<DynamicApprovalForm> {
       // TODO: Загрузить проекты через API
       // Пока используем пустой список
       final projectItems = (_projectsList ?? {}).entries.map((entry) {
-        return DropdownMenuItem<String>(
+        return createStyledDropdownItem<String>(
+          context: context,
           value: entry.key,
           child: Text(entry.value.toString()),
         );
       }).toList();
 
+      final theme = context.appTheme;
       return FormBuilderDropdown<String>(
         name: fieldName,
         initialValue: initialValue?.toString(),
@@ -308,6 +312,8 @@ class _DynamicApprovalFormState extends State<DynamicApprovalForm> {
           labelText: isRequired ? '$fieldTitle *' : fieldTitle,
           border: const OutlineInputBorder(),
         ),
+        dropdownColor: theme.backgroundSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius),
         items: projectItems.isEmpty
             ? [
                 const DropdownMenuItem<String>(
@@ -328,6 +334,7 @@ class _DynamicApprovalFormState extends State<DynamicApprovalForm> {
     // Если это статический список опций
     final staticOptions = fieldSchema['enum'] as List<dynamic>?;
     if (staticOptions != null) {
+      final theme = context.appTheme;
       return FormBuilderDropdown<String>(
         name: fieldName,
         initialValue: initialValue?.toString(),
@@ -335,8 +342,11 @@ class _DynamicApprovalFormState extends State<DynamicApprovalForm> {
           labelText: isRequired ? '$fieldTitle *' : fieldTitle,
           border: const OutlineInputBorder(),
         ),
+        dropdownColor: theme.backgroundSurface,
+        borderRadius: BorderRadius.circular(theme.borderRadius),
         items: staticOptions.map((option) {
-          return DropdownMenuItem<String>(
+          return createStyledDropdownItem<String>(
+            context: context,
             value: option.toString(),
             child: Text(option.toString()),
           );
