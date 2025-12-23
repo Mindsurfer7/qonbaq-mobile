@@ -314,6 +314,11 @@ class _DynamicApprovalFormState extends State<DynamicApprovalForm> {
         ),
         dropdownColor: theme.backgroundSurface,
         borderRadius: BorderRadius.circular(theme.borderRadius),
+        selectedItemBuilder: (BuildContext context) {
+          return (_projectsList ?? {}).values.map<Widget>((value) {
+            return Text(value.toString());
+          }).toList();
+        },
         items: projectItems.isEmpty
             ? [
                 const DropdownMenuItem<String>(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 
@@ -59,8 +61,8 @@ class BusinessSelectorWidget extends StatelessWidget {
 
         // Показываем селектор
         return compact
-            ? _buildCompactSelector(provider)
-            : _buildFullSelector(provider);
+            ? _buildCompactSelector(provider, context)
+            : _buildFullSelector(provider, context);
       },
     );
   }
@@ -129,7 +131,7 @@ class BusinessSelectorWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactSelector(ProfileProvider provider) {
+  Widget _buildCompactSelector(ProfileProvider provider, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -153,9 +155,20 @@ class BusinessSelectorWidget extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             isExpanded: true,
+            dropdownColor: context.appTheme.backgroundSurface,
+            borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+            selectedItemBuilder: (BuildContext context) {
+              return provider.businesses!.map<Widget>((business) {
+                return Text(
+                  business.name,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }).toList();
+            },
             items: provider.businesses!
                 .map(
-                  (business) => DropdownMenuItem(
+                  (business) => createStyledDropdownItem(
+                    context: context,
                     value: business,
                     child: Text(
                       business.name,
@@ -175,7 +188,7 @@ class BusinessSelectorWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFullSelector(ProfileProvider provider) {
+  Widget _buildFullSelector(ProfileProvider provider, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -196,9 +209,17 @@ class BusinessSelectorWidget extends StatelessWidget {
               labelText: 'Выберите компанию',
               border: OutlineInputBorder(),
             ),
+            dropdownColor: context.appTheme.backgroundSurface,
+            borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+            selectedItemBuilder: (BuildContext context) {
+              return provider.businesses!.map<Widget>((business) {
+                return Text(business.name);
+              }).toList();
+            },
             items: provider.businesses!
                 .map(
-                  (business) => DropdownMenuItem(
+                  (business) => createStyledDropdownItem(
+                    context: context,
                     value: business,
                     child: Text(business.name),
                   ),

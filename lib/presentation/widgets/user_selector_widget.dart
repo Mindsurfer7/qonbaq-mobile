@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -183,6 +185,8 @@ class _UserSelectorWidgetState extends State<UserSelectorWidget> {
         border: const OutlineInputBorder(),
       ),
       isDense: true,
+      dropdownColor: context.appTheme.backgroundSurface,
+      borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
       // Показываем только имя когда dropdown закрыт (выбранное значение)
       selectedItemBuilder: (BuildContext context) {
         return _employees!.map<Widget>((Employee employee) {
@@ -196,7 +200,8 @@ class _UserSelectorWidgetState extends State<UserSelectorWidget> {
       // В открытом списке показываем имя и роль
       items:
           _employees!.map((employee) {
-            return DropdownMenuItem<Employee>(
+            return createStyledDropdownItem<Employee>(
+              context: context,
               value: employee,
               child: SizedBox(
                 height: 48,

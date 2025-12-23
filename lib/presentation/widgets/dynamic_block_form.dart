@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
@@ -155,6 +157,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
           } else if (fieldFormat == 'select') {
             // Select поле
             if (enumValues != null) {
+              final theme = context.appTheme;
               field = FormBuilderDropdown<String>(
                 name: fieldName,
                 initialValue: initialValue?.toString(),
@@ -164,13 +167,26 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                   border: const OutlineInputBorder(),
                   helperText: description,
                 ),
+                dropdownColor: theme.backgroundSurface,
+                borderRadius: BorderRadius.circular(theme.borderRadius),
+                selectedItemBuilder: (BuildContext context) {
+                  return enumValues.asMap().entries.map<Widget>((entry) {
+                    final index = entry.key;
+                    final value = entry.value.toString();
+                    final name = enumNames != null && index < enumNames.length
+                        ? enumNames[index].toString()
+                        : value;
+                    return Text(name);
+                  }).toList();
+                },
                 items: enumValues.asMap().entries.map((entry) {
                   final index = entry.key;
                   final value = entry.value.toString();
                   final name = enumNames != null && index < enumNames.length
                       ? enumNames[index].toString()
                       : value;
-                  return DropdownMenuItem<String>(
+                  return createStyledDropdownItem<String>(
+                    context: context,
                     value: value,
                     child: Text(name),
                   );
@@ -807,6 +823,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     }
 
     // Если нет родительского поля, используем обычный FormBuilderDropdown
+    final theme = context.appTheme;
     return FormBuilderDropdown<String>(
       name: _fieldName,
       initialValue: initialValue?.toString(),
@@ -814,6 +831,17 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         labelText: isRequired ? '$label *' : label,
         border: const OutlineInputBorder(),
       ),
+      dropdownColor: theme.backgroundSurface,
+      borderRadius: BorderRadius.circular(theme.borderRadius),
+      selectedItemBuilder: (BuildContext context) {
+        return (options ?? []).map<Widget>((option) {
+          if (option is Map<String, dynamic>) {
+            return Text(option['name']?.toString() ?? option['value']?.toString() ?? '');
+          } else {
+            return Text(option.toString());
+          }
+        }).toList();
+      },
       items: (options ?? []).isEmpty
           ? [
               const DropdownMenuItem<String>(
@@ -824,12 +852,22 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
             ]
           : (options ?? []).map((option) {
               if (option is Map<String, dynamic>) {
-                return DropdownMenuItem<String>(
-                  value: option['value']?.toString(),
-                  child: Text(option['name']?.toString() ?? option['value']?.toString() ?? ''),
+                final value = option['value']?.toString();
+                if (value == null) {
+                  return const DropdownMenuItem<String>(
+                    value: null,
+                    enabled: false,
+                    child: Text('Нет доступных опций'),
+                  );
+                }
+                return createStyledDropdownItem<String>(
+                  context: context,
+                  value: value,
+                  child: Text(option['name']?.toString() ?? value),
                 );
               } else {
-                return DropdownMenuItem<String>(
+                return createStyledDropdownItem<String>(
+                  context: context,
                   value: option.toString(),
                   child: Text(option.toString()),
                 );
@@ -988,6 +1026,7 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
         final currentOptions = widget.filterOptions(context, widget.options, widget.parent);
 
         // Используем key для перестройки виджета при изменении родительского значения
+        final theme = context.appTheme;
         return FormBuilderDropdown<String>(
           key: ValueKey('${widget.fieldName}-$parentValue'),
           name: widget.fieldName,
@@ -997,6 +1036,17 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
             border: const OutlineInputBorder(),
             errorText: field.errorText,
           ),
+          dropdownColor: theme.backgroundSurface,
+          borderRadius: BorderRadius.circular(theme.borderRadius),
+          selectedItemBuilder: (BuildContext context) {
+            return currentOptions.map<Widget>((option) {
+              if (option is Map<String, dynamic>) {
+                return Text(option['name']?.toString() ?? option['value']?.toString() ?? '');
+              } else {
+                return Text(option.toString());
+              }
+            }).toList();
+          },
           items: currentOptions.isEmpty
               ? [
                   const DropdownMenuItem<String>(
@@ -1007,12 +1057,22 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
                 ]
               : currentOptions.map((option) {
                   if (option is Map<String, dynamic>) {
-                    return DropdownMenuItem<String>(
-                      value: option['value']?.toString(),
-                      child: Text(option['name']?.toString() ?? option['value']?.toString() ?? ''),
+                    final value = option['value']?.toString();
+                    if (value == null) {
+                      return const DropdownMenuItem<String>(
+                        value: null,
+                        enabled: false,
+                        child: Text('Нет доступных опций'),
+                      );
+                    }
+                    return createStyledDropdownItem<String>(
+                      context: context,
+                      value: value,
+                      child: Text(option['name']?.toString() ?? value),
                     );
                   } else {
-                    return DropdownMenuItem<String>(
+                    return createStyledDropdownItem<String>(
+                      context: context,
                       value: option.toString(),
                       child: Text(option.toString()),
                     );

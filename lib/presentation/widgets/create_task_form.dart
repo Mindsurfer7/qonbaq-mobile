@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/task.dart';
@@ -236,15 +238,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorText: _fieldErrors['priority'],
                 errorMaxLines: 2,
               ),
-              items:
-                  TaskPriority.values
-                      .map(
-                        (priority) => DropdownMenuItem(
-                          value: priority,
-                          child: Text(_getPriorityText(priority)),
-                        ),
-                      )
-                      .toList(),
+              dropdownColor: context.appTheme.backgroundSurface,
+              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              selectedItemBuilder: (BuildContext context) {
+                return TaskPriority.values.map<Widget>((TaskPriority priority) {
+                  return Text(_getPriorityText(priority));
+                }).toList();
+              },
+              items: TaskPriority.values
+                  .map(
+                    (priority) => createStyledDropdownItem<TaskPriority>(
+                      context: context,
+                      value: priority,
+                      child: Text(_getPriorityText(priority)),
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 16),
 
@@ -258,15 +267,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorMaxLines: 2,
               ),
               initialValue: TaskStatus.pending,
-              items:
-                  TaskStatus.values
-                      .map(
-                        (status) => DropdownMenuItem(
-                          value: status,
-                          child: Text(_getStatusText(status)),
-                        ),
-                      )
-                      .toList(),
+              dropdownColor: context.appTheme.backgroundSurface,
+              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              selectedItemBuilder: (BuildContext context) {
+                return TaskStatus.values.map<Widget>((TaskStatus status) {
+                  return Text(_getStatusText(status));
+                }).toList();
+              },
+              items: TaskStatus.values
+                  .map(
+                    (status) => createStyledDropdownItem<TaskStatus>(
+                      context: context,
+                      value: status,
+                      child: Text(_getStatusText(status)),
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 16),
 

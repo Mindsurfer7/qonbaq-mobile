@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -478,7 +480,15 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 labelText: 'Приоритет',
                 border: OutlineInputBorder(),
               ),
-              items: TaskPriority.values.map((priority) => DropdownMenuItem(
+              dropdownColor: context.appTheme.backgroundSurface,
+              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              selectedItemBuilder: (BuildContext context) {
+                return TaskPriority.values.map<Widget>((TaskPriority priority) {
+                  return Text(_getPriorityText(priority));
+                }).toList();
+              },
+              items: TaskPriority.values.map((priority) => createStyledDropdownItem<TaskPriority>(
+                context: context,
                 value: priority,
                 child: Text(_getPriorityText(priority)),
               )).toList(),
@@ -491,7 +501,15 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 labelText: 'Статус',
                 border: OutlineInputBorder(),
               ),
-              items: TaskStatus.values.map((status) => DropdownMenuItem(
+              dropdownColor: context.appTheme.backgroundSurface,
+              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              selectedItemBuilder: (BuildContext context) {
+                return TaskStatus.values.map<Widget>((TaskStatus status) {
+                  return Text(_getStatusText(status));
+                }).toList();
+              },
+              items: TaskStatus.values.map((status) => createStyledDropdownItem<TaskStatus>(
+                context: context,
                 value: status,
                 child: Text(_getStatusText(status)),
               )).toList(),
