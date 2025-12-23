@@ -35,12 +35,25 @@ class VoiceRecordWidget extends StatefulWidget {
 }
 
 class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  late AnimationController _barsAnimationController;
+  late Animation<double> _barsAnimation;
   late AnimationController _waveController;
 
   @override
   void initState() {
     super.initState();
+
+    // Анимация для компактных палочек
+    _barsAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+    _barsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _barsAnimationController, curve: Curves.linear),
+    );
+
+    // Анимация для полноэкранных волн
     _waveController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -49,6 +62,7 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
 
   @override
   void dispose() {
+    _barsAnimationController.dispose();
     _waveController.dispose();
     super.dispose();
   }
@@ -57,6 +71,18 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
   Widget build(BuildContext context) {
     return Consumer<AudioRecordingService>(
       builder: (context, audioService, child) {
+        // Управляем анимацией в зависимости от состояния записи
+        if (audioService.state == RecordingState.recording) {
+          if (!_barsAnimationController.isAnimating) {
+            _barsAnimationController.repeat();
+          }
+        } else {
+          if (_barsAnimationController.isAnimating) {
+            _barsAnimationController.stop();
+            _barsAnimationController.reset();
+          }
+        }
+
         // Если запись не активна, показываем кнопку записи
         if (audioService.state == RecordingState.idle) {
           return _buildIdleState(context, audioService);
@@ -113,37 +139,32 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Область записи сверху
+          // Область записи сверху (анимация и таймер)
           Container(
             constraints: const BoxConstraints(minHeight: 40),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
-                // Индикатор записи
+                // Область с движущимися палочками
                 Expanded(
-                  child:
-                      audioService.state == RecordingState.loading
-                          ? const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                          : const Row(
-                            children: [
-                              Icon(Icons.mic, size: 20, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Запись...',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
+                  child: Container(
+                    height: 30,
+                    child:
+                        audioService.state == RecordingState.loading
+                            ? const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
                                 ),
                               ),
-                            ],
-                          ),
+                            )
+                            : ClipRect(
+                              // Обрезаем содержимое чтобы палочки не выходили за границы
+                              child: _buildCompactMovingBars(),
+                            ),
+                  ),
                 ),
                 // Таймер справа
                 Text(
@@ -157,7 +178,7 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
               ],
             ),
           ),
-          // Кнопки управления
+          // Кнопки управления снизу
           if (audioService.state == RecordingState.recording ||
               audioService.state == RecordingState.recorded)
             Padding(
@@ -171,7 +192,7 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
                     onPressed: () => _cancelRecording(audioService),
                     tooltip: 'Отменить',
                   ),
-                  // Кнопка подтверждения
+                  // Кнопка подтверждения (галочка)
                   IconButton(
                     icon: const Icon(Icons.check, color: Colors.green),
                     onPressed: () => _acceptRecording(context, audioService),
@@ -182,6 +203,22 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
             ),
         ],
       ),
+    );
+  }
+
+  /// Компактные движущиеся палочки для нижнего блока
+  Widget _buildCompactMovingBars() {
+    return AnimatedBuilder(
+      animation: _barsAnimation,
+      builder: (context, child) {
+        return Container(
+          height: 30,
+          child: CustomPaint(
+            painter: CompactMovingBarsPainter(_barsAnimation.value),
+            size: const Size(double.infinity, 30),
+          ),
+        );
+      },
     );
   }
 
@@ -362,31 +399,80 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
     BuildContext context,
     AudioRecordingService audioService,
   ) async {
-    if (audioService.state == RecordingState.recording) {
-      // Сначала останавливаем запись
-      await audioService.stopRecording();
-    } else if (audioService.state == RecordingState.recorded) {
-      // Отправляем на транскрипцию
-      try {
-        final transcription = await audioService.acceptRecording();
-        if (context.mounted) {
-          widget.onTranscriptionReceived?.call(transcription);
-        }
-      } catch (e) {
-        final errorMessage = 'Ошибка транскрипции: $e';
-        if (widget.onError != null) {
-          widget.onError!(errorMessage);
-        } else if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(errorMessage)));
-        }
+    try {
+      // Если запись идет, сначала останавливаем ее
+      if (audioService.state == RecordingState.recording) {
+        await audioService.stopRecording();
+      }
+
+      // Отправляем на транскрипцию (метод acceptRecording сам проверит состояние)
+      final transcription = await audioService.acceptRecording();
+      if (context.mounted) {
+        widget.onTranscriptionReceived?.call(transcription);
+      }
+    } catch (e) {
+      final errorMessage = 'Ошибка транскрипции: $e';
+      if (widget.onError != null) {
+        widget.onError!(errorMessage);
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
   }
 }
 
-/// Отрисовщик волн для анимации записи
+/// Класс для рисования компактных движущихся палочек
+class CompactMovingBarsPainter extends CustomPainter {
+  final double animationValue;
+
+  const CompactMovingBarsPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.black54
+          ..strokeCap = StrokeCap.round;
+
+    // Параметры палочек для компактного вида
+    const barWidth = 1.5;
+    const barSpacing = 4.0;
+
+    // Смещение для плавного движения
+    final offset = animationValue * barSpacing * 4;
+
+    // Рисуем палочки начиная с отрицательной позиции для плавного появления
+    final startIndex = -(offset / barSpacing).floor() - 5;
+    final endIndex = startIndex + (size.width / barSpacing).ceil() + 15;
+
+    // Рисуем палочки с плавным движением
+    for (int i = startIndex; i < endIndex; i++) {
+      // Позиция X
+      final x = (i * barSpacing) - offset;
+
+      // Показываем только палочки, которые видны на экране
+      if (x >= -barWidth && x <= size.width + barWidth) {
+        // Высота палочки с вариацией (используем абсолютное значение индекса)
+        final heights = [4.0, 8.0, 12.0, 6.0, 10.0, 5.0, 14.0];
+        final barHeight = heights[i.abs() % heights.length];
+
+        // Центрируем палочку по вертикали
+        final y1 = (size.height - barHeight) / 2;
+        final y2 = y1 + barHeight;
+
+        paint.strokeWidth = barWidth;
+        canvas.drawLine(Offset(x, y1), Offset(x, y2), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+/// Отрисовщик волн для анимации записи (полноэкранный режим)
 class WavePainter extends CustomPainter {
   final double animationValue;
 

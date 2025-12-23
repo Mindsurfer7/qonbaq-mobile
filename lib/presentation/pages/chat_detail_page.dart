@@ -5,6 +5,8 @@ import '../../domain/repositories/chat_repository.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/entities/chat.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/voice_record_widget.dart';
+import '../../core/services/audio_recording_service.dart';
 import 'approval_detail_page.dart';
 
 /// Страница детального чата с конкретным пользователем
@@ -621,51 +623,102 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
           ),
 
-          // Поле ввода сообщения
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Введите сообщение...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
+          // Поле ввода сообщения или интерфейс записи
+          Consumer<AudioRecordingService>(
+            builder: (context, audioService, child) {
+              // Если идет запись, показываем интерфейс записи
+              if (audioService.state != RecordingState.idle) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, -2),
                       ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: SafeArea(
+                    child: VoiceRecordWidget(
+                      style: VoiceRecordStyle.compact,
+                      onTranscriptionReceived: (transcription) {
+                        // Вставляем транскрипцию в поле ввода
+                        _messageController.text = transcription;
+                        setState(() {});
+                      },
+                      onError: (error) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error)),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
+                );
+              }
+
+              // Обычный интерфейс ввода сообщения
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
                     ),
-                    child:
-                        _isSending
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      // Кнопка записи голоса
+                      IconButton(
+                        icon: const Icon(Icons.mic),
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          // Начинаем запись через сервис
+                          Provider.of<AudioRecordingService>(
+                            context,
+                            listen: false,
+                          ).startRecording().catchError((e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Ошибка начала записи: $e')),
+                            );
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: 'Введите сообщение...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: _isSending
                             ? const Padding(
                               padding: EdgeInsets.all(12),
                               child: SizedBox(
@@ -685,10 +738,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               padding: const EdgeInsets.all(12),
                               constraints: const BoxConstraints(),
                             ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),

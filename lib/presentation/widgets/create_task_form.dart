@@ -5,6 +5,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../data/models/validation_error.dart';
 import 'user_selector_widget.dart';
+import 'voice_record_widget.dart';
 
 /// Форма создания задачи
 class CreateTaskForm extends StatefulWidget {
@@ -35,6 +36,7 @@ class CreateTaskForm extends StatefulWidget {
 
 class _CreateTaskFormState extends State<CreateTaskForm> {
   final _formKey = GlobalKey<FormBuilderState>();
+  final _descriptionController = TextEditingController();
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
@@ -47,6 +49,13 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   @override
   void didUpdateWidget(CreateTaskForm oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Обновляем контроллер описания, если изменилось initialDescription
+    if (widget.initialDescription != oldWidget.initialDescription) {
+      _descriptionController.text = widget.initialDescription ?? '';
+      _formKey.currentState?.fields['description']?.didChange(widget.initialDescription);
+    }
+    
     // Применяем ошибки валидации к полям формы
     if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -90,12 +99,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   @override
   void initState() {
     super.initState();
+    // Устанавливаем начальное значение для описания, если есть
+    if (widget.initialDescription != null) {
+      _descriptionController.text = widget.initialDescription!;
+    }
     // Применяем ошибки валидации после первой отрисовки, если они есть
     if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyValidationErrors();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
   }
 
   /// Маппинг имен полей из JSON ответа в имена полей формы
@@ -162,6 +181,23 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   ],
                 ),
               ),
+            // Виджет записи голоса
+            VoiceRecordWidget(
+              style: VoiceRecordStyle.compact,
+              onTranscriptionReceived: (transcription) {
+                // Вставляем транскрипцию в поле описания
+                _descriptionController.text = transcription;
+                // Обновляем значение в форме
+                _formKey.currentState?.fields['description']?.didChange(transcription);
+                setState(() {});
+              },
+              onError: (error) {
+                if (widget.onError != null) {
+                  widget.onError!(error);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             // Заголовок
             FormBuilderTextField(
               name: 'title',
@@ -180,7 +216,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Описание
             FormBuilderTextField(
               name: 'description',
-              initialValue: widget.initialDescription,
+              controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Описание',
                 border: const OutlineInputBorder(),
