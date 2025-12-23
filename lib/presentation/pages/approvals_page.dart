@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/services/voice_context.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
@@ -12,6 +13,7 @@ import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/dynamic_block_form.dart';
+import '../widgets/voice_record_block.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -770,6 +772,84 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     super.dispose();
   }
 
+  /// Применяет данные из voice-assist к форме
+  void _applyVoiceAssistData(Map<String, dynamic> formData) {
+    if (_formKey.currentState == null) return;
+
+    // Если есть title, заполняем его
+    if (formData.containsKey('title') && formData['title'] != null) {
+      final title = formData['title'].toString();
+      _titleController.text = title;
+      _formKey.currentState?.fields['title']?.didChange(title);
+    }
+
+    // Если есть description, заполняем его
+    if (formData.containsKey('description') &&
+        formData['description'] != null) {
+      final description = formData['description'].toString();
+      _descriptionController.text = description;
+      _formKey.currentState?.fields['description']?.didChange(description);
+    }
+
+    // Применяем данные к полям динамической формы
+    // Данные могут быть вложенными по блокам (например, {"block_name": {"field": "value"}})
+    // или плоскими (например, {"field": "value"})
+    final flattenedData = _flattenFormData(formData);
+
+    for (var entry in flattenedData.entries) {
+      final fieldName = entry.key;
+      final value = entry.value;
+
+      // Пропускаем title и description, так как они уже обработаны
+      if (fieldName == 'title' || fieldName == 'description') continue;
+
+      final field = _formKey.currentState?.fields[fieldName];
+      if (field != null && value != null) {
+        field.didChange(value);
+      }
+    }
+
+    setState(() {});
+  }
+
+  /// Преобразует вложенную структуру formData в плоскую для заполнения формы
+  Map<String, dynamic> _flattenFormData(
+    Map<String, dynamic> data, {
+    String prefix = '',
+  }) {
+    final result = <String, dynamic>{};
+
+    for (var entry in data.entries) {
+      final key = prefix.isEmpty ? entry.key : '$prefix.${entry.key}';
+
+      if (entry.value is Map) {
+        // Рекурсивно обрабатываем вложенные объекты
+        result.addAll(
+          _flattenFormData(entry.value as Map<String, dynamic>, prefix: key),
+        );
+      } else if (entry.value is List) {
+        // Обрабатываем массивы (например, для deviceCheckPhoto.0.value)
+        final list = entry.value as List;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] is Map) {
+            result.addAll(
+              _flattenFormData(
+                list[i] as Map<String, dynamic>,
+                prefix: '$key.$i',
+              ),
+            );
+          } else {
+            result['$key.$i'] = list[i];
+          }
+        }
+      } else {
+        result[key] = entry.value;
+      }
+    }
+
+    return result;
+  }
+
   Future<void> _loadTemplates() async {
     setState(() {
       _isLoadingTemplates = true;
@@ -1104,6 +1184,24 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                       return null;
                     },
                   ),
+                  // Блок голосовой записи (показываем только если выбран шаблон)
+                  if (_selectedTemplate != null) ...[
+                    const SizedBox(height: 16),
+                    VoiceRecordBlock(
+                      context: VoiceContext.approval,
+                      templateCode: _selectedTemplate!.code,
+                      onResultReceived: (result) {
+                        // Результат - Map<String, dynamic> (formData) для контекста approval
+                        final formData = result as Map<String, dynamic>;
+                        _applyVoiceAssistData(formData);
+                      },
+                      onError: (error) {
+                        setState(() {
+                          _error = error;
+                        });
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   FormBuilderTextField(
                     name: 'title',

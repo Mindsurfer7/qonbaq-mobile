@@ -331,7 +331,7 @@ class AudioRecordingService extends ChangeNotifier {
   /// Возвращает:
   /// - String для VoiceContext.transcription
   /// - TaskModel для VoiceContext.task
-  /// - ApprovalModel для VoiceContext.approval
+  /// - Map<String, dynamic> (formData) для VoiceContext.approval
   /// - TaskModel для VoiceContext.dontForget
   Future<dynamic> processRecordingWithContext(
     VoiceContext context, {

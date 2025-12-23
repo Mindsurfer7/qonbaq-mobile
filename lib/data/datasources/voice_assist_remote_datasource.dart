@@ -1,5 +1,4 @@
 import '../datasources/datasource.dart';
-import '../models/task_model.dart';
 
 /// Удаленный источник данных для голосового ассистента
 abstract class VoiceAssistRemoteDataSource extends DataSource {
@@ -8,12 +7,14 @@ abstract class VoiceAssistRemoteDataSource extends DataSource {
   /// [audioFile] - файл с аудио (для мобильных платформ)
   /// [audioBytes] - байты аудио (для веб-платформы)
   /// [filename] - имя файла
-  /// [context] - контекст: "task" или "approval"
+  /// [context] - контекст: "task", "approval" или "dontForget"
   /// [templateCode] - код шаблона согласования (для approval)
   /// [templateId] - UUID шаблона согласования (для approval)
   /// 
-  /// Возвращает предзаполненные данные задачи
-  Future<TaskModel> processVoiceMessage({
+  /// Возвращает:
+  /// - TaskModel для context="task" или "dontForget"
+  /// - Map<String, dynamic> (formData) для context="approval"
+  Future<dynamic> processVoiceMessage({
     String? audioFile,
     List<int>? audioBytes,
     String filename = 'voice.m4a',

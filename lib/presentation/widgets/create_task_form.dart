@@ -9,7 +9,7 @@ import '../../data/models/validation_error.dart';
 import '../../data/models/task_model.dart';
 import '../../core/services/voice_context.dart';
 import 'user_selector_widget.dart';
-import 'voice_record_widget.dart';
+import 'voice_record_block.dart';
 
 /// Форма создания задачи
 class CreateTaskForm extends StatefulWidget {
@@ -267,9 +267,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   ],
                 ),
               ),
-            // Виджет записи голоса
-            VoiceRecordWidget(
-              style: VoiceRecordStyle.compact,
+            // Блок голосовой записи
+            VoiceRecordBlock(
               context: VoiceContext.task,
               onResultReceived: (result) {
                 // Результат - TaskModel для контекста task

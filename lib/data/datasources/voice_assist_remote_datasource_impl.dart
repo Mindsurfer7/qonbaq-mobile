@@ -15,7 +15,7 @@ class VoiceAssistRemoteDataSourceImpl extends VoiceAssistRemoteDataSource {
   static const String _endpoint = '/api/voice-assist';
 
   @override
-  Future<TaskModel> processVoiceMessage({
+  Future<dynamic> processVoiceMessage({
     String? audioFile,
     List<int>? audioBytes,
     String filename = 'voice.m4a',
@@ -38,8 +38,8 @@ class VoiceAssistRemoteDataSourceImpl extends VoiceAssistRemoteDataSource {
     }
 
     // Валидация контекста
-    if (context != 'task' && context != 'approval') {
-      throw Exception('Контекст должен быть "task" или "approval"');
+    if (context != 'task' && context != 'approval' && context != 'dontForget') {
+      throw Exception('Контекст должен быть "task", "approval" или "dontForget"');
     }
 
     // Для approval обязательно нужен templateCode или templateId
@@ -107,37 +107,42 @@ class VoiceAssistRemoteDataSourceImpl extends VoiceAssistRemoteDataSource {
         final apiResponse = ApiResponse.fromJson(
           json,
           (dataJson) {
-            // Парсим данные задачи из ответа
+            final dataMap = dataJson as Map<String, dynamic>;
+            
+            // Для approval возвращаем структуру formData (Map<String, dynamic>)
+            if (context == 'approval') {
+              // API возвращает структуру данных формы согласно шаблону
+              // Это может быть как плоская структура, так и вложенная по блокам
+              return dataMap;
+            }
+            
+            // Для task и dontForget возвращаем TaskModel
             // Endpoint возвращает только поля задачи без связей (assignedTo, assignedBy - это ID строки)
             // Нужно создать TaskModel с частичными данными
-            final taskJson = dataJson as Map<String, dynamic>;
-            
-            // Создаем минимальный TaskModel с предзаполненными данными
-            // Для полей, которых нет в ответе, используем значения по умолчанию
             return TaskModel(
               id: '', // Будет присвоен при создании
-              businessId: taskJson['businessId'] as String? ?? '',
-              title: taskJson['title'] as String? ?? '',
-              description: taskJson['description'] as String?,
-              status: _parseStatus(taskJson['status'] as String?),
-              priority: _parsePriority(taskJson['priority'] as String?),
-              assignedTo: taskJson['assignedTo'] as String?,
-              assignedBy: taskJson['assignedBy'] as String?,
-              assignmentDate: taskJson['assignmentDate'] != null
-                  ? DateTime.parse(taskJson['assignmentDate'] as String)
+              businessId: dataMap['businessId'] as String? ?? '',
+              title: dataMap['title'] as String? ?? '',
+              description: dataMap['description'] as String?,
+              status: _parseStatus(dataMap['status'] as String?),
+              priority: _parsePriority(dataMap['priority'] as String?),
+              assignedTo: dataMap['assignedTo'] as String?,
+              assignedBy: dataMap['assignedBy'] as String?,
+              assignmentDate: dataMap['assignmentDate'] != null
+                  ? DateTime.parse(dataMap['assignmentDate'] as String)
                   : null,
-              deadline: taskJson['deadline'] != null
-                  ? DateTime.parse(taskJson['deadline'] as String)
+              deadline: dataMap['deadline'] != null
+                  ? DateTime.parse(dataMap['deadline'] as String)
                   : null,
-              isImportant: taskJson['isImportant'] as bool? ?? false,
-              isRecurring: taskJson['isRecurring'] as bool? ?? false,
-              hasControlPoint: taskJson['hasControlPoint'] as bool? ?? false,
-              dontForget: taskJson['dontForget'] as bool? ?? false,
-              voiceNoteUrl: taskJson['voiceNoteUrl'] as String?,
+              isImportant: dataMap['isImportant'] as bool? ?? false,
+              isRecurring: dataMap['isRecurring'] as bool? ?? false,
+              hasControlPoint: dataMap['hasControlPoint'] as bool? ?? false,
+              dontForget: dataMap['dontForget'] as bool? ?? false,
+              voiceNoteUrl: dataMap['voiceNoteUrl'] as String?,
               createdAt: DateTime.now(), // Временное значение
               updatedAt: DateTime.now(), // Временное значение
-              observerIds: taskJson['observerIds'] != null
-                  ? List<String>.from(taskJson['observerIds'] as List)
+              observerIds: dataMap['observerIds'] != null
+                  ? List<String>.from(dataMap['observerIds'] as List)
                   : null,
             );
           },
