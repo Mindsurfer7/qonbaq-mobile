@@ -89,7 +89,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
     if (currentUser == null || selectedBusiness == null) return false;
 
-    final permission = currentUser.getPermissionsForBusiness(selectedBusiness.id);
+    final permission = currentUser.getPermissionsForBusiness(
+      selectedBusiness.id,
+    );
     if (permission == null) return false;
 
     return permission.isAuthorizedApprover || permission.isGeneralDirector;
@@ -531,7 +533,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
               ),
             ),
             const SizedBox(height: 20),
-            ..._canApproveApprovals.map((approval) => _buildApprovalCard(approval)),
+            ..._canApproveApprovals.map(
+              (approval) => _buildApprovalCard(approval),
+            ),
           ] else
             Padding(
               padding: const EdgeInsets.all(32.0),
@@ -550,9 +554,10 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 'Все согласования в бизнесе',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: _isLoadingAllApprovals
-                  ? const Text('Загрузка...')
-                  : Text('${_allCanApproveApprovals.length} согласований'),
+              subtitle:
+                  _isLoadingAllApprovals
+                      ? const Text('Загрузка...')
+                      : Text('${_allCanApproveApprovals.length} согласований'),
               leading: const Icon(Icons.business),
               initiallyExpanded: false,
               onExpansionChanged: (expanded) {
@@ -579,8 +584,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                     ),
                   )
                 else
-                  ..._allCanApproveApprovals
-                      .map((approval) => _buildApprovalCard(approval)),
+                  ..._allCanApproveApprovals.map(
+                    (approval) => _buildApprovalCard(approval),
+                  ),
               ],
             ),
           ),
@@ -654,8 +660,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
               : TabBarView(
                 controller: _tabController,
                 children: [
-                  if (_canApproveInCurrentBusiness)
-                    _buildCanApproveTab(),
+                  if (_canApproveInCurrentBusiness) _buildCanApproveTab(),
                   _buildApprovalsList(_pendingApprovals),
                   _buildCompletedTab(),
                 ],
@@ -1030,7 +1035,22 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                       border: OutlineInputBorder(),
                     ),
                     dropdownColor: context.appTheme.backgroundSurface,
-                    borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+                    borderRadius: BorderRadius.circular(
+                      context.appTheme.borderRadius,
+                    ),
+                    // Для отображения выбранного значения используем только текст без стилизации
+                    selectedItemBuilder: (BuildContext context) {
+                      return _templates.map<Widget>((
+                        ApprovalTemplate template,
+                      ) {
+                        return Text(
+                          template.name,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        );
+                      }).toList();
+                    },
                     items:
                         _templates.map((template) {
                           return createStyledDropdownItem<ApprovalTemplate>(

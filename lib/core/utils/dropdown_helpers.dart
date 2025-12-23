@@ -23,10 +23,34 @@ DropdownMenuItem<T> createStyledDropdownItem<T>({
   return DropdownMenuItem<T>(
     value: value,
     enabled: enabled,
-    // Используем Material для отключения стандартного hover эффекта
-    child: Material(
-      color: Colors.transparent,
-      child: _HoverableDropdownItem(theme: theme, child: child),
+    // Используем Theme для отключения стандартного hover эффекта ListTile
+    child: Theme(
+      data: Theme.of(context).copyWith(
+        listTileTheme: ListTileThemeData(
+          tileColor: Colors.transparent,
+          selectedTileColor: Colors.transparent,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          child: Container(
+            // Используем clipBehavior чтобы обрезать стандартный hover эффект
+            clipBehavior: Clip.antiAlias,
+            margin: EdgeInsets.symmetric(
+              horizontal: theme.dropdownItemGap,
+              vertical: theme.dropdownItemGap / 2,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(theme.borderRadius),
+            ),
+            child: _HoverableDropdownItem(theme: theme, child: child),
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -65,30 +89,18 @@ class _HoverableDropdownItemState extends State<_HoverableDropdownItem> {
 
     final borderColor = _isHovered ? Colors.black : theme.borderPrimary;
 
-    return InkWell(
-      // Отключаем стандартный splash и highlight эффекты
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      onTap:
-          null, // Отключаем обработку tap, так как DropdownMenuItem сам обрабатывает
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: Container(
-          width: double.infinity, // 100% ширины родителя
-          margin: EdgeInsets.symmetric(
-            horizontal: theme.dropdownItemGap,
-            vertical: theme.dropdownItemGap / 2,
-          ),
-          padding: theme.dropdownItemPaddingInsets,
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: 1),
-            borderRadius: BorderRadius.circular(theme.borderRadius),
-            color: _isHovered ? hoverBackgroundColor : theme.backgroundSurface,
-          ),
-          child: widget.child,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        width: double.infinity, // 100% ширины родителя
+        padding: theme.dropdownItemPaddingInsets,
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor, width: 1),
+          borderRadius: BorderRadius.circular(theme.borderRadius),
+          color: _isHovered ? hoverBackgroundColor : theme.backgroundSurface,
         ),
+        child: widget.child,
       ),
     );
   }
