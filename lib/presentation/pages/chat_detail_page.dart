@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/entities/chat.dart';
+import '../../core/services/voice_context.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/voice_record_widget.dart';
 import '../../core/services/audio_recording_service.dart';
@@ -643,7 +644,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   child: SafeArea(
                     child: VoiceRecordWidget(
                       style: VoiceRecordStyle.compact,
-                      onTranscriptionReceived: (transcription) {
+                      context: VoiceContext.transcription,
+                      onResultReceived: (result) {
+                        // Результат - String для контекста transcription
+                        final transcription = result as String;
                         // Вставляем транскрипцию в поле ввода
                         _messageController.text = transcription;
                         setState(() {});

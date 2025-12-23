@@ -5,6 +5,9 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import '../../data/datasources/transcription_remote_datasource_impl.dart';
+import '../../data/datasources/voice_assist_remote_datasource_impl.dart';
+import '../../data/models/task_model.dart';
+import 'voice_context.dart';
 
 /// Состояния записи голоса
 enum RecordingState {
@@ -18,13 +21,17 @@ enum RecordingState {
 class AudioRecordingService extends ChangeNotifier {
   final AudioRecorder _recorder = AudioRecorder();
   final TranscriptionRemoteDataSourceImpl _transcriptionDataSource;
+  final VoiceAssistRemoteDataSourceImpl? _voiceAssistDataSource;
 
   RecordingState _state = RecordingState.idle;
   int _recordingDuration = 0;
   Timer? _timer;
   String? _currentRecordingPath;
 
-  AudioRecordingService(this._transcriptionDataSource);
+  AudioRecordingService(
+    this._transcriptionDataSource, [
+    this._voiceAssistDataSource,
+  ]);
 
   /// Текущее состояние записи
   RecordingState get state => _state;
@@ -313,6 +320,168 @@ class AudioRecordingService extends ChangeNotifier {
     }
 
     return transcriptionResponse.text;
+  }
+
+  /// Принимает запись и отправляет на обработку в зависимости от контекста
+  /// 
+  /// [context] - контекст использования голосового сообщения
+  /// [templateCode] - код шаблона согласования (для context=approval)
+  /// [templateId] - UUID шаблона согласования (для context=approval)
+  /// 
+  /// Возвращает:
+  /// - String для VoiceContext.transcription
+  /// - TaskModel для VoiceContext.task
+  /// - ApprovalModel для VoiceContext.approval
+  /// - TaskModel для VoiceContext.dontForget
+  Future<dynamic> processRecordingWithContext(
+    VoiceContext context, {
+    String? templateCode,
+    String? templateId,
+  }) async {
+    debugPrint('📢 === AudioRecordingService: processRecordingWithContext ===');
+    debugPrint('📢 Контекст: $context');
+
+    if (_currentRecordingPath == null) {
+      throw Exception('Нет записи для обработки');
+    }
+
+    final recordingPath = _currentRecordingPath!;
+    _updateState(RecordingState.loading);
+
+    try {
+      dynamic result;
+
+      if (context == VoiceContext.transcription) {
+        // Простая транскрипция
+        if (kIsWeb) {
+          result = await _handleWebRecord(recordingPath);
+        } else {
+          result = await _handleNonWebRecord(recordingPath);
+        }
+      } else {
+        // Voice-assist для структурированных данных
+        if (_voiceAssistDataSource == null) {
+          throw Exception('VoiceAssistDataSource не инициализирован');
+        }
+
+        if (kIsWeb) {
+          result = await _handleWebRecordForVoiceAssist(
+            recordingPath,
+            context,
+            templateCode: templateCode,
+            templateId: templateId,
+          );
+        } else {
+          result = await _handleNonWebRecordForVoiceAssist(
+            recordingPath,
+            context,
+            templateCode: templateCode,
+            templateId: templateId,
+          );
+        }
+      }
+
+      debugPrint('✅ Обработка голосового сообщения завершена');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Ошибка обработки голосового сообщения: $e');
+      rethrow;
+    } finally {
+      _currentRecordingPath = null;
+      _recordingDuration = 0;
+      _updateState(RecordingState.idle);
+    }
+  }
+
+  /// Принимает запись и отправляет на обработку голосовым ассистентом для создания задачи
+  /// Возвращает предзаполненные данные задачи
+  /// 
+  /// @deprecated Используйте processRecordingWithContext(VoiceContext.task)
+  @Deprecated('Используйте processRecordingWithContext(VoiceContext.task)')
+  Future<TaskModel> acceptRecordingForTask() async {
+    return await processRecordingWithContext(VoiceContext.task) as TaskModel;
+  }
+
+  /// Обрабатывает файл для мобильных платформ (voice-assist)
+  Future<dynamic> _handleNonWebRecordForVoiceAssist(
+    String filePath,
+    VoiceContext context, {
+    String? templateCode,
+    String? templateId,
+  }) async {
+    final file = File(filePath);
+    final fileSize = await file.length();
+    debugPrint('📢 Обрабатываем файл для voice-assist: размер $fileSize байт');
+
+    if (fileSize == 0) {
+      throw Exception('Файл записи пустой');
+    }
+
+    const maxSizeInBytes = 25 * 1024 * 1024; // 25 МБ
+    if (fileSize > maxSizeInBytes) {
+      throw Exception('Файл слишком большой. Максимум: 25 МБ');
+    }
+
+    // Преобразуем enum в строку для API
+    final contextString = context.name;
+
+    final result = await _voiceAssistDataSource!.processVoiceMessage(
+      audioFile: filePath,
+      filename: 'voice.m4a',
+      context: contextString,
+      templateCode: templateCode,
+      templateId: templateId,
+    );
+
+    // Удаляем временный файл
+    try {
+      if (await file.exists()) {
+        await file.delete();
+        debugPrint("🗑️ Временный файл удален");
+      }
+    } catch (e) {
+      debugPrint("⚠️ Не удалось удалить временный файл: $e");
+    }
+
+    return result;
+  }
+
+  /// Обрабатывает Blob для веб (voice-assist)
+  Future<dynamic> _handleWebRecordForVoiceAssist(
+    String blobUrl,
+    VoiceContext context, {
+    String? templateCode,
+    String? templateId,
+  }) async {
+    final audioResponse = await http.get(Uri.parse(blobUrl));
+    if (audioResponse.statusCode != 200) {
+      throw Exception('Ошибка загрузки из Blob: ${audioResponse.statusCode}');
+    }
+
+    final audioBytes = audioResponse.bodyBytes;
+    debugPrint('📢 Получено ${audioBytes.length} байт из Blob для voice-assist');
+
+    if (audioBytes.isEmpty) {
+      throw Exception("Запись пустая");
+    }
+
+    const maxSizeInBytes = 25 * 1024 * 1024; // 25 МБ
+    if (audioBytes.length > maxSizeInBytes) {
+      throw Exception("Файл слишком большой. Максимум: 25 МБ");
+    }
+
+    // Преобразуем enum в строку для API
+    final contextString = context.name;
+
+    final result = await _voiceAssistDataSource!.processVoiceMessage(
+      audioBytes: audioBytes,
+      filename: 'voice.m4a',
+      context: contextString,
+      templateCode: templateCode,
+      templateId: templateId,
+    );
+
+    return result;
   }
 
   @override

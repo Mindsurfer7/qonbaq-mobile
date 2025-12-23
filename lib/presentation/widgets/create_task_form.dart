@@ -6,6 +6,8 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../data/models/validation_error.dart';
+import '../../data/models/task_model.dart';
+import '../../core/services/voice_context.dart';
 import 'user_selector_widget.dart';
 import 'voice_record_widget.dart';
 
@@ -19,6 +21,8 @@ class CreateTaskForm extends StatefulWidget {
   final List<ValidationError>? validationErrors; // Ошибки валидации по полям
   final Function(String)? onError; // Callback для обновления ошибки
   final String? initialDescription; // Начальное значение для поля описания
+  final TaskModel?
+  initialTaskData; // Предзаполненные данные задачи из voice-assist
 
   const CreateTaskForm({
     super.key,
@@ -30,6 +34,7 @@ class CreateTaskForm extends StatefulWidget {
     this.validationErrors,
     this.onError,
     this.initialDescription,
+    this.initialTaskData,
   });
 
   @override
@@ -51,19 +56,23 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   @override
   void didUpdateWidget(CreateTaskForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Обновляем контроллер описания, если изменилось initialDescription
     if (widget.initialDescription != oldWidget.initialDescription) {
       _descriptionController.text = widget.initialDescription ?? '';
-      _formKey.currentState?.fields['description']?.didChange(widget.initialDescription);
+      _formKey.currentState?.fields['description']?.didChange(
+        widget.initialDescription,
+      );
     }
-    
+
     // Применяем ошибки валидации к полям формы
-    if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
+    if (widget.validationErrors != null &&
+        widget.validationErrors!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyValidationErrors();
       });
-    } else if (widget.validationErrors == null || widget.validationErrors!.isEmpty) {
+    } else if (widget.validationErrors == null ||
+        widget.validationErrors!.isEmpty) {
       // Очищаем ошибки, если их нет
       setState(() {
         _fieldErrors.clear();
@@ -80,7 +89,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       // Маппинг полей из JSON в поля формы
       final fieldName = _mapFieldName(error.field);
       final field = _formKey.currentState?.fields[fieldName];
-      
+
       if (field != null) {
         // Сохраняем ошибку для отображения
         newErrors[fieldName] = error.message;
@@ -105,12 +114,86 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (widget.initialDescription != null) {
       _descriptionController.text = widget.initialDescription!;
     }
+    // Применяем предзаполненные данные задачи, если есть
+    if (widget.initialTaskData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyInitialTaskData(widget.initialTaskData!);
+      });
+    }
     // Применяем ошибки валидации после первой отрисовки, если они есть
-    if (widget.validationErrors != null && widget.validationErrors!.isNotEmpty) {
+    if (widget.validationErrors != null &&
+        widget.validationErrors!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyValidationErrors();
       });
     }
+  }
+
+  /// Применяет предзаполненные данные задачи к форме
+  void _applyInitialTaskData(TaskModel taskData) {
+    if (_formKey.currentState == null) return;
+
+    final formState = _formKey.currentState!;
+
+    // Заполняем поля формы предзаполненными данными
+    if (taskData.title.isNotEmpty) {
+      formState.fields['title']?.didChange(taskData.title);
+    }
+    if (taskData.description != null && taskData.description!.isNotEmpty) {
+      _descriptionController.text = taskData.description!;
+      formState.fields['description']?.didChange(taskData.description);
+    }
+    if (taskData.priority != null) {
+      formState.fields['priority']?.didChange(taskData.priority);
+    }
+    formState.fields['status']?.didChange(taskData.status);
+    if (taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
+      _assignedToId = taskData.assignedTo;
+      formState.fields['assignedTo']?.didChange(taskData.assignedTo);
+    }
+    if (taskData.assignedBy != null && taskData.assignedBy!.isNotEmpty) {
+      _assignedById = taskData.assignedBy;
+      formState.fields['assignedBy']?.didChange(taskData.assignedBy);
+    }
+    if (taskData.assignmentDate != null) {
+      formState.fields['assignmentDate']?.didChange(taskData.assignmentDate);
+    }
+    if (taskData.deadline != null) {
+      formState.fields['deadline']?.didChange(taskData.deadline);
+    }
+    if (taskData.isImportant) {
+      setState(() {
+        _isImportant = true;
+      });
+      formState.fields['isImportant']?.didChange(true);
+    }
+    if (taskData.isRecurring) {
+      setState(() {
+        _isRecurring = true;
+      });
+      formState.fields['isRecurring']?.didChange(true);
+    }
+    if (taskData.hasControlPoint) {
+      setState(() {
+        _hasControlPoint = true;
+      });
+      formState.fields['hasControlPoint']?.didChange(true);
+    }
+    if (taskData.dontForget) {
+      setState(() {
+        _dontForget = true;
+      });
+      formState.fields['dontForget']?.didChange(true);
+    }
+    if (taskData.voiceNoteUrl != null && taskData.voiceNoteUrl!.isNotEmpty) {
+      formState.fields['voiceNoteUrl']?.didChange(taskData.voiceNoteUrl);
+    }
+    if (taskData.observerIds != null && taskData.observerIds!.isNotEmpty) {
+      final observerIdsString = taskData.observerIds!.join(', ');
+      formState.fields['observerIds']?.didChange(observerIdsString);
+    }
+
+    setState(() {});
   }
 
   @override
@@ -137,7 +220,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       'dontForget': 'dontForget',
       'voiceNoteUrl': 'voiceNoteUrl',
       'observerIds': 'observerIds',
-      'businessId': 'businessId', // Хотя этого поля нет в форме, но может быть ошибка
+      'businessId':
+          'businessId', // Хотя этого поля нет в форме, но может быть ошибка
     };
 
     // Если поле вложенное (например, recurrence.frequency)
@@ -186,12 +270,12 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Виджет записи голоса
             VoiceRecordWidget(
               style: VoiceRecordStyle.compact,
-              onTranscriptionReceived: (transcription) {
-                // Вставляем транскрипцию в поле описания
-                _descriptionController.text = transcription;
-                // Обновляем значение в форме
-                _formKey.currentState?.fields['description']?.didChange(transcription);
-                setState(() {});
+              context: VoiceContext.task,
+              onResultReceived: (result) {
+                // Результат - TaskModel для контекста task
+                final taskData = result as TaskModel;
+                // Применяем предзаполненные данные к форме
+                _applyInitialTaskData(taskData);
               },
               onError: (error) {
                 if (widget.onError != null) {
@@ -239,21 +323,24 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorMaxLines: 2,
               ),
               dropdownColor: context.appTheme.backgroundSurface,
-              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              borderRadius: BorderRadius.circular(
+                context.appTheme.borderRadius,
+              ),
               selectedItemBuilder: (BuildContext context) {
                 return TaskPriority.values.map<Widget>((TaskPriority priority) {
                   return Text(_getPriorityText(priority));
                 }).toList();
               },
-              items: TaskPriority.values
-                  .map(
-                    (priority) => createStyledDropdownItem<TaskPriority>(
-                      context: context,
-                      value: priority,
-                      child: Text(_getPriorityText(priority)),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  TaskPriority.values
+                      .map(
+                        (priority) => createStyledDropdownItem<TaskPriority>(
+                          context: context,
+                          value: priority,
+                          child: Text(_getPriorityText(priority)),
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 16),
 
@@ -268,21 +355,24 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
               ),
               initialValue: TaskStatus.pending,
               dropdownColor: context.appTheme.backgroundSurface,
-              borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+              borderRadius: BorderRadius.circular(
+                context.appTheme.borderRadius,
+              ),
               selectedItemBuilder: (BuildContext context) {
                 return TaskStatus.values.map<Widget>((TaskStatus status) {
                   return Text(_getStatusText(status));
                 }).toList();
               },
-              items: TaskStatus.values
-                  .map(
-                    (status) => createStyledDropdownItem<TaskStatus>(
-                      context: context,
-                      value: status,
-                      child: Text(_getStatusText(status)),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  TaskStatus.values
+                      .map(
+                        (status) => createStyledDropdownItem<TaskStatus>(
+                          context: context,
+                          value: status,
+                          child: Text(_getStatusText(status)),
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 16),
 

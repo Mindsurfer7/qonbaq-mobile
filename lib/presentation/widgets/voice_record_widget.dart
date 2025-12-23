@@ -1,17 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/audio_recording_service.dart';
+import '../../core/services/voice_context.dart';
 import 'dart:math' as math;
 
 /// Переиспользуемый виджет для записи голоса
 ///
 /// Виджет может быть встроен в разные части приложения:
-/// - В чат для отправки сообщений с голосом
-/// - В форму создания задачи с голосовым описанием
-/// - В заметки для голосовых заметок
+/// - В чат для отправки сообщений с голосом (VoiceContext.transcription)
+/// - В форму создания задачи с голосовым описанием (VoiceContext.task)
+/// - В форму создания согласования (VoiceContext.approval)
+/// - В страницу "Не забыть выполнить" (VoiceContext.dontForget)
 class VoiceRecordWidget extends StatefulWidget {
-  /// Callback, вызываемый когда получен текст транскрипции
-  final void Function(String transcription)? onTranscriptionReceived;
+  /// Контекст использования голосового сообщения
+  /// Определяет, какой endpoint будет вызван и какой тип данных вернется
+  final VoiceContext context;
+
+  /// Callback, вызываемый когда получен результат обработки
+  ///
+  /// Тип результата зависит от контекста:
+  /// - VoiceContext.transcription → String (текст транскрипции)
+  /// - VoiceContext.task → TaskModel (предзаполненные данные задачи)
+  /// - VoiceContext.approval → ApprovalModel (предзаполненные данные согласования)
+  /// - VoiceContext.dontForget → TaskModel (предзаполненные данные задачи)
+  final void Function(dynamic result) onResultReceived;
 
   /// Callback, вызываемый при ошибке
   final void Function(String error)? onError;
@@ -22,12 +34,21 @@ class VoiceRecordWidget extends StatefulWidget {
   /// Кнопка для начала записи (когда запись не активна)
   final Widget? recordButton;
 
+  /// Код шаблона согласования (для VoiceContext.approval)
+  final String? templateCode;
+
+  /// UUID шаблона согласования (для VoiceContext.approval)
+  final String? templateId;
+
   const VoiceRecordWidget({
     super.key,
-    this.onTranscriptionReceived,
+    required this.context,
+    required this.onResultReceived,
     this.onError,
     this.style = VoiceRecordStyle.compact,
     this.recordButton,
+    this.templateCode,
+    this.templateId,
   });
 
   @override
@@ -394,7 +415,7 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
     audioService.cancelRecording();
   }
 
-  /// Принимает запись и отправляет на транскрипцию
+  /// Принимает запись и отправляет на обработку в зависимости от контекста
   Future<void> _acceptRecording(
     BuildContext context,
     AudioRecordingService audioService,
@@ -405,13 +426,18 @@ class _VoiceRecordWidgetState extends State<VoiceRecordWidget>
         await audioService.stopRecording();
       }
 
-      // Отправляем на транскрипцию (метод acceptRecording сам проверит состояние)
-      final transcription = await audioService.acceptRecording();
+      // Отправляем на обработку с указанным контекстом
+      final result = await audioService.processRecordingWithContext(
+        widget.context,
+        templateCode: widget.templateCode,
+        templateId: widget.templateId,
+      );
+
       if (context.mounted) {
-        widget.onTranscriptionReceived?.call(transcription);
+        widget.onResultReceived(result);
       }
     } catch (e) {
-      final errorMessage = 'Ошибка транскрипции: $e';
+      final errorMessage = 'Ошибка обработки голосового сообщения: $e';
       if (widget.onError != null) {
         widget.onError!(errorMessage);
       } else if (context.mounted) {

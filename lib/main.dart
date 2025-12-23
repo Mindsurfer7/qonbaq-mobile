@@ -121,6 +121,7 @@ import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
 import 'package:qonbaq/data/datasources/transcription_remote_datasource_impl.dart';
+import 'package:qonbaq/data/datasources/voice_assist_remote_datasource_impl.dart';
 import 'package:qonbaq/core/services/audio_recording_service.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
@@ -293,7 +294,11 @@ class MyApp extends StatelessWidget {
 
     // Инициализация зависимостей для записи голоса
     final transcriptionDataSource = TranscriptionRemoteDataSourceImpl();
-    final audioRecordingService = AudioRecordingService(transcriptionDataSource);
+    final voiceAssistDataSource = VoiceAssistRemoteDataSourceImpl();
+    final audioRecordingService = AudioRecordingService(
+      transcriptionDataSource,
+      voiceAssistDataSource,
+    );
 
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();

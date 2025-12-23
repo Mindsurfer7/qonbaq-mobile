@@ -7,6 +7,8 @@ import '../../domain/usecases/get_tasks.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
+import '../../data/models/task_model.dart';
+import '../../core/services/voice_context.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/create_task_form.dart';
@@ -38,6 +40,7 @@ class _TasksPageState extends State<TasksPage> {
     String businessId,
     UserRepository userRepository, {
     String? initialDescription,
+    TaskModel? initialTaskData,
   }) {
     showDialog(
       context: context,
@@ -102,15 +105,18 @@ class _TasksPageState extends State<TasksPage> {
               Expanded(
                 child: VoiceRecordWidget(
                   style: VoiceRecordStyle.fullscreen,
-                  onTranscriptionReceived: (transcription) {
+                  context: VoiceContext.task,
+                  onResultReceived: (result) {
+                    // Результат - TaskModel для контекста task
+                    final taskData = result as TaskModel;
                     // Закрываем диалог записи
                     Navigator.of(context).pop();
-                    // Открываем диалог создания задачи с заполненным описанием
+                    // Открываем диалог создания задачи с предзаполненными данными
                     _showCreateTaskDialog(
                       createTaskUseCase,
                       businessId,
                       userRepository,
-                      initialDescription: transcription,
+                      initialTaskData: taskData,
                     );
                   },
                   onError: (error) {
@@ -824,6 +830,7 @@ class _CreateTaskDialog extends StatefulWidget {
   final CreateTask createTaskUseCase;
   final VoidCallback onSuccess;
   final String? initialDescription;
+  final TaskModel? initialTaskData;
 
   const _CreateTaskDialog({
     required this.businessId,
@@ -831,6 +838,7 @@ class _CreateTaskDialog extends StatefulWidget {
     required this.createTaskUseCase,
     required this.onSuccess,
     this.initialDescription,
+    this.initialTaskData,
   });
 
   @override
@@ -893,6 +901,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                 businessId: widget.businessId,
                 userRepository: widget.userRepository,
                 initialDescription: widget.initialDescription,
+                initialTaskData: widget.initialTaskData,
                 error: _error,
                 validationErrors: _validationErrors,
                 onError: (error) {
