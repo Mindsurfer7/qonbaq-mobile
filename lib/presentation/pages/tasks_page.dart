@@ -11,6 +11,7 @@ import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/create_task_form.dart';
 import '../widgets/business_selector_widget.dart';
+import '../widgets/voice_record_widget.dart';
 
 /// Тип фильтра задач
 enum TaskFilter {
@@ -35,8 +36,9 @@ class _TasksPageState extends State<TasksPage> {
   void _showCreateTaskDialog(
     CreateTask createTaskUseCase,
     String businessId,
-    UserRepository userRepository,
-  ) {
+    UserRepository userRepository, {
+    String? initialDescription,
+  }) {
     showDialog(
       context: context,
       builder:
@@ -44,6 +46,7 @@ class _TasksPageState extends State<TasksPage> {
             businessId: businessId,
             userRepository: userRepository,
             createTaskUseCase: createTaskUseCase,
+            initialDescription: initialDescription,
             onSuccess: () {
               // Обновляем список задач после создания
               final profileProvider = Provider.of<ProfileProvider>(
@@ -60,6 +63,72 @@ class _TasksPageState extends State<TasksPage> {
               }
             },
           ),
+    );
+  }
+
+  void _showVoiceRecordDialog(
+    CreateTask createTaskUseCase,
+    String businessId,
+    UserRepository userRepository,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Заголовок
+              Row(
+                children: [
+                  const Text(
+                    'Запись голоса',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Виджет записи голоса
+              Expanded(
+                child: VoiceRecordWidget(
+                  style: VoiceRecordStyle.fullscreen,
+                  onTranscriptionReceived: (transcription) {
+                    // Закрываем диалог записи
+                    Navigator.of(context).pop();
+                    // Открываем диалог создания задачи с заполненным описанием
+                    _showCreateTaskDialog(
+                      createTaskUseCase,
+                      businessId,
+                      userRepository,
+                      initialDescription: transcription,
+                    );
+                  },
+                  onError: (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(error),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -273,16 +342,36 @@ class _TasksPageState extends State<TasksPage> {
               : _buildTasksView(selectedBusiness, getTasksUseCase),
       floatingActionButton:
           selectedBusiness != null
-              ? FloatingActionButton(
-                onPressed: () {
-                  _showCreateTaskDialog(
-                    createTaskUseCase,
-                    selectedBusiness.id,
-                    userRepository,
-                  );
-                },
-                child: const Icon(Icons.add),
-              )
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Кнопка микрофона для голосовой записи
+                    FloatingActionButton(
+                      heroTag: "voice_record",
+                      onPressed: () {
+                        _showVoiceRecordDialog(
+                          createTaskUseCase,
+                          selectedBusiness.id,
+                          userRepository,
+                        );
+                      },
+                      child: const Icon(Icons.mic),
+                    ),
+                    const SizedBox(height: 16),
+                    // Кнопка плюсика для создания задачи
+                    FloatingActionButton(
+                      heroTag: "create_task",
+                      onPressed: () {
+                        _showCreateTaskDialog(
+                          createTaskUseCase,
+                          selectedBusiness.id,
+                          userRepository,
+                        );
+                      },
+                      child: const Icon(Icons.add),
+                    ),
+                  ],
+                )
               : null,
     );
   }
@@ -734,12 +823,14 @@ class _CreateTaskDialog extends StatefulWidget {
   final UserRepository userRepository;
   final CreateTask createTaskUseCase;
   final VoidCallback onSuccess;
+  final String? initialDescription;
 
   const _CreateTaskDialog({
     required this.businessId,
     required this.userRepository,
     required this.createTaskUseCase,
     required this.onSuccess,
+    this.initialDescription,
   });
 
   @override
@@ -801,6 +892,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
               child: CreateTaskForm(
                 businessId: widget.businessId,
                 userRepository: widget.userRepository,
+                initialDescription: widget.initialDescription,
                 error: _error,
                 validationErrors: _validationErrors,
                 onError: (error) {

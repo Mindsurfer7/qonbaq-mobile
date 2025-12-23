@@ -15,6 +15,7 @@ class CreateTaskForm extends StatefulWidget {
   final String? error; // Общая ошибка от сервера
   final List<ValidationError>? validationErrors; // Ошибки валидации по полям
   final Function(String)? onError; // Callback для обновления ошибки
+  final String? initialDescription; // Начальное значение для поля описания
 
   const CreateTaskForm({
     super.key,
@@ -25,6 +26,7 @@ class CreateTaskForm extends StatefulWidget {
     this.error,
     this.validationErrors,
     this.onError,
+    this.initialDescription,
   });
 
   @override
@@ -178,6 +180,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Описание
             FormBuilderTextField(
               name: 'description',
+              initialValue: widget.initialDescription,
               decoration: InputDecoration(
                 labelText: 'Описание',
                 border: const OutlineInputBorder(),

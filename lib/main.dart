@@ -119,6 +119,8 @@ import 'package:qonbaq/domain/usecases/update_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
+import 'package:qonbaq/data/datasources/transcription_remote_datasource_impl.dart';
+import 'package:qonbaq/core/services/audio_recording_service.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -288,6 +290,10 @@ class MyApp extends StatelessWidget {
     final deleteApprovalComment = DeleteApprovalComment(approvalRepository);
     final getApprovalTemplates = GetApprovalTemplates(approvalRepository);
 
+    // Инициализация зависимостей для записи голоса
+    final transcriptionDataSource = TranscriptionRemoteDataSourceImpl();
+    final audioRecordingService = AudioRecordingService(transcriptionDataSource);
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
@@ -317,6 +323,9 @@ class MyApp extends StatelessWidget {
         Provider<UpdateApprovalComment>(create: (_) => updateApprovalComment),
         Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
         Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
+        ChangeNotifierProvider<AudioRecordingService>(
+          create: (_) => audioRecordingService,
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

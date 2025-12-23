@@ -62,6 +62,12 @@ dependencies:
   
   # WebSocket
   web_socket_channel: ^2.4.0
+  
+  # Запись аудио
+  record: ^5.1.2
+  
+  # Работа с путями файловой системы
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:
