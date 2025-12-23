@@ -57,6 +57,7 @@ import 'package:qonbaq/presentation/pages/department_detail_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
 import 'package:qonbaq/presentation/providers/profile_provider.dart';
 import 'package:qonbaq/presentation/providers/invite_provider.dart';
+import 'package:qonbaq/presentation/providers/theme_provider.dart';
 import 'package:qonbaq/data/datasources/user_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/user_local_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/user_repository_impl.dart';
@@ -294,8 +295,12 @@ class MyApp extends StatelessWidget {
     final transcriptionDataSource = TranscriptionRemoteDataSourceImpl();
     final audioRecordingService = AudioRecordingService(transcriptionDataSource);
 
+    // Инициализация провайдера темы
+    final themeProvider = ThemeProvider();
+
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => themeProvider),
         ChangeNotifierProvider(create: (_) => authProvider),
         ChangeNotifierProvider(create: (_) => profileProvider),
         ChangeNotifierProvider(create: (_) => inviteProvider),
@@ -327,15 +332,14 @@ class MyApp extends StatelessWidget {
           create: (_) => audioRecordingService,
         ),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        initialRoute: '/',
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.currentTheme.themeData,
+            initialRoute: '/',
         routes: {
           // Стартовая страница
           '/': (context) => const StartPage(),
@@ -444,6 +448,8 @@ class MyApp extends StatelessWidget {
           },
           '/remember': (context) => const RememberPage(),
           '/favorites': (context) => const FavoritesPage(),
+        },
+          );
         },
       ),
     );

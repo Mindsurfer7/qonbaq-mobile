@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../core/theme/theme_extensions.dart';
 import '../providers/profile_provider.dart';
 import '../providers/invite_provider.dart';
+import '../providers/theme_provider.dart';
 import '../widgets/business_selector_widget.dart';
 
 /// Страница профиля и настроек
@@ -164,6 +166,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   Expanded(child: _buildHrDocumentsCard(profile)),
                 ],
               ),
+              const SizedBox(height: 16),
+              // Третий ряд - карточка с настройками темы (на всю ширину)
+              _buildThemeSettingsCard(),
             ],
           ),
           // Взаимозаменяемый работник (отдельно)
@@ -765,6 +770,58 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildThemeSettingsCard() {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final theme = context.appTheme;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Настройки темы',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          themeProvider.isDarkMode
+                              ? Icons.dark_mode
+                              : Icons.light_mode,
+                          color: theme.accentPrimary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          themeProvider.isDarkMode
+                              ? 'Темная тема'
+                              : 'Светлая тема',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    Switch(
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                      activeColor: theme.accentPrimary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

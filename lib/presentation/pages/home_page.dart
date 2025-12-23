@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/theme_extensions.dart';
 import '../providers/auth_provider.dart';
 
 /// Главная страница приложения
@@ -12,10 +13,14 @@ class HomePage extends StatelessWidget {
       builder: (context, authProvider, child) {
         final user = authProvider.user;
 
+        final theme = context.appTheme;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Qonbaq'),
-            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            backgroundColor: theme.backgroundSecondary,
+            foregroundColor: theme.textPrimary,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
