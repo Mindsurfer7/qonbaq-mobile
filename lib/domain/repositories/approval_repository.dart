@@ -26,6 +26,15 @@ abstract class ApprovalRepository extends Repository {
   /// Создать согласование
   Future<Either<Failure, Approval>> createApproval(Approval approval);
 
+  /// Обновить согласование
+  Future<Either<Failure, Approval>> updateApproval(
+    String id, {
+    String? title,
+    String? projectId,
+    double? amount,
+    Map<String, dynamic>? formData,
+  });
+
   /// Получить список согласований
   Future<Either<Failure, List<Approval>>> getApprovals({
     String? businessId,

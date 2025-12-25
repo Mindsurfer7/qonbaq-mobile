@@ -208,7 +208,83 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<ApprovalModel> updateApproval(
+    String id, {
+    String? title,
+    String? projectId,
+    double? amount,
+    Map<String, dynamic>? formData,
+  }) async {
+    try {
+      // Создаем временную модель для использования toUpdateJson
+      final tempModel = ApprovalModel(
+        id: id,
+        businessId: projectId ?? '',
+        title: title ?? '',
+        createdBy: '',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        formData: formData,
+      );
+      
+      final response = await apiClient.put(
+        '/api/approvals/$id',
+        headers: _getAuthHeaders(),
+        body: tempModel.toUpdateJson(
+          title: title,
+          projectId: projectId,
+          amount: amount,
+          formData: formData,
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 400) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Нельзя редактировать согласование',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Нет прав на обновление',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 404) {
+        throw Exception('Согласование не найдено');
+      } else {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {

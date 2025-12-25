@@ -26,6 +26,15 @@ abstract class ApprovalRemoteDataSource extends DataSource {
   /// Создать согласование
   Future<ApprovalModel> createApproval(ApprovalModel approval);
 
+  /// Обновить согласование
+  Future<ApprovalModel> updateApproval(
+    String id, {
+    String? title,
+    String? projectId,
+    double? amount,
+    Map<String, dynamic>? formData,
+  });
+
   /// Получить список согласований
   Future<List<ApprovalModel>> getApprovals({
     String? businessId,

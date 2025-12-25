@@ -87,6 +87,34 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
   }
 
   @override
+  Future<Either<Failure, Approval>> updateApproval(
+    String id, {
+    String? title,
+    String? projectId,
+    double? amount,
+    Map<String, dynamic>? formData,
+  }) async {
+    try {
+      final updatedApproval = await remoteDataSource.updateApproval(
+        id,
+        title: title,
+        projectId: projectId,
+        amount: amount,
+        formData: formData,
+      );
+      return Right(updatedApproval.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при обновлении согласования: $e'));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<Approval>>> getApprovals({
     String? businessId,
     ApprovalStatus? status,

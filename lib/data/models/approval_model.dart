@@ -285,6 +285,35 @@ class ApprovalModel extends Approval implements Model {
     };
   }
 
+  /// JSON для обновления согласования (все поля опциональны)
+  /// Согласно API: title, projectId, amount, formData
+  Map<String, dynamic> toUpdateJson({
+    String? title,
+    String? projectId,
+    double? amount,
+    Map<String, dynamic>? formData,
+  }) {
+    final result = <String, dynamic>{};
+    
+    if (title != null && title.isNotEmpty) {
+      result['title'] = title;
+    }
+    
+    if (projectId != null && projectId.isNotEmpty) {
+      result['projectId'] = projectId;
+    }
+    
+    if (amount != null) {
+      result['amount'] = amount;
+    }
+    
+    if (formData != null) {
+      result['formData'] = formData;
+    }
+    
+    return result;
+  }
+
   Approval toEntity() {
     return Approval(
       id: id,

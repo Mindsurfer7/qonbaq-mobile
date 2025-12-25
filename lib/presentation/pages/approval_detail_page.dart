@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_decision.dart';
+import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/usecases/get_approval_by_id.dart';
 import '../../domain/usecases/decide_approval.dart';
 import '../../domain/usecases/create_approval_comment.dart';
 import '../../domain/usecases/delete_approval_comment.dart';
+import '../../domain/usecases/update_approval.dart';
 import '../../core/error/failures.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
 import '../../domain/repositories/chat_repository.dart';
 import 'chat_detail_page.dart';
+import '../widgets/dynamic_block_form.dart';
 
 /// Страница детального согласования
 class ApprovalDetailPage extends StatefulWidget {
@@ -74,6 +79,29 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         }
       },
       (approval) {
+        // Логи для отладки
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final currentUser = authProvider.user;
+        final currentUserId = currentUser?.id;
+        final creatorId = approval.createdBy;
+        final isMatch = currentUserId == creatorId;
+
+        print('=== ЛОГИ СОГЛАСОВАНИЯ ===');
+        print('ID текущего пользователя: $currentUserId');
+        print('ID создателя согласования: $creatorId');
+        print('Совпадают ли ID: $isMatch');
+        print('Название согласования: ${approval.title}');
+        print('Статус согласования: ${approval.status}');
+        if (approval.creator != null) {
+          print('Информация о создателе:');
+          print('  - ID: ${approval.creator!.id}');
+          print('  - Email: ${approval.creator!.email}');
+          print(
+            '  - Имя: ${approval.creator!.firstName} ${approval.creator!.lastName}',
+          );
+        }
+        print('========================');
+
         setState(() {
           _isLoading = false;
           _approval = approval;
@@ -216,6 +244,26 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         }
       },
     );
+  }
+
+  Future<void> _editApproval() async {
+    if (_approval == null || !_canEdit()) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => _EditApprovalDialog(approval: _approval!),
+    );
+
+    if (result == true && mounted) {
+      // Перезагружаем согласование после редактирования
+      _loadApproval();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Согласование успешно обновлено'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _deleteComment(ApprovalComment comment) async {
@@ -412,6 +460,60 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     return false;
   }
 
+  /// Проверяет, является ли текущий пользователь создателем согласования
+  bool _isCreator() {
+    if (_approval == null) return false;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    if (currentUser == null) return false;
+
+    return _approval!.createdBy == currentUser.id;
+  }
+
+  /// Проверяет, можно ли редактировать согласование
+  bool _canEdit() {
+    if (_approval == null) return false;
+    if (!_isCreator()) return false;
+
+    // Нельзя редактировать, если статус: APPROVED, IN_EXECUTION, COMPLETED
+    if (_approval!.status == ApprovalStatus.approved ||
+        _approval!.status == ApprovalStatus.inExecution ||
+        _approval!.status == ApprovalStatus.completed) {
+      return false;
+    }
+
+    // Нельзя редактировать, если согласование находится у гендиректора или уполномоченного
+    // Проверяем, есть ли currentApprover - если есть, значит согласование находится на согласовании
+    // и нужно проверить, является ли он гендиректором или уполномоченным
+    // Пока что упрощенная проверка: если currentApprover существует, проверяем права текущего пользователя
+    // TODO: Нужно проверять права currentApprover, а не текущего пользователя
+    // Для этого нужно получать информацию о правах currentApprover через API
+    if (_approval!.currentApprover != null) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
+      final currentUser = authProvider.user;
+      final selectedBusiness = profileProvider.selectedBusiness;
+
+      if (currentUser != null && selectedBusiness != null) {
+        final permission = currentUser.getPermissionsForBusiness(
+          selectedBusiness.id,
+        );
+        // Если текущий пользователь - гендиректор или уполномоченный,
+        // и согласование находится у него, то нельзя редактировать
+        if (permission != null &&
+            (permission.isAuthorizedApprover || permission.isGeneralDirector) &&
+            _approval!.currentApprover!.id == currentUser.id) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -422,6 +524,12 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          if (_approval != null && _canEdit())
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _editApproval,
+              tooltip: 'Редактировать',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadApproval,
@@ -615,27 +723,28 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          onPressed:
-                                              _isDeciding
-                                                  ? null
-                                                  : () => _decideApproval(
-                                                    ApprovalDecisionType
-                                                        .requestChanges,
-                                                  ),
-                                          icon: const Icon(Icons.edit),
-                                          label: const Text('На доработку'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
+                                      // Кнопка "На доработку" скрыта
+                                      // Expanded(
+                                      //   child: ElevatedButton.icon(
+                                      //     onPressed:
+                                      //         _isDeciding
+                                      //             ? null
+                                      //             : () => _decideApproval(
+                                      //               ApprovalDecisionType
+                                      //                   .requestChanges,
+                                      //             ),
+                                      //     icon: const Icon(Icons.edit),
+                                      //     label: const Text('На доработку'),
+                                      //     style: ElevatedButton.styleFrom(
+                                      //       backgroundColor: Colors.orange,
+                                      //       foregroundColor: Colors.white,
+                                      //       padding: const EdgeInsets.symmetric(
+                                      //         vertical: 16,
+                                      //       ),
+                                      //     ),
+                                      //   ),
+                                      // ),
+                                      // const SizedBox(width: 8),
                                       Expanded(
                                         child: ElevatedButton.icon(
                                           onPressed:
@@ -1118,6 +1227,210 @@ class _DecisionDialogState extends State<_DecisionDialog> {
             backgroundColor: buttonColor,
             foregroundColor: Colors.white,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Диалог редактирования согласования
+class _EditApprovalDialog extends StatefulWidget {
+  final Approval approval;
+
+  const _EditApprovalDialog({required this.approval});
+
+  @override
+  State<_EditApprovalDialog> createState() => _EditApprovalDialogState();
+}
+
+class _EditApprovalDialogState extends State<_EditApprovalDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.text = widget.approval.title;
+    _descriptionController.text = widget.approval.description ?? '';
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final formValues = _formKey.currentState!.value;
+    final title = _titleController.text.trim();
+
+    // Извлекаем formData из формы так же, как при создании согласования
+    final dynamicFormData = <String, dynamic>{};
+
+    formValues.forEach((key, value) {
+      // Исключаем системные поля формы
+      if (key != 'template' &&
+          key != 'title' &&
+          key != 'description' &&
+          value != null) {
+        // Удаляем processName из formData - бэкенд его автоматически удаляет
+        if (key == 'processName') {
+          return; // Пропускаем processName
+        }
+
+        // Преобразуем DateTime в ISO строку для отправки на сервер
+        if (value is DateTime) {
+          dynamicFormData[key] = value.toIso8601String();
+        } else if (value is ApprovalTemplate) {
+          // Пропускаем объекты шаблонов
+        } else {
+          dynamicFormData[key] = value;
+        }
+      }
+    });
+
+    // Если formData пустой, но есть текущий formData, используем его
+    Map<String, dynamic>? updatedFormData;
+    if (dynamicFormData.isNotEmpty) {
+      updatedFormData = dynamicFormData;
+    } else if (widget.approval.formData != null) {
+      updatedFormData = Map<String, dynamic>.from(widget.approval.formData!);
+    }
+
+    final updateApprovalUseCase = Provider.of<UpdateApproval>(
+      context,
+      listen: false,
+    );
+
+    final result = await updateApprovalUseCase.call(
+      UpdateApprovalParams(
+        approvalId: widget.approval.id,
+        title: title.isNotEmpty ? title : null,
+        projectId: widget.approval.businessId,
+        formData: updatedFormData,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoading = false;
+          _error = _getErrorMessage(failure);
+        });
+      },
+      (approval) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      },
+    );
+  }
+
+  String _getErrorMessage(Failure failure) {
+    if (failure is ForbiddenFailure) {
+      return failure.message;
+    } else if (failure is ServerFailure) {
+      return failure.message;
+    } else if (failure is NetworkFailure) {
+      return failure.message;
+    }
+    return 'Произошла ошибка';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Редактировать согласование'),
+      content: SingleChildScrollView(
+        child: FormBuilder(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+              FormBuilderTextField(
+                name: 'title',
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Название *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: FormBuilderValidators.required(
+                  errorText: 'Название обязательно',
+                ),
+              ),
+              const SizedBox(height: 16),
+              FormBuilderTextField(
+                name: 'description',
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Описание',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+              ),
+              // Если есть шаблон с formSchema, показываем динамическую форму
+              if (widget.approval.template?.formSchema != null) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                DynamicBlockForm(
+                  key: ValueKey(
+                    widget.approval.template!.code,
+                  ), // Уникальный key для пересоздания виджета
+                  formSchema: widget.approval.template!.formSchema,
+                  initialValues: widget.approval.formData,
+                  formKey: _formKey,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Отмена'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _save,
+          child:
+              _isLoading
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Сохранить'),
         ),
       ],
     );

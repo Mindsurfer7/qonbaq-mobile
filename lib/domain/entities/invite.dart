@@ -42,3 +42,4 @@ class CreateInviteResult extends Entity {
 
 
 
+

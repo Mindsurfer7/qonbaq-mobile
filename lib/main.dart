@@ -113,6 +113,7 @@ import 'package:qonbaq/domain/repositories/approval_repository.dart';
 import 'package:qonbaq/domain/usecases/get_approvals.dart';
 import 'package:qonbaq/domain/usecases/get_approval_by_id.dart';
 import 'package:qonbaq/domain/usecases/create_approval.dart';
+import 'package:qonbaq/domain/usecases/update_approval.dart';
 import 'package:qonbaq/domain/usecases/decide_approval.dart';
 import 'package:qonbaq/domain/usecases/create_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_comments.dart';
@@ -285,6 +286,7 @@ class MyApp extends StatelessWidget {
     final getApprovals = GetApprovals(approvalRepository);
     final getApprovalById = GetApprovalById(approvalRepository);
     final createApproval = CreateApproval(approvalRepository);
+    final updateApproval = UpdateApproval(approvalRepository);
     final decideApproval = DecideApproval(approvalRepository);
     final createApprovalComment = CreateApprovalComment(approvalRepository);
     final getApprovalComments = GetApprovalComments(approvalRepository);
@@ -327,6 +329,7 @@ class MyApp extends StatelessWidget {
         Provider<GetApprovals>(create: (_) => getApprovals),
         Provider<GetApprovalById>(create: (_) => getApprovalById),
         Provider<CreateApproval>(create: (_) => createApproval),
+        Provider<UpdateApproval>(create: (_) => updateApproval),
         Provider<DecideApproval>(create: (_) => decideApproval),
         Provider<CreateApprovalComment>(create: (_) => createApprovalComment),
         Provider<GetApprovalComments>(create: (_) => getApprovalComments),
