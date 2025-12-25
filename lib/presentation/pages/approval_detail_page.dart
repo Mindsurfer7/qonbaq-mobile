@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -91,6 +92,9 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         print('ID создателя согласования: $creatorId');
         print('Совпадают ли ID: $isMatch');
         print('Название согласования: ${approval.title}');
+        print('Описание согласования: ${approval.description}');
+        print('Описание is null: ${approval.description == null}');
+        print('Описание isEmpty: ${approval.description?.isEmpty ?? true}');
         print('Статус согласования: ${approval.status}');
         if (approval.creator != null) {
           print('Информация о создателе:');
@@ -617,26 +621,43 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             const SizedBox(height: 16),
 
                             // Описание
-                            if (_approval!.description != null &&
-                                _approval!.description!.isNotEmpty)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Описание',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Описание',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _approval!.description!,
-                                    style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _approval!.description != null &&
+                                          _approval!.description!.isNotEmpty
+                                      ? _approval!.description!
+                                      : 'Описание отсутствует',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color:
+                                        _approval!.description != null &&
+                                                _approval!
+                                                    .description!
+                                                    .isNotEmpty
+                                            ? null
+                                            : Colors.grey,
+                                    fontStyle:
+                                        _approval!.description != null &&
+                                                _approval!
+                                                    .description!
+                                                    .isNotEmpty
+                                            ? FontStyle.normal
+                                            : FontStyle.italic,
                                   ),
-                                  const SizedBox(height: 16),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
 
                             // Создатель
                             if (_approval!.creator != null) _buildCreatorRow(),
@@ -1255,6 +1276,32 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
     super.initState();
     _titleController.text = widget.approval.title;
     _descriptionController.text = widget.approval.description ?? '';
+
+    // Логи для отладки formSchema
+    print('=== ЛОГИ ШАБЛОНА В ДИАЛОГЕ РЕДАКТИРОВАНИЯ ===');
+    print('Template ID: ${widget.approval.template?.id}');
+    print('Template Code: ${widget.approval.template?.code}');
+    print('Template Name: ${widget.approval.template?.name}');
+    print('FormSchema: ${widget.approval.template?.formSchema}');
+    if (widget.approval.template?.formSchema != null) {
+      print('FormSchema (pretty):');
+      print(_prettyPrintJson(widget.approval.template!.formSchema!));
+    }
+    print('Initial FormData: ${widget.approval.formData}');
+    if (widget.approval.formData != null) {
+      print('FormData (pretty):');
+      print(_prettyPrintJson(widget.approval.formData!));
+    }
+    print('============================================');
+  }
+
+  String _prettyPrintJson(Map<String, dynamic> json) {
+    const encoder = JsonEncoder.withIndent('  ');
+    try {
+      return encoder.convert(json);
+    } catch (e) {
+      return json.toString();
+    }
   }
 
   @override
@@ -1403,13 +1450,31 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
-                DynamicBlockForm(
-                  key: ValueKey(
-                    widget.approval.template!.code,
-                  ), // Уникальный key для пересоздания виджета
-                  formSchema: widget.approval.template!.formSchema,
-                  initialValues: widget.approval.formData,
-                  formKey: _formKey,
+                Builder(
+                  builder: (context) {
+                    // Логи перед созданием формы
+                    print('=== СОЗДАНИЕ DYNAMIC BLOCK FORM ===');
+                    print('FormSchema перед передачей в DynamicBlockForm:');
+                    print(
+                      _prettyPrintJson(widget.approval.template!.formSchema!),
+                    );
+                    print('InitialValues перед передачей:');
+                    if (widget.approval.formData != null) {
+                      print(_prettyPrintJson(widget.approval.formData!));
+                    } else {
+                      print('null');
+                    }
+                    print('===================================');
+
+                    return DynamicBlockForm(
+                      key: ValueKey(
+                        widget.approval.template!.code,
+                      ), // Уникальный key для пересоздания виджета
+                      formSchema: widget.approval.template!.formSchema,
+                      initialValues: widget.approval.formData,
+                      formKey: _formKey,
+                    );
+                  },
                 ),
               ],
             ],

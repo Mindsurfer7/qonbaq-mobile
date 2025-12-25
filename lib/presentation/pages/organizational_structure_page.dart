@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
+import '../../domain/entities/project.dart';
 import '../providers/department_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/project_provider.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/department_tree_graph.dart';
 import 'create_department_dialog.dart';
+import 'create_project_dialog.dart';
 
 /// Страница организационной структуры
 class OrganizationalStructurePage extends StatefulWidget {
@@ -26,9 +29,12 @@ class _OrganizationalStructurePageState
           Provider.of<ProfileProvider>(context, listen: false);
       final departmentProvider =
           Provider.of<DepartmentProvider>(context, listen: false);
+      final projectProvider =
+          Provider.of<ProjectProvider>(context, listen: false);
 
       if (profileProvider.selectedBusiness != null) {
         final businessId = profileProvider.selectedBusiness!.id;
+        projectProvider.loadProjects(businessId);
         departmentProvider.loadDepartments(businessId);
         departmentProvider.loadDepartmentsTree(businessId);
       }
@@ -53,8 +59,8 @@ class _OrganizationalStructurePageState
           ),
         ],
       ),
-      body: Consumer2<ProfileProvider, DepartmentProvider>(
-        builder: (context, profileProvider, departmentProvider, child) {
+      body: Consumer3<ProfileProvider, DepartmentProvider, ProjectProvider>(
+        builder: (context, profileProvider, departmentProvider, projectProvider, child) {
           final selectedBusiness = profileProvider.selectedBusiness;
 
           if (selectedBusiness == null) {
@@ -63,13 +69,14 @@ class _OrganizationalStructurePageState
             );
           }
 
-          // Загружаем департаменты при изменении выбранной компании
+          // Загружаем данные при изменении выбранной компании
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (departmentProvider.departments == null ||
                 (departmentProvider.departments != null &&
                     departmentProvider.departments!.isNotEmpty &&
                     departmentProvider.departments!.first.businessId !=
                         selectedBusiness.id)) {
+              projectProvider.loadProjects(selectedBusiness.id);
               departmentProvider.loadDepartments(selectedBusiness.id);
               departmentProvider.loadDepartmentsTree(selectedBusiness.id);
             }
@@ -79,7 +86,47 @@ class _OrganizationalStructurePageState
             children: [
               // Виджет выбора компании
               const BusinessSelectorWidget(compact: true),
-              // Кнопка создания департамента
+              // Секция проектов
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Проекты',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    FloatingActionButton.small(
+                      onPressed: () => _showCreateProjectDialog(
+                        context,
+                        selectedBusiness.id,
+                        projectProvider,
+                      ),
+                      child: const Icon(Icons.add),
+                      tooltip: 'Создать проект',
+                      heroTag: 'create_project',
+                    ),
+                  ],
+                ),
+              ),
+              // Список проектов
+              Expanded(
+                flex: 1,
+                child: _buildProjectsList(
+                  projectProvider,
+                  selectedBusiness.id,
+                ),
+              ),
+              // Разделитель
+              Container(
+                height: 1,
+                color: Colors.grey.shade300,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              // Секция подразделений
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -100,11 +147,12 @@ class _OrganizationalStructurePageState
                       ),
                       child: const Icon(Icons.add),
                       tooltip: 'Создать подразделение',
+                      heroTag: 'create_department',
                     ),
                   ],
                 ),
               ),
-              // Список департаментов (сверху)
+              // Список департаментов
               Expanded(
                 flex: 1,
                 child: _buildDepartmentsList(
@@ -367,6 +415,241 @@ class _OrganizationalStructurePageState
           arguments: departmentId,
         );
       },
+    );
+  }
+
+  void _showCreateProjectDialog(
+    BuildContext context,
+    String businessId,
+    ProjectProvider provider,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => CreateProjectDialog(
+        businessId: businessId,
+        onProjectCreated: () {
+          provider.loadProjects(businessId);
+        },
+      ),
+    );
+  }
+
+  Widget _buildProjectsList(
+    ProjectProvider provider,
+    String businessId,
+  ) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              provider.error!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => provider.loadProjects(businessId),
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (provider.projects == null || provider.projects!.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.folder,
+              size: 64,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Нет проектов',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Создайте первый проект',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await provider.loadProjects(businessId);
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: provider.projects!.length,
+        itemBuilder: (context, index) {
+          final project = provider.projects![index];
+          return _buildProjectCard(project, provider, businessId);
+        },
+      ),
+    );
+  }
+
+  Widget _buildProjectCard(
+    Project project,
+    ProjectProvider provider,
+    String businessId,
+  ) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(
+          project.isActive ? Icons.folder : Icons.folder_off,
+          size: 32,
+          color: project.isActive ? Colors.blue : Colors.grey,
+        ),
+        title: Text(
+          project.name,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            decoration: project.isActive ? null : TextDecoration.lineThrough,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (project.description != null && project.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  project.description!,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            if (project.city != null || project.country != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  [
+                    if (project.city != null) project.city,
+                    if (project.country != null) project.country,
+                  ].join(', '),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        onTap: () {
+          // TODO: Навигация на страницу деталей проекта
+        },
+        trailing: Consumer<ProfileProvider>(
+          builder: (context, profileProvider, child) {
+            final isGeneralDirector =
+                profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+
+            if (!isGeneralDirector) {
+              return const SizedBox.shrink();
+            }
+
+            return PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _showDeleteProjectConfirmation(
+                    context,
+                    project,
+                    provider,
+                    businessId,
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Удалить'),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        isThreeLine: (project.description != null &&
+                project.description!.isNotEmpty) ||
+            (project.city != null || project.country != null),
+      ),
+    );
+  }
+
+  void _showDeleteProjectConfirmation(
+    BuildContext context,
+    Project project,
+    ProjectProvider provider,
+    String businessId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удаление проекта'),
+        content: Text(
+          'Вы уверены, что хотите удалить проект "${project.name}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final success = await provider.removeProject(project.id);
+              if (success && context.mounted) {
+                provider.loadProjects(businessId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Проект удален'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      provider.error ?? 'Ошибка при удалении',
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Удалить',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

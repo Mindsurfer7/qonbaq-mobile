@@ -26,66 +26,119 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
   @override
   Widget build(BuildContext context) {
     if (widget.formSchema == null) {
+      print('⚠️ DynamicBlockForm: formSchema is null');
       return const SizedBox.shrink();
     }
 
+    print('=== DYNAMIC BLOCK FORM BUILD ===');
+    print('FormSchema keys: ${widget.formSchema!.keys.toList()}');
+
     // Проверяем, есть ли структура с блоками (новый формат)
     final blocks = widget.formSchema!['blocks'] as List<dynamic>?;
-    final blocksInfo = widget.formSchema!['blocks_info'] as Map<String, dynamic>?;
+    final blocksInfo =
+        widget.formSchema!['blocks_info'] as Map<String, dynamic>?;
+
+    print('Blocks: $blocks');
+    print('BlocksInfo keys: ${blocksInfo?.keys.toList()}');
 
     // Если есть блоки, используем новый формат
     if (blocks != null && blocksInfo != null && blocks.isNotEmpty) {
+      print('✅ Используется формат с блоками');
+      print('Количество блоков: ${blocks.length}');
+      blocksInfo.forEach((blockName, blockData) {
+        print('  Блок "$blockName":');
+        print('    Label: ${blockData['label']}');
+        final elements = blockData['elements'] as List<dynamic>?;
+        print('    Количество элементов: ${elements?.length ?? 0}');
+        if (elements != null) {
+          for (var i = 0; i < elements.length; i++) {
+            final element = elements[i] as Map<String, dynamic>;
+            print('    Элемент $i:');
+            print('      name: ${element['name']}');
+            print('      label: ${element['label']}');
+            print('      type: ${element['type']}');
+            if (element['options'] != null) {
+              print('      options: ${element['options']}');
+            }
+          }
+        }
+      });
+      print('==============================');
       return _buildBlocksFormat(blocks, blocksInfo);
     }
 
     // Иначе проверяем, есть ли обычный JSON Schema (старый формат)
-    final properties = widget.formSchema!['properties'] as Map<String, dynamic>?;
+    final properties =
+        widget.formSchema!['properties'] as Map<String, dynamic>?;
     if (properties != null && properties.isNotEmpty) {
+      print('✅ Используется JSON Schema формат');
+      print('Количество свойств: ${properties.length}');
+      properties.forEach((fieldName, fieldSchema) {
+        print('  Поле "$fieldName":');
+        if (fieldSchema is Map<String, dynamic>) {
+          print('    type: ${fieldSchema['type']}');
+          print('    title: ${fieldSchema['title']}');
+          print('    format: ${fieldSchema['format']}');
+          if (fieldSchema['enum'] != null) {
+            print('    enum: ${fieldSchema['enum']}');
+          }
+          if (fieldSchema['enumNames'] != null) {
+            print('    enumNames: ${fieldSchema['enumNames']}');
+          }
+        }
+      });
+      print('==============================');
       return _buildJsonSchemaFormat(properties);
     }
 
+    print('⚠️ DynamicBlockForm: Не удалось определить формат схемы');
+    print('==============================');
     return const SizedBox.shrink();
   }
 
-  Widget _buildBlocksFormat(List<dynamic> blocks, Map<String, dynamic> blocksInfo) {
-
+  Widget _buildBlocksFormat(
+    List<dynamic> blocks,
+    Map<String, dynamic> blocksInfo,
+  ) {
     // Если formKey передан, используем его (форма уже создана родителем)
     if (widget.formKey != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: blocks.map((blockName) {
-          final blockNameStr = blockName.toString();
-          final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
-          if (block == null) return const SizedBox.shrink();
+        children:
+            blocks.map((blockName) {
+              final blockNameStr = blockName.toString();
+              final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
+              if (block == null) return const SizedBox.shrink();
 
-          return UniversalBlock(
-            key: ValueKey(blockNameStr),
-            blockName: blockNameStr,
-            label: block['label'] as String? ?? blockNameStr,
-            elements: block['elements'] as List<dynamic>? ?? [],
-            formKey: widget.formKey!,
-            initialValues: widget.initialValues,
-          );
-        }).toList(),
+              return UniversalBlock(
+                key: ValueKey(blockNameStr),
+                blockName: blockNameStr,
+                label: block['label'] as String? ?? blockNameStr,
+                elements: block['elements'] as List<dynamic>? ?? [],
+                formKey: widget.formKey!,
+                initialValues: widget.initialValues,
+              );
+            }).toList(),
       );
     } else {
       // Создаем свою форму (на случай если виджет используется отдельно)
       return FormBuilder(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: blocks.map((blockName) {
-            final blockNameStr = blockName.toString();
-            final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
-            if (block == null) return const SizedBox.shrink();
+          children:
+              blocks.map((blockName) {
+                final blockNameStr = blockName.toString();
+                final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
+                if (block == null) return const SizedBox.shrink();
 
-            return UniversalBlock(
-              key: ValueKey(blockNameStr),
-              blockName: blockNameStr,
-              label: block['label'] as String? ?? blockNameStr,
-              elements: block['elements'] as List<dynamic>? ?? [],
-              initialValues: widget.initialValues,
-            );
-          }).toList(),
+                return UniversalBlock(
+                  key: ValueKey(blockNameStr),
+                  blockName: blockNameStr,
+                  label: block['label'] as String? ?? blockNameStr,
+                  elements: block['elements'] as List<dynamic>? ?? [],
+                  initialValues: widget.initialValues,
+                );
+              }).toList(),
         ),
       );
     }
@@ -111,7 +164,9 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
       final isRequired = requiredFields.contains(fieldName);
       final defaultValue = fieldSchema['default'];
       final initialValue = widget.initialValues?[fieldName] ?? defaultValue;
-      final readOnly = fieldSchema['readOnly'] == true || isProcessName; // processName всегда только для чтения
+      final readOnly =
+          fieldSchema['readOnly'] == true ||
+          isProcessName; // processName всегда только для чтения
       final description = fieldSchema['description'] as String?;
       final minLength = fieldSchema['minLength'] as int?;
       final maxLength = fieldSchema['maxLength'] as int?;
@@ -173,29 +228,33 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                   return enumValues.asMap().entries.map<Widget>((entry) {
                     final index = entry.key;
                     final value = entry.value.toString();
-                    final name = enumNames != null && index < enumNames.length
-                        ? enumNames[index].toString()
-                        : value;
+                    final name =
+                        enumNames != null && index < enumNames.length
+                            ? enumNames[index].toString()
+                            : value;
                     return Text(name);
                   }).toList();
                 },
-                items: enumValues.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final value = entry.value.toString();
-                  final name = enumNames != null && index < enumNames.length
-                      ? enumNames[index].toString()
-                      : value;
-                  return createStyledDropdownItem<String>(
-                    context: context,
-                    value: value,
-                    child: Text(name),
-                  );
-                }).toList(),
-                validator: isRequired
-                    ? FormBuilderValidators.required(
-                        errorText: 'Поле "$fieldTitle" обязательно',
-                      )
-                    : null,
+                items:
+                    enumValues.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final value = entry.value.toString();
+                      final name =
+                          enumNames != null && index < enumNames.length
+                              ? enumNames[index].toString()
+                              : value;
+                      return createStyledDropdownItem<String>(
+                        context: context,
+                        value: value,
+                        child: Text(name),
+                      );
+                    }).toList(),
+                validator:
+                    isRequired
+                        ? FormBuilderValidators.required(
+                          errorText: 'Поле "$fieldTitle" обязательно',
+                        )
+                        : null,
               );
             } else if (options != null) {
               // Динамический список (departments, projects и т.д.)
@@ -216,11 +275,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                     child: Text('Нет доступных опций'),
                   ),
                 ],
-                validator: isRequired
-                    ? FormBuilderValidators.required(
-                        errorText: 'Поле "$fieldTitle" обязательно',
-                      )
-                    : null,
+                validator:
+                    isRequired
+                        ? FormBuilderValidators.required(
+                          errorText: 'Поле "$fieldTitle" обязательно',
+                        )
+                        : null,
               );
             } else {
               // Обычное текстовое поле
@@ -269,11 +329,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                 helperText: description,
               ),
               inputType: InputType.date,
-              validator: isRequired
-                  ? FormBuilderValidators.required(
-                      errorText: 'Поле "$fieldTitle" обязательно',
-                    )
-                  : null,
+              validator:
+                  isRequired
+                      ? FormBuilderValidators.required(
+                        errorText: 'Поле "$fieldTitle" обязательно',
+                      )
+                      : null,
             );
           } else if (fieldFormat == 'datetime') {
             DateTime? dateValue;
@@ -293,11 +354,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                 helperText: description,
               ),
               inputType: InputType.both,
-              validator: isRequired
-                  ? FormBuilderValidators.required(
-                      errorText: 'Поле "$fieldTitle" обязательно',
-                    )
-                  : null,
+              validator:
+                  isRequired
+                      ? FormBuilderValidators.required(
+                        errorText: 'Поле "$fieldTitle" обязательно',
+                      )
+                      : null,
             );
           } else if (fieldFormat == 'file') {
             // TODO: Реализовать загрузку файлов
@@ -310,11 +372,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                 border: const OutlineInputBorder(),
                 helperText: description ?? 'Загрузка файлов будет реализована',
               ),
-              validator: isRequired
-                  ? FormBuilderValidators.required(
-                      errorText: 'Поле "$fieldTitle" обязательно',
-                    )
-                  : null,
+              validator:
+                  isRequired
+                      ? FormBuilderValidators.required(
+                        errorText: 'Поле "$fieldTitle" обязательно',
+                      )
+                      : null,
             );
           } else {
             // Обычное текстовое поле
@@ -364,9 +427,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                 FormBuilderValidators.required(
                   errorText: 'Поле "$fieldTitle" обязательно',
                 ),
-              FormBuilderValidators.numeric(
-                errorText: 'Введите число',
-              ),
+              FormBuilderValidators.numeric(errorText: 'Введите число'),
               if (minimum != null)
                 FormBuilderValidators.min(
                   minimum,
@@ -393,11 +454,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
               helperText: description ?? 'Введите значения через запятую',
             ),
             maxLines: 3,
-            validator: isRequired
-                ? FormBuilderValidators.required(
-                    errorText: 'Поле "$fieldTitle" обязательно',
-                  )
-                : null,
+            validator:
+                isRequired
+                    ? FormBuilderValidators.required(
+                      errorText: 'Поле "$fieldTitle" обязательно',
+                    )
+                    : null,
           );
           break;
 
@@ -411,11 +473,12 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
               border: const OutlineInputBorder(),
               helperText: description,
             ),
-            validator: isRequired
-                ? FormBuilderValidators.required(
-                    errorText: 'Поле "$fieldTitle" обязательно',
-                  )
-                : null,
+            validator:
+                isRequired
+                    ? FormBuilderValidators.required(
+                      errorText: 'Поле "$fieldTitle" обязательно',
+                    )
+                    : null,
           );
       }
 
@@ -467,10 +530,7 @@ class UniversalBlock extends StatelessWidget {
           padding: const EdgeInsets.only(top: 16, bottom: 8),
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         // Элементы блока
@@ -518,7 +578,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
   Widget build(BuildContext context) {
     // Получаем значения полей, от которых зависит видимость, для реактивности
     final visibilityKey = _getVisibilityKey(context);
-    
+
     // Проверяем видимость элемента
     final isVisible = _checkVisibility(context);
     if (!isVisible) {
@@ -531,10 +591,48 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     final defaultValue = widget.element['defaultValue'];
     final initialValue = _getInitialValue();
 
+    // Логи для отладки элементов формы
+    print('📝 Элемент формы:');
+    print('  FieldName: $_fieldName');
+    print('  Type: $elementType');
+    print('  Label: $label');
+    print('  Name: ${widget.element['name']}');
+    print('  Required: $isRequired');
+    print('  DefaultValue: $defaultValue');
+    print('  InitialValue: $initialValue');
+
+    if (elementType == 'select') {
+      final options = widget.element['options'] as List<dynamic>?;
+      print('  Select Options (${options?.length ?? 0}):');
+      if (options != null) {
+        for (var i = 0; i < options.length; i++) {
+          final option = options[i];
+          if (option is Map<String, dynamic>) {
+            print(
+              '    [$i] value: ${option['value']}, name: ${option['name']}',
+            );
+          } else {
+            print('    [$i] $option');
+          }
+        }
+      }
+      final parent = widget.element['parent'] as String?;
+      if (parent != null) {
+        print('  Parent field: $parent');
+      }
+    }
+    print('  ---');
+
     // Используем key для перестройки виджета при изменении значений, влияющих на видимость
     return KeyedSubtree(
       key: ValueKey('${_fieldName}-$visibilityKey'),
-      child: _buildFieldByType(elementType, label, isRequired, defaultValue, initialValue),
+      child: _buildFieldByType(
+        elementType,
+        label,
+        isRequired,
+        defaultValue,
+        initialValue,
+      ),
     );
   }
 
@@ -663,7 +761,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         return true;
       }
     }
-    
+
     if (formState == null) return true;
 
     final formValues = formState.value;
@@ -700,25 +798,35 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
   }
 
   /// Получает значение поля из плоского объекта
-  dynamic _getFieldValue(Map<String, dynamic> flattenedValues, String fieldPath) {
+  dynamic _getFieldValue(
+    Map<String, dynamic> flattenedValues,
+    String fieldPath,
+  ) {
     // Поддержка путей вида "blocks_new.CheckIn.status"
     final normalizedPath = fieldPath.replaceAll('[', '.').replaceAll(']', '');
     return flattenedValues[normalizedPath] ?? flattenedValues[fieldPath];
   }
 
   /// Преобразует вложенный объект в плоский
-  Map<String, dynamic> _flattenMap(Map<String, dynamic> map, {String prefix = ''}) {
+  Map<String, dynamic> _flattenMap(
+    Map<String, dynamic> map, {
+    String prefix = '',
+  }) {
     final result = <String, dynamic>{};
     for (var entry in map.entries) {
       final key = prefix.isEmpty ? entry.key : '$prefix.${entry.key}';
       if (entry.value is Map) {
-        result.addAll(_flattenMap(entry.value as Map<String, dynamic>, prefix: key));
+        result.addAll(
+          _flattenMap(entry.value as Map<String, dynamic>, prefix: key),
+        );
       } else if (entry.value is List) {
         // Обработка массивов (например, для deviceCheckPhoto.0.value)
         final list = entry.value as List;
         for (var i = 0; i < list.length; i++) {
           if (list[i] is Map) {
-            result.addAll(_flattenMap(list[i] as Map<String, dynamic>, prefix: '$key.$i'));
+            result.addAll(
+              _flattenMap(list[i] as Map<String, dynamic>, prefix: '$key.$i'),
+            );
           } else {
             result['$key.$i'] = list[i];
           }
@@ -738,7 +846,11 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
   }
 
   /// Фильтрует опции на основе значения родительского поля
-  List<dynamic> _filterOptions(BuildContext context, List<dynamic>? options, String? parent) {
+  List<dynamic> _filterOptions(
+    BuildContext context,
+    List<dynamic>? options,
+    String? parent,
+  ) {
     if (options == null || parent == null) return options ?? [];
 
     FormBuilderState? formState;
@@ -751,7 +863,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         return options;
       }
     }
-    
+
     if (formState == null) return options;
 
     final formValues = formState.value;
@@ -759,7 +871,8 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
 
     // Получаем значение родительского поля
     final parentFieldName = '${widget.blockName}.$parent';
-    final parentValue = flattenedValues[parentFieldName] ?? flattenedValues[parent];
+    final parentValue =
+        flattenedValues[parentFieldName] ?? flattenedValues[parent];
 
     if (parentValue == null) return options;
 
@@ -790,11 +903,12 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         border: const OutlineInputBorder(),
       ),
       maxLines: multiline ? 4 : 1,
-      validator: isRequired
-          ? FormBuilderValidators.required(
-              errorText: 'Поле "$label" обязательно',
-            )
-          : null,
+      validator:
+          isRequired
+              ? FormBuilderValidators.required(
+                errorText: 'Поле "$label" обязательно',
+              )
+              : null,
     );
   }
 
@@ -805,9 +919,32 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     List<dynamic>? options,
     String? parent,
   }) {
+    print('🔽 Создание Select поля:');
+    print('  FieldName: $_fieldName');
+    print('  Label: $label');
+    print('  InitialValue: $initialValue');
+    print('  Options count: ${options?.length ?? 0}');
+    print('  Parent: $parent');
+
+    if (options != null && options.isNotEmpty) {
+      print('  Options details:');
+      for (var i = 0; i < options.length; i++) {
+        final option = options[i];
+        if (option is Map<String, dynamic>) {
+          print(
+            '    [$i] Map: value="${option['value']}", name="${option['name']}", parentId="${option['parentId']}"',
+          );
+        } else {
+          print('    [$i] Simple: $option');
+        }
+      }
+    }
+    print('  ---');
+
     // Если есть родительское поле, создаем виджет с реактивностью
     if (parent != null) {
       final parentFieldName = '${widget.blockName}.$parent';
+      print('  Используется ReactiveSelectField (есть parent)');
       return _ReactiveSelectField(
         fieldName: _fieldName,
         parentFieldName: parentFieldName,
@@ -823,6 +960,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     }
 
     // Если нет родительского поля, используем обычный FormBuilderDropdown
+    print('  Используется обычный FormBuilderDropdown');
     final theme = context.appTheme;
     return FormBuilderDropdown<String>(
       name: _fieldName,
@@ -834,50 +972,69 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
       dropdownColor: theme.backgroundSurface,
       borderRadius: BorderRadius.circular(theme.borderRadius),
       selectedItemBuilder: (BuildContext context) {
+        print('📋 selectedItemBuilder для $_fieldName:');
         return (options ?? []).map<Widget>((option) {
           if (option is Map<String, dynamic>) {
-            return Text(option['name']?.toString() ?? option['value']?.toString() ?? '');
+            final name = option['name']?.toString();
+            final value = option['value']?.toString();
+            final displayText = name ?? value ?? '';
+            print(
+              '  selectedItemBuilder: name="$name", value="$value", displayText="$displayText"',
+            );
+            return Text(displayText);
           } else {
+            print('  selectedItemBuilder: simple option="$option"');
             return Text(option.toString());
           }
         }).toList();
       },
-      items: (options ?? []).isEmpty
-          ? [
-              const DropdownMenuItem<String>(
-                value: null,
-                enabled: false,
-                child: Text('Нет доступных опций'),
-              ),
-            ]
-          : (options ?? []).map((option) {
-              if (option is Map<String, dynamic>) {
-                final value = option['value']?.toString();
-                if (value == null) {
-                  return const DropdownMenuItem<String>(
-                    value: null,
-                    enabled: false,
-                    child: Text('Нет доступных опций'),
+      items:
+          (options ?? []).isEmpty
+              ? [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  enabled: false,
+                  child: Text('Нет доступных опций'),
+                ),
+              ]
+              : (options ?? []).map((option) {
+                if (option is Map<String, dynamic>) {
+                  final value = option['value']?.toString();
+                  final name = option['name']?.toString();
+                  if (value == null) {
+                    print(
+                      '  ⚠️ DropdownItem: value is null для option: $option',
+                    );
+                    return const DropdownMenuItem<String>(
+                      value: null,
+                      enabled: false,
+                      child: Text('Нет доступных опций'),
+                    );
+                  }
+                  final displayText = name ?? value;
+                  print(
+                    '  ✅ DropdownItem: value="$value", name="$name", displayText="$displayText"',
+                  );
+                  return createStyledDropdownItem<String>(
+                    context: context,
+                    value: value,
+                    child: Text(displayText),
+                  );
+                } else {
+                  print('  ✅ DropdownItem: simple value="$option"');
+                  return createStyledDropdownItem<String>(
+                    context: context,
+                    value: option.toString(),
+                    child: Text(option.toString()),
                   );
                 }
-                return createStyledDropdownItem<String>(
-                  context: context,
-                  value: value,
-                  child: Text(option['name']?.toString() ?? value),
-                );
-              } else {
-                return createStyledDropdownItem<String>(
-                  context: context,
-                  value: option.toString(),
-                  child: Text(option.toString()),
-                );
-              }
-            }).toList(),
-      validator: isRequired
-          ? FormBuilderValidators.required(
-              errorText: 'Поле "$label" обязательно',
-            )
-          : null,
+              }).toList(),
+      validator:
+          isRequired
+              ? FormBuilderValidators.required(
+                errorText: 'Поле "$label" обязательно',
+              )
+              : null,
     );
   }
 
@@ -899,9 +1056,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
           FormBuilderValidators.required(
             errorText: 'Поле "$label" обязательно',
           ),
-        FormBuilderValidators.numeric(
-          errorText: 'Введите число',
-        ),
+        FormBuilderValidators.numeric(errorText: 'Введите число'),
       ]),
     );
   }
@@ -927,11 +1082,12 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         suffixIcon: const Icon(Icons.calendar_today),
       ),
       inputType: InputType.date,
-      validator: isRequired
-          ? FormBuilderValidators.required(
-              errorText: 'Поле "$label" обязательно',
-            )
-          : null,
+      validator:
+          isRequired
+              ? FormBuilderValidators.required(
+                errorText: 'Поле "$label" обязательно',
+              )
+              : null,
     );
   }
 
@@ -956,11 +1112,12 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         suffixIcon: const Icon(Icons.event),
       ),
       inputType: InputType.both,
-      validator: isRequired
-          ? FormBuilderValidators.required(
-              errorText: 'Поле "$label" обязательно',
-            )
-          : null,
+      validator:
+          isRequired
+              ? FormBuilderValidators.required(
+                errorText: 'Поле "$label" обязательно',
+              )
+              : null,
     );
   }
 }
@@ -976,7 +1133,8 @@ class _ReactiveSelectField extends StatefulWidget {
   final String? parent;
   final String blockName;
   final GlobalKey<FormBuilderState>? formKey;
-  final List<dynamic> Function(BuildContext, List<dynamic>?, String?) filterOptions;
+  final List<dynamic> Function(BuildContext, List<dynamic>?, String?)
+  filterOptions;
 
   const _ReactiveSelectField({
     required this.fieldName,
@@ -1023,7 +1181,11 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
         }
 
         // Фильтруем опции на основе значения родителя
-        final currentOptions = widget.filterOptions(context, widget.options, widget.parent);
+        final currentOptions = widget.filterOptions(
+          context,
+          widget.options,
+          widget.parent,
+        );
 
         // Используем key для перестройки виджета при изменении родительского значения
         final theme = context.appTheme;
@@ -1041,78 +1203,92 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
           selectedItemBuilder: (BuildContext context) {
             return currentOptions.map<Widget>((option) {
               if (option is Map<String, dynamic>) {
-                return Text(option['name']?.toString() ?? option['value']?.toString() ?? '');
+                return Text(
+                  option['name']?.toString() ??
+                      option['value']?.toString() ??
+                      '',
+                );
               } else {
                 return Text(option.toString());
               }
             }).toList();
           },
-          items: currentOptions.isEmpty
-              ? [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    enabled: false,
-                    child: Text('Нет доступных опций'),
-                  ),
-                ]
-              : currentOptions.map((option) {
-                  if (option is Map<String, dynamic>) {
-                    final value = option['value']?.toString();
-                    if (value == null) {
-                      return const DropdownMenuItem<String>(
-                        value: null,
-                        enabled: false,
-                        child: Text('Нет доступных опций'),
+          items:
+              currentOptions.isEmpty
+                  ? [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      enabled: false,
+                      child: Text('Нет доступных опций'),
+                    ),
+                  ]
+                  : currentOptions.map((option) {
+                    if (option is Map<String, dynamic>) {
+                      final value = option['value']?.toString();
+                      if (value == null) {
+                        return const DropdownMenuItem<String>(
+                          value: null,
+                          enabled: false,
+                          child: Text('Нет доступных опций'),
+                        );
+                      }
+                      return createStyledDropdownItem<String>(
+                        context: context,
+                        value: value,
+                        child: Text(option['name']?.toString() ?? value),
+                      );
+                    } else {
+                      return createStyledDropdownItem<String>(
+                        context: context,
+                        value: option.toString(),
+                        child: Text(option.toString()),
                       );
                     }
-                    return createStyledDropdownItem<String>(
-                      context: context,
-                      value: value,
-                      child: Text(option['name']?.toString() ?? value),
-                    );
-                  } else {
-                    return createStyledDropdownItem<String>(
-                      context: context,
-                      value: option.toString(),
-                      child: Text(option.toString()),
-                    );
-                  }
-                }).toList(),
+                  }).toList(),
           onChanged: (value) {
             field.didChange(value);
           },
-          validator: widget.isRequired
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Поле "${widget.label}" обязательно';
+          validator:
+              widget.isRequired
+                  ? (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Поле "${widget.label}" обязательно';
+                    }
+                    return null;
                   }
-                  return null;
-                }
-              : null,
+                  : null,
         );
       },
-      validator: widget.isRequired
-          ? (value) {
-              if (value == null || value.isEmpty) {
-                return 'Поле "${widget.label}" обязательно';
+      validator:
+          widget.isRequired
+              ? (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Поле "${widget.label}" обязательно';
+                }
+                return null;
               }
-              return null;
-            }
-          : null,
+              : null,
     );
   }
 
-  Map<String, dynamic> _flattenMap(Map<String, dynamic> map, {String prefix = ''}) {
+  Map<String, dynamic> _flattenMap(
+    Map<String, dynamic> map, {
+    String prefix = '',
+  }) {
     final result = <String, dynamic>{};
     for (var entry in map.entries) {
       final key = prefix.isEmpty ? entry.key : '$prefix.${entry.key}';
       if (entry.value is Map) {
-        result.addAll(_flattenMap(entry.value as Map<String, dynamic>, prefix: key));
+        result.addAll(
+          _flattenMap(entry.value as Map<String, dynamic>, prefix: key),
+        );
       } else if (entry.value is List) {
         final list = entry.value as List;
         for (var i = 0; i < list.length; i++) {
           if (list[i] is Map) {
-            result.addAll(_flattenMap(list[i] as Map<String, dynamic>, prefix: '$key.$i'));
+            result.addAll(
+              _flattenMap(list[i] as Map<String, dynamic>, prefix: '$key.$i'),
+            );
           } else {
             result['$key.$i'] = list[i];
           }
@@ -1124,4 +1300,3 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
     return result;
   }
 }
-

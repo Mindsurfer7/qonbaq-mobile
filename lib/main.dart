@@ -98,6 +98,14 @@ import 'package:qonbaq/data/datasources/department_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/department_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/department_repository.dart';
 import 'package:qonbaq/domain/usecases/get_business_departments.dart';
+import 'package:qonbaq/data/datasources/project_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/project_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/project_repository.dart';
+import 'package:qonbaq/domain/usecases/get_business_projects.dart';
+import 'package:qonbaq/domain/usecases/create_project.dart';
+import 'package:qonbaq/domain/usecases/update_project.dart';
+import 'package:qonbaq/domain/usecases/delete_project.dart';
+import 'package:qonbaq/presentation/providers/project_provider.dart';
 import 'package:qonbaq/domain/usecases/create_department.dart';
 import 'package:qonbaq/domain/usecases/update_department.dart';
 import 'package:qonbaq/domain/usecases/delete_department.dart';
@@ -121,6 +129,10 @@ import 'package:qonbaq/domain/usecases/update_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
+import 'package:qonbaq/data/datasources/financial_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/financial_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/financial_repository.dart';
+import 'package:qonbaq/domain/usecases/get_financial_form.dart';
 import 'package:qonbaq/data/datasources/transcription_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/voice_assist_remote_datasource_impl.dart';
 import 'package:qonbaq/core/services/audio_recording_service.dart';
@@ -276,6 +288,25 @@ class MyApp extends StatelessWidget {
       departmentRepository: departmentRepository,
     );
 
+    // Инициализация зависимостей для проектов
+    final projectRemoteDataSource = ProjectRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final ProjectRepository projectRepository = ProjectRepositoryImpl(
+      remoteDataSource: projectRemoteDataSource,
+    );
+    final getBusinessProjects = GetBusinessProjects(projectRepository);
+    final createProject = CreateProject(projectRepository);
+    final updateProject = UpdateProject(projectRepository);
+    final deleteProject = DeleteProject(projectRepository);
+    final projectProvider = ProjectProvider(
+      getBusinessProjects: getBusinessProjects,
+      createProject: createProject,
+      updateProject: updateProject,
+      deleteProject: deleteProject,
+      projectRepository: projectRepository,
+    );
+
     // Инициализация зависимостей для согласований
     final approvalRemoteDataSource = ApprovalRemoteDataSourceImpl(
       apiClient: apiClient,
@@ -293,6 +324,15 @@ class MyApp extends StatelessWidget {
     final updateApprovalComment = UpdateApprovalComment(approvalRepository);
     final deleteApprovalComment = DeleteApprovalComment(approvalRepository);
     final getApprovalTemplates = GetApprovalTemplates(approvalRepository);
+
+    // Инициализация зависимостей для финансовых форм
+    final financialRemoteDataSource = FinancialRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final FinancialRepository financialRepository = FinancialRepositoryImpl(
+      remoteDataSource: financialRemoteDataSource,
+    );
+    final getFinancialForm = GetFinancialForm(financialRepository);
 
     // Инициализация зависимостей для записи голоса
     final transcriptionDataSource = TranscriptionRemoteDataSourceImpl();
@@ -312,6 +352,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => profileProvider),
         ChangeNotifierProvider(create: (_) => inviteProvider),
         ChangeNotifierProvider(create: (_) => departmentProvider),
+        ChangeNotifierProvider(create: (_) => projectProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
@@ -336,6 +377,7 @@ class MyApp extends StatelessWidget {
         Provider<UpdateApprovalComment>(create: (_) => updateApprovalComment),
         Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
         Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
+        Provider<GetFinancialForm>(create: (_) => getFinancialForm),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),
