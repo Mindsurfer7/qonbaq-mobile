@@ -31,6 +31,7 @@ abstract class InboxRepository extends Repository {
   Future<Either<Failure, List<InboxItem>>> getInboxItems({
     String? businessId,
     bool? isArchived,
+    InboxItemCategory? category,
     int? page,
     int? limit,
     String? sortBy,

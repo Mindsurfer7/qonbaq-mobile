@@ -48,6 +48,7 @@ class InboxProvider with ChangeNotifier {
   Future<void> loadInboxItems({
     String? businessId,
     bool? isArchived,
+    InboxItemCategory? category,
     int? page,
     int? limit,
     String? sortBy,
@@ -61,6 +62,7 @@ class InboxProvider with ChangeNotifier {
       GetInboxItemsParams(
         businessId: businessId,
         isArchived: isArchived,
+        category: category,
         page: page,
         limit: limit,
         sortBy: sortBy,
@@ -88,6 +90,7 @@ class InboxProvider with ChangeNotifier {
     required String businessId,
     String? title,
     String? description,
+    InboxItemCategory? category,
   }) async {
     _isLoading = true;
     _error = null;
@@ -100,6 +103,7 @@ class InboxProvider with ChangeNotifier {
       title: title,
       description: description,
       isArchived: false,
+      category: category,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -172,6 +176,7 @@ class InboxProvider with ChangeNotifier {
     String? title,
     String? description,
     bool? isArchived,
+    InboxItemCategory? category,
   }) async {
     _isLoading = true;
     _error = null;
@@ -197,6 +202,7 @@ class InboxProvider with ChangeNotifier {
       title: title ?? existingItem.title,
       description: description ?? existingItem.description,
       isArchived: isArchived ?? existingItem.isArchived,
+      category: category ?? existingItem.category,
       createdAt: existingItem.createdAt,
       updatedAt: DateTime.now(),
       user: existingItem.user,

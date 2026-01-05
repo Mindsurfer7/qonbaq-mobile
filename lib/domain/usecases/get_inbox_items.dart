@@ -8,6 +8,7 @@ import '../repositories/inbox_repository.dart';
 class GetInboxItemsParams {
   final String? businessId;
   final bool? isArchived;
+  final InboxItemCategory? category;
   final int? page;
   final int? limit;
   final String? sortBy;
@@ -16,6 +17,7 @@ class GetInboxItemsParams {
   GetInboxItemsParams({
     this.businessId,
     this.isArchived,
+    this.category,
     this.page,
     this.limit,
     this.sortBy,
@@ -36,6 +38,7 @@ class GetInboxItems implements UseCase<List<InboxItem>, GetInboxItemsParams> {
     return await repository.getInboxItems(
       businessId: params.businessId,
       isArchived: params.isArchived,
+      category: params.category,
       page: params.page,
       limit: params.limit,
       sortBy: params.sortBy,

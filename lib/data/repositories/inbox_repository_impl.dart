@@ -76,6 +76,7 @@ class InboxRepositoryImpl extends RepositoryImpl implements InboxRepository {
   Future<Either<Failure, List<InboxItem>>> getInboxItems({
     String? businessId,
     bool? isArchived,
+    InboxItemCategory? category,
     int? page,
     int? limit,
     String? sortBy,
@@ -85,6 +86,7 @@ class InboxRepositoryImpl extends RepositoryImpl implements InboxRepository {
       final items = await remoteDataSource.getInboxItems(
         businessId: businessId,
         isArchived: isArchived,
+        category: category,
         page: page,
         limit: limit,
         sortBy: sortBy,

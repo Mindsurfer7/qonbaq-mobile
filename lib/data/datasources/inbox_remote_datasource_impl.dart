@@ -6,6 +6,7 @@ import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/error_handler.dart';
 import '../../core/utils/constants.dart';
+import '../../domain/entities/inbox_item.dart';
 import '../datasources/inbox_remote_datasource.dart';
 import '../models/inbox_item_model.dart';
 import '../models/validation_error.dart';
@@ -222,6 +223,7 @@ class InboxRemoteDataSourceImpl extends InboxRemoteDataSource {
   Future<List<InboxItemModel>> getInboxItems({
     String? businessId,
     bool? isArchived,
+    InboxItemCategory? category,
     int? page,
     int? limit,
     String? sortBy,
@@ -232,6 +234,9 @@ class InboxRemoteDataSourceImpl extends InboxRemoteDataSource {
       if (businessId != null) queryParams['businessId'] = businessId;
       if (isArchived != null) {
         queryParams['isArchived'] = isArchived.toString();
+      }
+      if (category != null) {
+        queryParams['category'] = category.toApiString();
       }
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();

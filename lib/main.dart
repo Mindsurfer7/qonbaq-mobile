@@ -52,6 +52,7 @@ import 'package:qonbaq/presentation/pages/tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
 import 'package:qonbaq/presentation/pages/inbox_items_page.dart';
+import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
 import 'package:qonbaq/presentation/pages/organizational_structure_page.dart';
 import 'package:qonbaq/presentation/pages/department_detail_page.dart';
@@ -530,7 +531,7 @@ class MyApp extends StatelessWidget {
             }
             return ApprovalDetailPage(approvalId: approvalId);
           },
-          '/remember': (context) => const InboxItemsPage(),
+          '/remember': (context) => const RememberPage(),
           '/favorites': (context) => const FavoritesPage(),
         },
           );

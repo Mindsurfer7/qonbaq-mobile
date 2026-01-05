@@ -1,4 +1,4 @@
-import 'dart:io';
+import '../../domain/entities/inbox_item.dart';
 import '../datasources/datasource.dart';
 import '../models/inbox_item_model.dart';
 
@@ -29,6 +29,7 @@ abstract class InboxRemoteDataSource extends DataSource {
   Future<List<InboxItemModel>> getInboxItems({
     String? businessId,
     bool? isArchived,
+    InboxItemCategory? category,
     int? page,
     int? limit,
     String? sortBy,

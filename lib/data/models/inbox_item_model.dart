@@ -13,6 +13,7 @@ class InboxItemModel extends InboxItem implements Model {
     super.title,
     super.description,
     super.isArchived,
+    super.category,
     required super.createdAt,
     required super.updatedAt,
     super.user,
@@ -41,6 +42,12 @@ class InboxItemModel extends InboxItem implements Model {
       business = BusinessModel.fromJson(businessJson).toEntity();
     }
 
+    // Парсим category
+    InboxItemCategory? category;
+    if (json['category'] != null) {
+      category = InboxItemCategoryUtils.fromString(json['category'] as String);
+    }
+
     return InboxItemModel(
       id: json['id'] as String,
       userId: json['userId'] as String,
@@ -48,6 +55,7 @@ class InboxItemModel extends InboxItem implements Model {
       title: json['title'] as String?,
       description: json['description'] as String?,
       isArchived: json['isArchived'] as bool? ?? false,
+      category: category,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       user: user,
@@ -64,6 +72,7 @@ class InboxItemModel extends InboxItem implements Model {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       'isArchived': isArchived,
+      if (category != null) 'category': category!.toApiString(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (user != null) 'user': {
@@ -83,6 +92,7 @@ class InboxItemModel extends InboxItem implements Model {
       'businessId': businessId,
       if (title != null && title!.isNotEmpty) 'title': title,
       if (description != null && description!.isNotEmpty) 'description': description,
+      if (category != null) 'category': category!.toApiString(),
     };
   }
 
@@ -92,6 +102,7 @@ class InboxItemModel extends InboxItem implements Model {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       'isArchived': isArchived,
+      if (category != null) 'category': category!.toApiString(),
     };
   }
 
@@ -103,6 +114,7 @@ class InboxItemModel extends InboxItem implements Model {
       title: title,
       description: description,
       isArchived: isArchived,
+      category: category,
       createdAt: createdAt,
       updatedAt: updatedAt,
       user: user,
@@ -118,6 +130,7 @@ class InboxItemModel extends InboxItem implements Model {
       title: inboxItem.title,
       description: inboxItem.description,
       isArchived: inboxItem.isArchived,
+      category: inboxItem.category,
       createdAt: inboxItem.createdAt,
       updatedAt: inboxItem.updatedAt,
       user: inboxItem.user,

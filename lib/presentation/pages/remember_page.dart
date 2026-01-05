@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
-import '../../domain/entities/task.dart';
-import '../../domain/usecases/get_tasks.dart';
-import '../../core/error/failures.dart';
+import 'package:http/http.dart' as http;
+import '../../domain/entities/inbox_item.dart';
+import '../providers/inbox_provider.dart';
 import '../providers/profile_provider.dart';
+import '../../core/services/audio_recording_service.dart';
 
-/// Страница "Не забыть выполнить"
+/// Страница "Заметки на ходу" с 4 блоками по категориям
 class RememberPage extends StatefulWidget {
   const RememberPage({super.key});
 
@@ -14,94 +16,26 @@ class RememberPage extends StatefulWidget {
 }
 
 class _RememberPageState extends State<RememberPage> {
-  bool _isLoading = false;
-  String? _error;
-  List<Task> _tasks = [];
-
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInboxItems();
+    });
   }
 
-  Future<void> _loadTasks() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
+  void _loadInboxItems() {
     final profileProvider = Provider.of<ProfileProvider>(
       context,
       listen: false,
     );
+    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
     final selectedBusiness = profileProvider.selectedBusiness;
-    final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
 
-    if (selectedBusiness == null) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Бизнес не выбран';
-      });
-      return;
+    if (selectedBusiness != null) {
+      // Загружаем все элементы (и обработанные, и необработанные)
+      inboxProvider.loadInboxItems(businessId: selectedBusiness.id);
     }
-
-    final result = await getTasksUseCase.call(
-      GetTasksParams(businessId: selectedBusiness.id, dontForget: true),
-    );
-
-    result.fold(
-      (failure) {
-        setState(() {
-          _isLoading = false;
-          _error = _getErrorMessage(failure);
-        });
-      },
-      (tasks) {
-        setState(() {
-          _isLoading = false;
-          _tasks = tasks;
-        });
-      },
-    );
-  }
-
-  String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.message;
-    } else if (failure is NetworkFailure) {
-      return failure.message;
-    }
-    return 'Произошла ошибка';
-  }
-
-  String _getStatusText(TaskStatus status) {
-    switch (status) {
-      case TaskStatus.pending:
-        return 'Ожидает';
-      case TaskStatus.inProgress:
-        return 'В работе';
-      case TaskStatus.completed:
-        return 'Завершена';
-      case TaskStatus.cancelled:
-        return 'Отменена';
-    }
-  }
-
-  Color _getStatusColor(TaskStatus status) {
-    switch (status) {
-      case TaskStatus.pending:
-        return Colors.grey;
-      case TaskStatus.inProgress:
-        return Colors.blue;
-      case TaskStatus.completed:
-        return Colors.green;
-      case TaskStatus.cancelled:
-        return Colors.red;
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}.${date.month}.${date.year}';
   }
 
   @override
@@ -115,8 +49,18 @@ class _RememberPageState extends State<RememberPage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.mic),
+            onPressed: () => _handleVoiceRecording(context),
+            tooltip: 'Создать голосовым сообщением',
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showCreateDialog(context),
+            tooltip: 'Создать',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadTasks,
+            onPressed: _loadInboxItems,
             tooltip: 'Обновить',
           ),
           IconButton(
@@ -124,140 +68,649 @@ class _RememberPageState extends State<RememberPage> {
             onPressed: () {
               Navigator.of(context).pushReplacementNamed('/business');
             },
+            tooltip: 'На главную',
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadTasks,
-                      child: const Text('Повторить'),
-                    ),
-                  ],
-                ),
-              )
-              : _tasks.isEmpty
-              ? const Center(
-                child: Text(
-                  'Нет задач с флагом "Не забыть выполнить"',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              )
-              : RefreshIndicator(
-                onRefresh: _loadTasks,
-                child: ListView.builder(
-                  itemCount: _tasks.length,
-                  padding: const EdgeInsets.all(8),
-                  itemBuilder: (context, index) {
-                    final task = _tasks[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+      body: Consumer2<InboxProvider, ProfileProvider>(
+        builder: (context, inboxProvider, profileProvider, child) {
+          final selectedBusiness = profileProvider.selectedBusiness;
+
+          if (selectedBusiness == null) {
+            return const Center(child: Text('Выберите компанию'));
+          }
+
+          if (inboxProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (inboxProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    inboxProvider.error!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadInboxItems,
+                    child: const Text('Повторить'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final allItems = inboxProvider.items ?? [];
+          final unprocessedItems =
+              allItems.where((item) => !item.isArchived).toList();
+          final processedItems =
+              allItems.where((item) => item.isArchived).toList();
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              _loadInboxItems();
+            },
+            child: Column(
+              children: [
+                Expanded(
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    padding: const EdgeInsets.all(16),
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.0, // Делаем квадратные блоки
+                    children: [
+                      // Верхний левый - Дела и Задачи (зеленый)
+                      _buildQuadrantCard(
+                        context,
+                        'Дела и Задачи',
+                        Colors.green,
+                        [
+                          InboxItemCategory.workMiscellaneous,
+                          InboxItemCategory.personalMiscellaneous,
+                        ],
+                        unprocessedItems,
+                        allItems,
                       ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.notifications_active,
-                          color: Colors.orange,
+                      // Верхний правый - Читать и смотреть (синий)
+                      _buildQuadrantCard(
+                        context,
+                        'Читать и смотреть',
+                        Colors.blue,
+                        [
+                          InboxItemCategory.readLater,
+                          InboxItemCategory.watchVideoLater,
+                        ],
+                        unprocessedItems,
+                        allItems,
+                      ),
+                      // Нижний левый - Цели и Миссия (серый)
+                      _buildQuadrantCard(
+                        context,
+                        'Цели и Миссия',
+                        Colors.grey,
+                        [
+                          InboxItemCategory.doThisYear,
+                          InboxItemCategory.doIn510Years,
+                        ],
+                        unprocessedItems,
+                        allItems,
+                      ),
+                      // Нижний правый - Аналитика (желтый)
+                      _buildAnalyticsCard(context, processedItems),
+                    ],
+                  ),
+                ),
+                // Большая кнопка микрофона внизу
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: FloatingActionButton.large(
+                    onPressed: () => _handleVoiceRecording(context),
+                    backgroundColor: Colors.orange,
+                    child: const Icon(Icons.mic, size: 40, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildQuadrantCard(
+    BuildContext context,
+    String title,
+    Color color,
+    List<InboxItemCategory> categories,
+    List<InboxItem> unprocessedItems,
+    List<InboxItem> allItems,
+  ) {
+    // Фильтруем необработанные элементы по категориям
+    final categoryItems =
+        unprocessedItems
+            .where(
+              (item) =>
+                  item.category != null && categories.contains(item.category),
+            )
+            .toList();
+
+    // Группируем необработанные по категориям
+    final itemsByCategory = <InboxItemCategory, List<InboxItem>>{};
+    for (final category in categories) {
+      itemsByCategory[category] =
+          categoryItems.where((item) => item.category == category).toList();
+    }
+
+    // Проверяем наличие обработанных элементов по категориям
+    final processedItemsByCategory = <InboxItemCategory, bool>{};
+    for (final category in categories) {
+      final hasProcessed = allItems.any(
+        (item) => item.category == category && item.isArchived,
+      );
+      processedItemsByCategory[category] = hasProcessed;
+    }
+
+    return Card(
+      color: color.withOpacity(0.2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Заголовок
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          // Список категорий
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final items = itemsByCategory[category] ?? [];
+                final categoryName = category.displayName;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        categoryName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration:
-                                task.status == TaskStatus.completed
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (task.description != null &&
-                                task.description!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  task.description!,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            if (task.deadline != null)
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.event,
-                                    size: 16,
-                                    color:
-                                        task.deadline!.isBefore(DateTime.now())
-                                            ? Colors.red
-                                            : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDate(task.deadline!),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          task.deadline!.isBefore(
-                                                DateTime.now(),
-                                              )
-                                              ? Colors.red
-                                              : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(task.status),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Список элементов категории
+                      if (items.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            _getStatusText(task.status),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            'Нет элементов',
+                            style: TextStyle(
+                              color: Colors.grey[400],
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      else
+                        ...items.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.title ?? 'Без названия',
+                                    style: const TextStyle(fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Icon(
+                                  item.isArchived
+                                      ? Icons.check_circle
+                                      : Icons.schedule,
+                                  size: 16,
+                                  color:
+                                      item.isArchived
+                                          ? Colors.green[700]
+                                          : Colors.orange[600],
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        onTap: () {
-                          Navigator.of(
-                            context,
-                          ).pushNamed('/tasks/detail', arguments: task.id);
-                        },
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsCard(
+    BuildContext context,
+    List<InboxItem> processedItems,
+  ) {
+    // Группируем обработанные элементы по категориям
+    final itemsByCategory = <InboxItemCategory, List<InboxItem>>{};
+    for (final item in processedItems) {
+      if (item.category != null) {
+        itemsByCategory.putIfAbsent(item.category!, () => []).add(item);
+      }
+    }
+
+    // Сортируем категории по порядку
+    final sortedCategories =
+        InboxItemCategory.values
+            .where((category) => itemsByCategory.containsKey(category))
+            .toList();
+
+    return Card(
+      color: Colors.amber.withOpacity(0.2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Заголовок
+          const Padding(
+            padding: EdgeInsets.all(12.0),
+            child: Text(
+              'Аналитика',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          // Подзаголовок
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12.0),
+            child: Text(
+              'Обработанные',
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Список обработанных элементов
+          Expanded(
+            child:
+                sortedCategories.isEmpty
+                    ? const Center(
+                      child: Text(
+                        'Нет обработанных элементов',
+                        style: TextStyle(color: Colors.grey),
                       ),
-                    );
-                  },
+                    )
+                    : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: sortedCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = sortedCategories[index];
+                        final categoryName = category.displayName;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 16,
+                                color: Colors.green[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  categoryName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateDialog(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
+      return;
+    }
+
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Создать элемент'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Название',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Описание',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
               ),
+              ElevatedButton(
+                onPressed: () async {
+                  final inboxProvider = Provider.of<InboxProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final success = await inboxProvider.createItem(
+                    businessId: selectedBusiness.id,
+                    title:
+                        titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                    description:
+                        descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                  );
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Успешно создано')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            inboxProvider.error ?? 'Ошибка создания',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Создать'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _handleVoiceRecording(BuildContext context) async {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
+      return;
+    }
+
+    // Показываем диалог записи
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => _VoiceRecordingDialog(
+            businessId: selectedBusiness.id,
+            onResult: (audioFile, audioBytes) async {
+              Navigator.of(context).pop();
+
+              // Отправляем на backend
+              final success = await inboxProvider.createItemFromVoice(
+                audioFile: audioFile,
+                audioBytes: audioBytes,
+                businessId: selectedBusiness.id,
+              );
+
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Элемент успешно создан')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(inboxProvider.error ?? 'Ошибка создания'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            onError: (error) {
+              Navigator.of(context).pop();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error), backgroundColor: Colors.red),
+                );
+              }
+            },
+          ),
+    );
+  }
+}
+
+/// Диалог для записи голосового сообщения
+class _VoiceRecordingDialog extends StatefulWidget {
+  final String businessId;
+  final void Function(String? audioFile, List<int>? audioBytes) onResult;
+  final void Function(String error) onError;
+
+  const _VoiceRecordingDialog({
+    required this.businessId,
+    required this.onResult,
+    required this.onError,
+  });
+
+  @override
+  State<_VoiceRecordingDialog> createState() => _VoiceRecordingDialogState();
+}
+
+class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startRecording();
+    });
+  }
+
+  Future<void> _startRecording() async {
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
+    try {
+      await audioService.startRecording();
+    } catch (e) {
+      widget.onError('Ошибка начала записи: $e');
+    }
+  }
+
+  Future<void> _stopAndSend() async {
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
+
+    try {
+      // Останавливаем запись
+      if (audioService.state == RecordingState.recording) {
+        await audioService.stopRecording();
+      }
+
+      // Получаем путь к файлу или байты
+      String? audioFile;
+      List<int>? audioBytes;
+
+      if (kIsWeb) {
+        // Для веба нужно получить байты из blob URL
+        final blobUrl = audioService.currentRecordingPath;
+        if (blobUrl == null) {
+          widget.onError('Blob URL не найден');
+          return;
+        }
+
+        try {
+          final audioResponse = await http.get(Uri.parse(blobUrl));
+          if (audioResponse.statusCode != 200) {
+            widget.onError(
+              'Ошибка загрузки из Blob: ${audioResponse.statusCode}',
+            );
+            return;
+          }
+
+          audioBytes = audioResponse.bodyBytes;
+          if (audioBytes.isEmpty) {
+            widget.onError('Запись пустая');
+            return;
+          }
+
+          // Проверяем размер файла (максимум 25 МБ)
+          const maxSizeInBytes = 25 * 1024 * 1024; // 25 МБ
+          if (audioBytes.length > maxSizeInBytes) {
+            widget.onError('Файл слишком большой. Максимум: 25 МБ');
+            return;
+          }
+        } catch (e) {
+          widget.onError('Ошибка получения аудио из Blob: $e');
+          return;
+        }
+      } else {
+        audioFile = audioService.currentRecordingPath;
+        if (audioFile == null) {
+          widget.onError('Путь к записи не найден');
+          return;
+        }
+      }
+
+      // Передаем результат
+      widget.onResult(audioFile, audioBytes);
+    } catch (e) {
+      widget.onError('Ошибка обработки записи: $e');
+    }
+  }
+
+  void _cancel() {
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
+    audioService.cancelRecording();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AudioRecordingService>(
+      builder: (context, audioService, child) {
+        final minutes = audioService.recordingDuration ~/ 60;
+        final seconds = audioService.recordingDuration % 60;
+        final timeText =
+            "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+
+        return AlertDialog(
+          title: const Text('Запись голосового сообщения'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (audioService.state == RecordingState.recording) ...[
+                const Icon(Icons.mic, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  timeText,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text('Идет запись...'),
+              ] else if (audioService.state == RecordingState.recorded) ...[
+                const Icon(Icons.check_circle, size: 48, color: Colors.green),
+                const SizedBox(height: 16),
+                Text(
+                  timeText,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text('Запись завершена'),
+              ] else if (audioService.state == RecordingState.loading) ...[
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Обработка...'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: _cancel, child: const Text('Отмена')),
+            if (audioService.state == RecordingState.recording ||
+                audioService.state == RecordingState.recorded)
+              ElevatedButton(
+                onPressed:
+                    audioService.state == RecordingState.loading
+                        ? null
+                        : _stopAndSend,
+                child: const Text('Отправить'),
+              ),
+          ],
+        );
+      },
     );
   }
 }
