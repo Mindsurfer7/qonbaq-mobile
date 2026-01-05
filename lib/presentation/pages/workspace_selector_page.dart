@@ -70,10 +70,6 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
             );
           }
 
-          if (provider.businesses == null || provider.businesses!.isEmpty) {
-            return const Center(child: Text('Нет доступных workspace'));
-          }
-
           final familyBusiness = provider.familyBusiness;
           final businessList = provider.businessList;
 
