@@ -22,10 +22,10 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
       if (provider.businesses == null && !provider.isLoading) {
         await provider.loadBusinesses();
       }
-      
+
       // Проверяем, есть ли выбранный workspace
       if (!mounted) return;
-      
+
       if (provider.selectedWorkspace == null) {
         // Если workspace не выбран, перенаправляем на страницу выбора
         Navigator.of(context).pushReplacementNamed('/workspace-selector');
@@ -40,7 +40,8 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
         title: Consumer<ProfileProvider>(
           builder: (context, provider, child) {
             // Показываем "Семья" если выбран первый бизнес (семья), иначе "Бизнес"
-            final isFamily = provider.selectedWorkspace != null &&
+            final isFamily =
+                provider.selectedWorkspace != null &&
                 provider.familyBusiness != null &&
                 provider.selectedWorkspace!.id == provider.familyBusiness!.id;
             return Text(isFamily ? 'Семья' : 'Business Main');
@@ -48,19 +49,12 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.home),
-          tooltip: 'Главная',
+          tooltip: 'Главная / Сменить пространство',
           onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/business');
+            Navigator.of(context).pushReplacementNamed('/workspace-selector');
           },
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz),
-            tooltip: 'Сменить workspace',
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/workspace-selector');
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.person),
             tooltip: 'Профиль',
@@ -248,7 +242,11 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   }) {
     return Expanded(
       child: InkWell(
-        onTap: onTap ?? (route != null ? () => Navigator.of(context).pushNamed(route) : null),
+        onTap:
+            onTap ??
+            (route != null
+                ? () => Navigator.of(context).pushNamed(route)
+                : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Column(
@@ -273,9 +271,6 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   }
 
   void _showWorkDayDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const WorkDayDialog(),
-    );
+    showDialog(context: context, builder: (context) => const WorkDayDialog());
   }
 }

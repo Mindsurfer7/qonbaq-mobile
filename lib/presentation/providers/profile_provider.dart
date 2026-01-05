@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:dartz/dartz.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/usecases/get_user_businesses.dart';
 import '../../domain/usecases/get_user_profile.dart';
+import '../../domain/usecases/create_business.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/workspace_storage.dart';
@@ -12,11 +14,13 @@ import '../../core/utils/workspace_storage.dart';
 class ProfileProvider with ChangeNotifier {
   final GetUserBusinesses getUserBusinesses;
   final GetUserProfile getUserProfile;
+  final CreateBusiness createBusiness;
   final UserRepository userRepository;
 
   ProfileProvider({
     required this.getUserBusinesses,
     required this.getUserProfile,
+    required this.createBusiness,
     required this.userRepository,
   });
 
@@ -75,10 +79,10 @@ class ProfileProvider with ChangeNotifier {
         _businesses = businesses;
         _isLoading = false;
         notifyListeners();
-        
+
         // Пытаемся загрузить сохраненный workspace
         _loadSavedWorkspace(businesses).then((_) {
-          // Если workspace не был загружен, но есть бизнесы, 
+          // Если workspace не был загружен, но есть бизнесы,
           // не выбираем автоматически - пользователь должен выбрать сам
         });
       },
@@ -88,7 +92,7 @@ class ProfileProvider with ChangeNotifier {
   /// Загрузить сохраненный workspace из локального хранилища
   Future<void> _loadSavedWorkspace(List<Business> businesses) async {
     if (businesses.isEmpty) return;
-    
+
     final savedWorkspaceId = await WorkspaceStorage.getSelectedWorkspaceId();
     if (savedWorkspaceId != null) {
       try {
@@ -112,9 +116,7 @@ class ProfileProvider with ChangeNotifier {
   Business? get familyBusiness {
     if (_businesses == null || _businesses!.isEmpty) return null;
     try {
-      return _businesses!.firstWhere(
-        (b) => b.type == BusinessType.family,
-      );
+      return _businesses!.firstWhere((b) => b.type == BusinessType.family);
     } catch (e) {
       return null;
     }
@@ -174,10 +176,10 @@ class ProfileProvider with ChangeNotifier {
     _selectedWorkspace = workspace;
     _selectedBusiness = workspace;
     _profile = null;
-    
+
     // Сохраняем выбранный workspace в локальное хранилище
     await WorkspaceStorage.saveSelectedWorkspaceId(workspace.id);
-    
+
     notifyListeners();
     loadProfile();
     // Загружаем сотрудников для выбранного workspace
@@ -223,11 +225,46 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Создать бизнес
+  Future<Either<Failure, Business>> createBusinessCall(
+    Business business,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final result = await createBusiness.call(
+      CreateBusinessParams(business: business),
+    );
+
+    result.fold(
+      (failure) {
+        _error = _getErrorMessage(failure);
+        _isLoading = false;
+        notifyListeners();
+      },
+      (createdBusiness) {
+        // Добавляем созданный бизнес в список
+        if (_businesses == null) {
+          _businesses = [];
+        }
+        _businesses!.add(createdBusiness);
+        _isLoading = false;
+        _error = null;
+        notifyListeners();
+      },
+    );
+
+    return result;
+  }
+
   /// Получить сообщение об ошибке
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
       return failure.message;
     } else if (failure is NetworkFailure) {
+      return failure.message;
+    } else if (failure is ValidationFailure) {
       return failure.message;
     }
     return 'Произошла ошибка';

@@ -28,4 +28,7 @@ abstract class UserRepository extends Repository {
   Future<Either<Failure, List<Employee>>> getBusinessEmployees(
     String businessId,
   );
+
+  /// Создать бизнес
+  Future<Either<Failure, Business>> createBusiness(Business business);
 }

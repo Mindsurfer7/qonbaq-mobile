@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/entities/inbox_item.dart';
 import '../../domain/usecases/get_inbox_items.dart';
 import '../../domain/usecases/create_inbox_item.dart';
+import '../../domain/usecases/create_inbox_item_from_voice.dart';
 import '../../domain/usecases/update_inbox_item.dart';
 import '../../domain/usecases/delete_inbox_item.dart';
 import '../../core/error/failures.dart';
@@ -10,12 +11,14 @@ import '../../core/error/failures.dart';
 class InboxProvider with ChangeNotifier {
   final GetInboxItems getInboxItems;
   final CreateInboxItem createInboxItem;
+  final CreateInboxItemFromVoice createInboxItemFromVoice;
   final UpdateInboxItem updateInboxItem;
   final DeleteInboxItem deleteInboxItem;
 
   InboxProvider({
     required this.getInboxItems,
     required this.createInboxItem,
+    required this.createInboxItemFromVoice,
     required this.updateInboxItem,
     required this.deleteInboxItem,
   });
@@ -115,6 +118,45 @@ class InboxProvider with ChangeNotifier {
       },
       (createdItem) {
         // Добавляем новый item в список
+        _items ??= [];
+        _items!.insert(0, createdItem);
+        _error = null;
+        notifyListeners();
+        return true;
+      },
+    );
+  }
+
+  /// Создать Inbox Item через голосовое сообщение
+  Future<bool> createItemFromVoice({
+    String? audioFile,
+    List<int>? audioBytes,
+    String filename = 'voice.m4a',
+    required String businessId,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final result = await createInboxItemFromVoice.call(
+      CreateInboxItemFromVoiceParams(
+        audioFile: audioFile,
+        audioBytes: audioBytes,
+        filename: filename,
+        businessId: businessId,
+      ),
+    );
+
+    _isLoading = false;
+
+    return result.fold(
+      (failure) {
+        _error = _getErrorMessage(failure);
+        notifyListeners();
+        return false;
+      },
+      (createdItem) {
+        // Оптимистично добавляем новый item в список
         _items ??= [];
         _items!.insert(0, createdItem);
         _error = null;

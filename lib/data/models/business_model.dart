@@ -68,6 +68,15 @@ class BusinessModel extends Business implements Model {
     };
   }
 
+  /// JSON для создания бизнеса (без id и других полей, генерируемых на сервере)
+  Map<String, dynamic> toCreateJson() {
+    return {
+      'name': name,
+      if (description != null) 'description': description,
+      'type': type == BusinessType.family ? 'FAMILY' : 'BUSINESS',
+    };
+  }
+
   Business toEntity() {
     return Business(
       id: id,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../domain/entities/inbox_item.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
+import '../../core/services/audio_recording_service.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/validation_error.dart';
 import '../providers/inbox_provider.dart';
@@ -164,6 +166,146 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
     );
   }
 
+  void _showCreateDialog(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Бизнес не выбран')),
+      );
+      return;
+    }
+
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Создать элемент'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Название',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Описание',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 4,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final inboxProvider = Provider.of<InboxProvider>(
+                context,
+                listen: false,
+              );
+              final success = await inboxProvider.createItem(
+                businessId: selectedBusiness.id,
+                title: titleController.text.trim().isEmpty
+                    ? null
+                    : titleController.text.trim(),
+                description: descriptionController.text.trim().isEmpty
+                    ? null
+                    : descriptionController.text.trim(),
+              );
+              if (mounted) {
+                Navigator.of(context).pop();
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Успешно создано')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(inboxProvider.error ?? 'Ошибка создания'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Создать'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleVoiceRecording(BuildContext context) async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Бизнес не выбран')),
+      );
+      return;
+    }
+
+    // Показываем диалог записи
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _VoiceRecordingDialog(
+        businessId: selectedBusiness.id,
+        onResult: (audioFile, audioBytes) async {
+          Navigator.of(context).pop();
+          
+          // Отправляем на backend
+          final success = await inboxProvider.createItemFromVoice(
+            audioFile: audioFile,
+            audioBytes: audioBytes,
+            businessId: selectedBusiness.id,
+          );
+
+          if (mounted) {
+            if (success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Элемент успешно создан')),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(inboxProvider.error ?? 'Ошибка создания'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+        onError: (error) {
+          Navigator.of(context).pop();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
   void _showCreateTaskDialog(InboxItem item) {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final selectedBusiness = profileProvider.selectedBusiness;
@@ -235,6 +377,16 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.mic),
+            onPressed: () => _handleVoiceRecording(context),
+            tooltip: 'Создать голосовым сообщением',
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showCreateDialog(context),
+            tooltip: 'Создать',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadInboxItems,
@@ -536,6 +688,139 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Диалог для записи голосового сообщения
+class _VoiceRecordingDialog extends StatefulWidget {
+  final String businessId;
+  final void Function(String? audioFile, List<int>? audioBytes) onResult;
+  final void Function(String error) onError;
+
+  const _VoiceRecordingDialog({
+    required this.businessId,
+    required this.onResult,
+    required this.onError,
+  });
+
+  @override
+  State<_VoiceRecordingDialog> createState() => _VoiceRecordingDialogState();
+}
+
+class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startRecording();
+    });
+  }
+
+  Future<void> _startRecording() async {
+    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
+    try {
+      await audioService.startRecording();
+    } catch (e) {
+      widget.onError('Ошибка начала записи: $e');
+    }
+  }
+
+  Future<void> _stopAndSend() async {
+    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
+    
+    try {
+      // Останавливаем запись
+      if (audioService.state == RecordingState.recording) {
+        await audioService.stopRecording();
+      }
+
+      // Получаем путь к файлу или байты
+      String? audioFile;
+      List<int>? audioBytes;
+
+      if (kIsWeb) {
+        // Для веба нужно получить байты из blob URL
+        // AudioRecordingService должен предоставить способ получить байты
+        // Пока используем заглушку - в реальности нужно получить из service
+        widget.onError('Веб-платформа пока не поддерживается');
+        return;
+      } else {
+        audioFile = audioService.currentRecordingPath;
+        if (audioFile == null) {
+          widget.onError('Путь к записи не найден');
+          return;
+        }
+      }
+
+      // Передаем результат
+      widget.onResult(audioFile, audioBytes);
+    } catch (e) {
+      widget.onError('Ошибка обработки записи: $e');
+    }
+  }
+
+  void _cancel() {
+    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
+    audioService.cancelRecording();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AudioRecordingService>(
+      builder: (context, audioService, child) {
+        final minutes = audioService.recordingDuration ~/ 60;
+        final seconds = audioService.recordingDuration % 60;
+        final timeText =
+            "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+
+        return AlertDialog(
+          title: const Text('Запись голосового сообщения'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (audioService.state == RecordingState.recording) ...[
+                const Icon(Icons.mic, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  timeText,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('Идет запись...'),
+              ] else if (audioService.state == RecordingState.recorded) ...[
+                const Icon(Icons.check_circle, size: 48, color: Colors.green),
+                const SizedBox(height: 16),
+                Text(
+                  timeText,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('Запись завершена'),
+              ] else if (audioService.state == RecordingState.loading) ...[
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Обработка...'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: _cancel,
+              child: const Text('Отмена'),
+            ),
+            if (audioService.state == RecordingState.recording ||
+                audioService.state == RecordingState.recorded)
+              ElevatedButton(
+                onPressed: audioService.state == RecordingState.loading
+                    ? null
+                    : _stopAndSend,
+                child: const Text('Отправить'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

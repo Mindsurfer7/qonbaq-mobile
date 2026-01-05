@@ -7,6 +7,7 @@ import '../models/business_model.dart';
 import '../models/user_profile_model.dart';
 import '../models/employee_model.dart';
 import '../models/api_response.dart';
+import '../models/validation_error.dart';
 
 /// Реализация удаленного источника данных для пользователей
 class UserRemoteDataSourceImpl extends UserRemoteDataSource {
@@ -147,4 +148,63 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
       throw Exception('Ошибка сети: $e');
     }
   }
+
+  @override
+  Future<BusinessModel> createBusiness(BusinessModel business) async {
+    try {
+      final response = await apiClient.post(
+        '/api/businesses',
+        headers: _getAuthHeaders(),
+        body: business.toCreateJson(),
+      );
+
+      if (response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => BusinessModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else {
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при создании бизнеса';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          throw Exception('Ошибка при создании бизнеса');
+        }
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+}
+
+/// Исключение для ошибок валидации
+class ValidationException implements Exception {
+  final ValidationErrorResponse validationResponse;
+
+  ValidationException(this.validationResponse);
+
+  @override
+  String toString() =>
+      validationResponse.message ?? validationResponse.error;
 }

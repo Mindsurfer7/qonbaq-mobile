@@ -9,6 +9,21 @@ abstract class InboxRepository extends Repository {
   /// Создать Inbox Item
   Future<Either<Failure, InboxItem>> createInboxItem(InboxItem inboxItem);
 
+  /// Создать Inbox Item через голосовое сообщение
+  /// 
+  /// [audioFile] - путь к аудиофайлу (для не-веб платформ)
+  /// [audioBytes] - байты аудиофайла (для веб-платформы)
+  /// [filename] - имя файла
+  /// [businessId] - ID бизнеса
+  /// 
+  /// Возвращает созданный Inbox Item
+  Future<Either<Failure, InboxItem>> createInboxItemFromVoice({
+    String? audioFile,
+    List<int>? audioBytes,
+    String filename = 'voice.m4a',
+    required String businessId,
+  });
+
   /// Получить Inbox Item по ID
   Future<Either<Failure, InboxItem>> getInboxItemById(String id);
 

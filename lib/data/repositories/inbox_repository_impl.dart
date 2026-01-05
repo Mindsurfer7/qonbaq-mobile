@@ -6,6 +6,7 @@ import '../models/inbox_item_model.dart';
 import '../datasources/inbox_remote_datasource.dart';
 import '../repositories/repository_impl.dart';
 import '../datasources/inbox_remote_datasource_impl.dart';
+import '../models/validation_error.dart';
 
 /// Реализация репозитория Inbox Items
 /// Использует Remote DataSource
@@ -32,6 +33,32 @@ class InboxRepositoryImpl extends RepositoryImpl implements InboxRepository {
       ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при создании inbox item: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, InboxItem>> createInboxItemFromVoice({
+    String? audioFile,
+    List<int>? audioBytes,
+    String filename = 'voice.m4a',
+    required String businessId,
+  }) async {
+    try {
+      final createdItem = await remoteDataSource.createInboxItemFromVoice(
+        audioFile: audioFile,
+        audioBytes: audioBytes,
+        filename: filename,
+        businessId: businessId,
+      );
+      return Right(createdItem.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при создании inbox item из голосового сообщения: $e'));
     }
   }
 

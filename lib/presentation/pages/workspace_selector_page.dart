@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../../domain/entities/business.dart';
+import '../widgets/create_business_dialog.dart';
 
 /// Страница выбора workspace (семья или бизнес)
 class WorkspaceSelectorPage extends StatefulWidget {
@@ -38,7 +39,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Выберите workspace'),
+        title: const Text('Выберите пространство'),
         automaticallyImplyLeading: false,
       ),
       body: Consumer<ProfileProvider>(
@@ -87,47 +88,35 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
             }
           }
 
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Выберите workspace',
+                  'Выберите пространство',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Левая часть - кнопка "Семья" (синяя)
-                      Expanded(
-                        child:
-                            familyBusiness != null
-                                ? _buildFamilyButton(familyBusiness)
-                                : _buildAddFamilyButton(),
-                      ),
-                      if (businessList.isNotEmpty) const SizedBox(width: 12),
-                      // Правая часть - список бизнесов (желтые)
-                      if (businessList.isNotEmpty)
-                        Expanded(child: _buildBusinessList(businessList))
-                      else
-                        // Если нет бизнесов, показываем сообщение
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              'Нет доступных бизнесов',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Левая часть - кнопка "Семья" (синяя)
+                    Expanded(
+                      child:
+                          familyBusiness != null
+                              ? _buildFamilyButton(familyBusiness)
+                              : _buildAddFamilyButton(),
+                    ),
+                    if (businessList.isNotEmpty) const SizedBox(width: 12),
+                    // Правая часть - список бизнесов (желтые) или кнопка создания
+                    if (businessList.isNotEmpty)
+                      Expanded(child: _buildBusinessList(businessList))
+                    else
+                      // Если нет бизнесов, показываем кнопку создания
+                      Expanded(child: _buildAddBusinessButton()),
+                  ],
                 ),
               ],
             ),
@@ -182,13 +171,24 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
       color: Colors.blue.shade100,
       elevation: 2,
       child: InkWell(
-        onTap: () {
-          // TODO: Реализовать создание семьи
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Функция создания семьи будет реализована позже'),
-            ),
+        onTap: () async {
+          final result = await showDialog<Business>(
+            context: context,
+            builder:
+                (context) =>
+                    const CreateBusinessDialog(type: BusinessType.family),
           );
+
+          if (result != null && mounted) {
+            // Перезагружаем список бизнесов
+            final provider = Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            );
+            await provider.loadBusinesses();
+            // Автоматически выбираем созданный бизнес
+            await _selectWorkspace(result);
+          }
         },
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -224,6 +224,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -231,44 +232,89 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Expanded(
-              child: ListView.builder(
-                itemCount: businesses.length,
-                itemBuilder: (context, index) {
-                  final business = businesses[index];
-                  return Card(
-                    color: Colors.amber,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      title: Text(
-                        business.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle:
-                          business.description != null
-                              ? Text(
-                                business.description!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12),
-                              )
-                              : null,
-                      trailing: const Icon(Icons.arrow_forward, size: 20),
-                      onTap: () => _selectWorkspace(business),
+            ...businesses.map((business) {
+              return Card(
+                color: Colors.amber,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  title: Text(
+                    business.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                  subtitle:
+                      business.description != null
+                          ? Text(
+                            business.description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          )
+                          : null,
+                  trailing: const Icon(Icons.arrow_forward, size: 20),
+                  onTap: () => _selectWorkspace(business),
+                ),
+              );
+            }).toList(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddBusinessButton() {
+    return Card(
+      color: Colors.amber.shade100,
+      elevation: 2,
+      child: InkWell(
+        onTap: () async {
+          final result = await showDialog<Business>(
+            context: context,
+            builder:
+                (context) =>
+                    const CreateBusinessDialog(type: BusinessType.business),
+          );
+
+          if (result != null && mounted) {
+            // Перезагружаем список бизнесов
+            final provider = Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            );
+            await provider.loadBusinesses();
+            // Автоматически выбираем созданный бизнес
+            await _selectWorkspace(result);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.add_circle_outline,
+                size: 48,
+                color: Colors.amber,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Создать бизнес',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

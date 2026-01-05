@@ -51,13 +51,14 @@ import 'package:qonbaq/presentation/pages/profile_settings_page.dart';
 import 'package:qonbaq/presentation/pages/tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
-import 'package:qonbaq/presentation/pages/remember_page.dart';
+import 'package:qonbaq/presentation/pages/inbox_items_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
 import 'package:qonbaq/presentation/pages/organizational_structure_page.dart';
 import 'package:qonbaq/presentation/pages/department_detail_page.dart';
 import 'package:qonbaq/presentation/providers/auth_provider.dart';
 import 'package:qonbaq/presentation/providers/profile_provider.dart';
 import 'package:qonbaq/presentation/providers/invite_provider.dart';
+import 'package:qonbaq/presentation/providers/inbox_provider.dart';
 import 'package:qonbaq/presentation/providers/theme_provider.dart';
 import 'package:qonbaq/data/datasources/user_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/user_local_datasource_impl.dart';
@@ -65,6 +66,7 @@ import 'package:qonbaq/data/repositories/user_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/user_repository.dart';
 import 'package:qonbaq/domain/usecases/get_user_businesses.dart';
 import 'package:qonbaq/domain/usecases/get_user_profile.dart';
+import 'package:qonbaq/domain/usecases/create_business.dart';
 import 'package:qonbaq/data/datasources/task_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
@@ -134,6 +136,14 @@ import 'package:qonbaq/data/datasources/financial_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/financial_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/financial_repository.dart';
 import 'package:qonbaq/domain/usecases/get_financial_form.dart';
+import 'package:qonbaq/data/datasources/inbox_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/inbox_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/inbox_repository.dart';
+import 'package:qonbaq/domain/usecases/get_inbox_items.dart';
+import 'package:qonbaq/domain/usecases/create_inbox_item.dart';
+import 'package:qonbaq/domain/usecases/create_inbox_item_from_voice.dart';
+import 'package:qonbaq/domain/usecases/update_inbox_item.dart';
+import 'package:qonbaq/domain/usecases/delete_inbox_item.dart';
 import 'package:qonbaq/data/datasources/transcription_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/voice_assist_remote_datasource_impl.dart';
 import 'package:qonbaq/core/services/audio_recording_service.dart';
@@ -198,9 +208,11 @@ class MyApp extends StatelessWidget {
     );
     final getUserBusinesses = GetUserBusinesses(userRepository);
     final getUserProfile = GetUserProfile(userRepository);
+    final createBusiness = CreateBusiness(userRepository);
     final profileProvider = ProfileProvider(
       getUserBusinesses: getUserBusinesses,
       getUserProfile: getUserProfile,
+      createBusiness: createBusiness,
       userRepository: userRepository,
     );
 
@@ -335,6 +347,24 @@ class MyApp extends StatelessWidget {
     );
     final getFinancialForm = GetFinancialForm(financialRepository);
 
+    // Инициализация зависимостей для Inbox Items
+    final inboxRemoteDataSource = InboxRemoteDataSourceImpl(apiClient: apiClient);
+    final InboxRepository inboxRepository = InboxRepositoryImpl(
+      remoteDataSource: inboxRemoteDataSource,
+    );
+    final getInboxItems = GetInboxItems(inboxRepository);
+    final createInboxItem = CreateInboxItem(inboxRepository);
+    final createInboxItemFromVoice = CreateInboxItemFromVoice(inboxRepository);
+    final updateInboxItem = UpdateInboxItem(inboxRepository);
+    final deleteInboxItem = DeleteInboxItem(inboxRepository);
+    final inboxProvider = InboxProvider(
+      getInboxItems: getInboxItems,
+      createInboxItem: createInboxItem,
+      createInboxItemFromVoice: createInboxItemFromVoice,
+      updateInboxItem: updateInboxItem,
+      deleteInboxItem: deleteInboxItem,
+    );
+
     // Инициализация зависимостей для записи голоса
     final transcriptionDataSource = TranscriptionRemoteDataSourceImpl();
     final voiceAssistDataSource = VoiceAssistRemoteDataSourceImpl();
@@ -354,6 +384,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => inviteProvider),
         ChangeNotifierProvider(create: (_) => departmentProvider),
         ChangeNotifierProvider(create: (_) => projectProvider),
+        ChangeNotifierProvider(create: (_) => inboxProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
@@ -499,7 +530,7 @@ class MyApp extends StatelessWidget {
             }
             return ApprovalDetailPage(approvalId: approvalId);
           },
-          '/remember': (context) => const RememberPage(),
+          '/remember': (context) => const InboxItemsPage(),
           '/favorites': (context) => const FavoritesPage(),
         },
           );

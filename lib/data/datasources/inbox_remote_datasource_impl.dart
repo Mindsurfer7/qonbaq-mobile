@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/error_handler.dart';
+import '../../core/utils/constants.dart';
 import '../datasources/inbox_remote_datasource.dart';
 import '../models/inbox_item_model.dart';
 import '../models/validation_error.dart';
@@ -72,6 +76,111 @@ class InboxRemoteDataSourceImpl extends InboxRemoteDataSource {
         rethrow;
       }
       throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<InboxItemModel> createInboxItemFromVoice({
+    String? audioFile,
+    List<int>? audioBytes,
+    String filename = 'voice.m4a',
+    required String businessId,
+  }) async {
+    // Проверяем, что передан либо файл, либо байты
+    if (audioFile == null && audioBytes == null) {
+      throw Exception('Необходимо передать либо audioFile, либо audioBytes');
+    }
+
+    // Для веба используем байты, для остальных платформ - файл
+    if (kIsWeb && audioBytes == null) {
+      throw Exception('Для веб-платформы необходимы audioBytes');
+    }
+
+    if (!kIsWeb && audioFile == null) {
+      throw Exception('Для не-веб платформ необходим audioFile');
+    }
+
+    // Получаем токен авторизации
+    final token = TokenStorage.instance.getAccessToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Токен авторизации не найден');
+    }
+
+    // Формируем URL
+    final backendUrl = AppConstants.apiBaseUrl;
+    final uri = Uri.parse('$backendUrl/api/inbox/from-voice').replace(
+      queryParameters: {
+        'businessId': businessId,
+      },
+    );
+
+    try {
+      // Создаем multipart запрос
+      final request = http.MultipartRequest('POST', uri);
+
+      // Добавляем заголовки
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      // Добавляем аудиофайл
+      if (kIsWeb && audioBytes != null) {
+        // Для веба используем байты
+        request.files.add(
+          http.MultipartFile.fromBytes('file', audioBytes, filename: filename),
+        );
+      } else if (!kIsWeb && audioFile != null) {
+        // Для не-веб платформ используем файл
+        final file = File(audioFile);
+        final fileSize = await file.length();
+        
+        // Проверяем размер файла (максимум 25 МБ)
+        const maxSizeInBytes = 25 * 1024 * 1024; // 25 МБ
+        if (fileSize > maxSizeInBytes) {
+          throw Exception('Файл слишком большой. Максимум: 25 МБ');
+        }
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            file.path,
+            filename: filename,
+          ),
+        );
+      }
+
+      // Отправляем запрос
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 201) {
+        // Парсим ответ используя ApiResponse
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => InboxItemModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (streamedResponse.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (streamedResponse.statusCode == 400) {
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else {
+        // Обрабатываем ошибки через ErrorHandler
+        String userMessage = ErrorHandler.getErrorMessage(
+          streamedResponse.statusCode,
+          responseBody,
+        );
+        throw Exception(userMessage);
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка при отправке аудио для создания inbox item: $e');
     }
   }
 

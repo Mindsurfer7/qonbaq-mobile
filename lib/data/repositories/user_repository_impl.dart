@@ -6,8 +6,9 @@ import '../../domain/entities/employee.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/user_model.dart';
-import '../models/employee_model.dart';
+import '../models/business_model.dart';
 import '../datasources/user_remote_datasource.dart';
+import '../datasources/user_remote_datasource_impl.dart';
 import '../datasources/user_local_datasource.dart';
 import '../repositories/repository_impl.dart';
 
@@ -112,6 +113,23 @@ class UserRepositoryImpl extends RepositoryImpl implements UserRepository {
       return Right(employees.map((model) => model.toEntity()).toList());
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении сотрудников: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Business>> createBusiness(Business business) async {
+    try {
+      final businessModel = BusinessModel.fromEntity(business);
+      final createdBusiness = await remoteDataSource.createBusiness(businessModel);
+      return Right(createdBusiness.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при создании бизнеса: $e'));
     }
   }
 }
