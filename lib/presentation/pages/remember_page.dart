@@ -3,9 +3,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/inbox_item.dart';
+import '../../domain/entities/task.dart';
+import '../../domain/usecases/create_task.dart';
+import '../../domain/repositories/user_repository.dart';
+import '../../data/models/task_model.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/profile_provider.dart';
 import '../../core/services/audio_recording_service.dart';
+import '../widgets/create_task_form.dart';
 
 /// Страница "Заметки на ходу" с 4 блоками по категориям
 class RememberPage extends StatefulWidget {
@@ -16,6 +21,10 @@ class RememberPage extends StatefulWidget {
 }
 
 class _RememberPageState extends State<RememberPage> {
+  // Отслеживание перетаскивания
+  InboxItem? _draggingItem;
+  InboxItemCategory? _draggingFromCategory;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +45,225 @@ class _RememberPageState extends State<RememberPage> {
       // Загружаем все элементы (и обработанные, и необработанные)
       inboxProvider.loadInboxItems(businessId: selectedBusiness.id);
     }
+  }
+
+  void _showCreateTaskDialog(BuildContext context, InboxItem item) {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
+      return;
+    }
+
+    // Предзаполняем форму данными из inbox item
+    final initialTaskData = TaskModel(
+      id: '',
+      businessId: selectedBusiness.id,
+      title: item.title ?? 'Без названия',
+      description: item.description,
+      status: TaskStatus.pending,
+      priority: null,
+      assignedTo: null,
+      assignedBy: null,
+      assignmentDate: null,
+      deadline: null,
+      isImportant: false,
+      isRecurring: false,
+      hasControlPoint: false,
+      dontForget: false,
+      voiceNoteUrl: null,
+      resultText: null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      observerIds: null,
+      attachments: null,
+      indicators: null,
+      recurrence: null,
+      business: null,
+      assignee: null,
+      assigner: null,
+      observers: null,
+      comments: null,
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+              child: Column(
+                children: [
+                  AppBar(
+                    title: const Text('Создать задачу'),
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  Expanded(
+                    child: CreateTaskForm(
+                      businessId: selectedBusiness.id,
+                      userRepository: userRepository,
+                      onSubmit: (task) async {
+                        final result = await createTaskUseCase.call(
+                          CreateTaskParams(task: task, inboxItemId: item.id),
+                        );
+
+                        result.fold(
+                          (failure) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(failure.message),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          },
+                          (createdTask) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Задача успешно создана'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            // Обновление произойдет автоматически через провайдер
+                          },
+                        );
+                      },
+                      onCancel: () => Navigator.of(context).pop(),
+                      initialTaskData: initialTaskData,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Future<void> _archiveItem(BuildContext context, InboxItem item) async {
+    await _toggleArchiveStatus(context, item, forceArchive: true);
+  }
+
+  Future<void> _toggleArchiveStatus(
+    BuildContext context,
+    InboxItem item, {
+    bool? forceArchive,
+  }) async {
+    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+    final newArchiveStatus = forceArchive ?? !item.isArchived;
+
+    final success = await inboxProvider.updateItem(
+      id: item.id,
+      isArchived: newArchiveStatus,
+      category: item.category, // Сохраняем категорию
+    );
+
+    if (mounted) {
+      if (success) {
+        // Не показываем сообщение при простом переключении чекбокса
+        if (forceArchive == true) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Элемент обработан')));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(inboxProvider.error ?? 'Ошибка обновления'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditDialog(BuildContext context, InboxItem item) {
+    final titleController = TextEditingController(text: item.title ?? '');
+    final descriptionController = TextEditingController(
+      text: item.description ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Редактировать'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Название',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Описание',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final inboxProvider = Provider.of<InboxProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final success = await inboxProvider.updateItem(
+                    id: item.id,
+                    title:
+                        titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                    description:
+                        descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                  );
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Успешно обновлено')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            inboxProvider.error ?? 'Ошибка обновления',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Сохранить'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -137,6 +365,8 @@ class _RememberPageState extends State<RememberPage> {
                         ],
                         unprocessedItems,
                         allItems,
+                        _draggingItem,
+                        _draggingFromCategory,
                       ),
                       // Верхний правый - Читать и смотреть (синий)
                       _buildQuadrantCard(
@@ -149,6 +379,8 @@ class _RememberPageState extends State<RememberPage> {
                         ],
                         unprocessedItems,
                         allItems,
+                        _draggingItem,
+                        _draggingFromCategory,
                       ),
                       // Нижний левый - Цели и Миссия (серый)
                       _buildQuadrantCard(
@@ -161,6 +393,8 @@ class _RememberPageState extends State<RememberPage> {
                         ],
                         unprocessedItems,
                         allItems,
+                        _draggingItem,
+                        _draggingFromCategory,
                       ),
                       // Нижний правый - Аналитика (желтый)
                       _buildAnalyticsCard(context, processedItems),
@@ -191,6 +425,8 @@ class _RememberPageState extends State<RememberPage> {
     List<InboxItemCategory> categories,
     List<InboxItem> unprocessedItems,
     List<InboxItem> allItems,
+    InboxItem? draggingItem,
+    InboxItemCategory? draggingFromCategory,
   ) {
     // Фильтруем необработанные элементы по категориям
     final categoryItems =
@@ -253,47 +489,145 @@ class _RememberPageState extends State<RememberPage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // Список элементов категории
-                      if (items.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            'Нет элементов',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 12,
-                            ),
-                          ),
-                        )
-                      else
-                        ...items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    item.title ?? 'Без названия',
-                                    style: const TextStyle(fontSize: 12),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                      // DragTarget для категории
+                      DragTarget<InboxItem>(
+                        onAccept: (draggedItem) async {
+                          // Сбрасываем состояние перетаскивания
+                          setState(() {
+                            _draggingItem = null;
+                            _draggingFromCategory = null;
+                          });
+
+                          // Обновляем category элемента
+                          if (draggedItem.category != category) {
+                            final inboxProvider = Provider.of<InboxProvider>(
+                              context,
+                              listen: false,
+                            );
+                            final profileProvider =
+                                Provider.of<ProfileProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                            final selectedBusiness =
+                                profileProvider.selectedBusiness;
+
+                            final success = await inboxProvider.updateItem(
+                              id: draggedItem.id,
+                              category: category,
+                            );
+
+                            if (mounted) {
+                              if (success) {
+                                // Перезагружаем данные для синхронизации
+                                if (selectedBusiness != null) {
+                                  await inboxProvider.loadInboxItems(
+                                    businessId: selectedBusiness.id,
+                                  );
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Категория обновлена'),
+                                    duration: Duration(seconds: 1),
                                   ),
-                                ),
-                                Icon(
-                                  item.isArchived
-                                      ? Icons.check_circle
-                                      : Icons.schedule,
-                                  size: 16,
-                                  color:
-                                      item.isArchived
-                                          ? Colors.green[700]
-                                          : Colors.orange[600],
-                                ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      inboxProvider.error ??
+                                          'Ошибка обновления категории',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        builder: (context, candidateData, rejectedData) {
+                          // Подсвечиваем если:
+                          // 1. Элемент перетаскивается (draggingItem != null)
+                          // 2. Это не исходная категория (category != draggingFromCategory)
+                          // 3. ИЛИ курсор находится над этой областью И это не исходная категория
+                          final isDragging = draggingItem != null;
+                          final isSourceCategory =
+                              draggingFromCategory == category;
+                          final isNotSourceCategory =
+                              draggingFromCategory != null && !isSourceCategory;
+                          final isHovered = candidateData.isNotEmpty;
+                          // Подсвечиваем все доступные категории при перетаскивании,
+                          // кроме исходной, или если курсор над областью (но не исходной)
+                          final shouldHighlight =
+                              (isDragging && isNotSourceCategory) ||
+                              (isHovered && !isSourceCategory);
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color:
+                                  shouldHighlight
+                                      ? color.withOpacity(0.3)
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Список элементов категории
+                                if (items.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      'Нет элементов',
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ...items.map(
+                                    (item) => Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: _DraggableInboxItem(
+                                        item: item,
+                                        onConvertToTask:
+                                            () => _showCreateTaskDialog(
+                                              context,
+                                              item,
+                                            ),
+                                        onArchive:
+                                            () => _archiveItem(context, item),
+                                        onEdit:
+                                            () =>
+                                                _showEditDialog(context, item),
+                                        onToggleCheck:
+                                            (item) => _toggleArchiveStatus(
+                                              context,
+                                              item,
+                                            ),
+                                        onDragStart: () {
+                                          setState(() {
+                                            _draggingItem = item;
+                                            _draggingFromCategory =
+                                                item.category;
+                                          });
+                                        },
+                                        onDragEnd: () {
+                                          setState(() {
+                                            _draggingItem = null;
+                                            _draggingFromCategory = null;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 );
@@ -711,6 +1045,268 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Draggable виджет для Inbox Item
+class _DraggableInboxItem extends StatefulWidget {
+  final InboxItem item;
+  final VoidCallback onConvertToTask;
+  final VoidCallback onArchive;
+  final VoidCallback onEdit;
+  final Function(InboxItem) onToggleCheck;
+  final VoidCallback? onDragStart;
+  final VoidCallback? onDragEnd;
+
+  const _DraggableInboxItem({
+    required this.item,
+    required this.onConvertToTask,
+    required this.onArchive,
+    required this.onEdit,
+    required this.onToggleCheck,
+    this.onDragStart,
+    this.onDragEnd,
+  });
+
+  @override
+  State<_DraggableInboxItem> createState() => _DraggableInboxItemState();
+}
+
+class _DraggableInboxItemState extends State<_DraggableInboxItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _checkAnimationController;
+  late Animation<double> _checkAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _checkAnimation = CurvedAnimation(
+      parent: _checkAnimationController,
+      curve: Curves.easeInOut,
+    );
+    // Если элемент уже обработан, показываем галочку сразу
+    if (widget.item.isArchived) {
+      _checkAnimationController.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_DraggableInboxItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Анимируем изменение статуса
+    if (oldWidget.item.isArchived != widget.item.isArchived) {
+      if (widget.item.isArchived) {
+        _checkAnimationController.forward();
+      } else {
+        _checkAnimationController.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _checkAnimationController.dispose();
+    super.dispose();
+  }
+
+  // Для веба используем Draggable, для мобильных - LongPressDraggable
+  Widget _buildDraggable() {
+    final draggableContent = _buildItemContent();
+
+    if (kIsWeb) {
+      // Для веба используем обычный Draggable
+      return Draggable<InboxItem>(
+        data: widget.item,
+        onDragStarted: () {
+          widget.onDragStart?.call();
+        },
+        onDragEnd: (details) {
+          widget.onDragEnd?.call();
+        },
+        feedback: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.item.title ?? 'Без названия',
+                  style: TextStyle(
+                    fontSize: 12,
+                    decoration:
+                        widget.item.isArchived
+                            ? TextDecoration.lineThrough
+                            : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.3, child: draggableContent),
+        child: draggableContent,
+      );
+    } else {
+      // Для мобильных используем LongPressDraggable
+      return LongPressDraggable<InboxItem>(
+        data: widget.item,
+        onDragStarted: () {
+          widget.onDragStart?.call();
+        },
+        onDragEnd: (details) {
+          widget.onDragEnd?.call();
+        },
+        feedback: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.item.title ?? 'Без названия',
+                  style: TextStyle(
+                    fontSize: 12,
+                    decoration:
+                        widget.item.isArchived
+                            ? TextDecoration.lineThrough
+                            : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.3, child: draggableContent),
+        child: draggableContent,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildDraggable();
+  }
+
+  Widget _buildItemContent() {
+    final isArchived = widget.item.isArchived;
+
+    return Opacity(
+      opacity: isArchived ? 0.65 : 1.0, // 0.65 в диапазоне 0.6-0.7
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Чекбокс или зачеркнутая галочка слева
+            GestureDetector(
+              onTap: () => widget.onToggleCheck(widget.item),
+              child: Container(
+                width: 20,
+                height: 20,
+                margin: const EdgeInsets.only(right: 8),
+                child:
+                    isArchived
+                        ? const Icon(
+                          Icons.check_circle,
+                          size: 20,
+                          color: Colors.green,
+                        )
+                        : Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.grey,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            // Анимированная галочка
+                            ScaleTransition(
+                              scale: _checkAnimation,
+                              child: const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+              ),
+            ),
+            // Текст элемента
+            Expanded(
+              child: Text(
+                widget.item.title ?? 'Без названия',
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: isArchived ? TextDecoration.lineThrough : null,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Круг операций (всегда видимый)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.task, size: 16),
+                  onPressed: widget.onConvertToTask,
+                  tooltip: 'Превратить в задачу',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.archive, size: 16),
+                  onPressed: widget.onArchive,
+                  tooltip: 'Обработать',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 16),
+                  onPressed: widget.onEdit,
+                  tooltip: 'Редактировать',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

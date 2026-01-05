@@ -195,6 +195,7 @@ class InboxProvider with ChangeNotifier {
       return false;
     }
 
+    // Используем переданные значения или существующие
     final updatedItem = InboxItem(
       id: existingItem.id,
       userId: existingItem.userId,
@@ -202,6 +203,7 @@ class InboxProvider with ChangeNotifier {
       title: title ?? existingItem.title,
       description: description ?? existingItem.description,
       isArchived: isArchived ?? existingItem.isArchived,
+      // Если category передан, используем его, иначе оставляем существующий
       category: category ?? existingItem.category,
       createdAt: existingItem.createdAt,
       updatedAt: DateTime.now(),
@@ -240,9 +242,7 @@ class InboxProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    final result = await deleteInboxItem.call(
-      DeleteInboxItemParams(id: id),
-    );
+    final result = await deleteInboxItem.call(DeleteInboxItemParams(id: id));
 
     _isLoading = false;
 
@@ -273,4 +273,3 @@ class InboxProvider with ChangeNotifier {
     return 'Произошла ошибка';
   }
 }
-
