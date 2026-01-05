@@ -30,7 +30,10 @@ class _RememberPageState extends State<RememberPage> {
       _error = null;
     });
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
 
@@ -43,10 +46,7 @@ class _RememberPageState extends State<RememberPage> {
     }
 
     final result = await getTasksUseCase.call(
-      GetTasksParams(
-        businessId: selectedBusiness.id,
-        dontForget: true,
-      ),
+      GetTasksParams(businessId: selectedBusiness.id, dontForget: true),
     );
 
     result.fold(
@@ -108,7 +108,7 @@ class _RememberPageState extends State<RememberPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Не забыть выполнить'),
+        title: const Text('Заметки на ходу'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -127,130 +127,137 @@ class _RememberPageState extends State<RememberPage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadTasks,
-                        child: const Text('Повторить'),
-                      ),
-                    ],
-                  ),
-                )
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadTasks,
+                      child: const Text('Повторить'),
+                    ),
+                  ],
+                ),
+              )
               : _tasks.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Нет задач с флагом "Не забыть выполнить"',
-                        style: TextStyle(color: Colors.grey),
+              ? const Center(
+                child: Text(
+                  'Нет задач с флагом "Не забыть выполнить"',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+              : RefreshIndicator(
+                onRefresh: _loadTasks,
+                child: ListView.builder(
+                  itemCount: _tasks.length,
+                  padding: const EdgeInsets.all(8),
+                  itemBuilder: (context, index) {
+                    final task = _tasks[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadTasks,
-                      child: ListView.builder(
-                        itemCount: _tasks.length,
-                        padding: const EdgeInsets.all(8),
-                        itemBuilder: (context, index) {
-                          final task = _tasks[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.notifications_active,
-                                color: Colors.orange,
-                              ),
-                              title: Text(
-                                task.title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  decoration: task.status ==
-                                          TaskStatus.completed
-                                      ? TextDecoration.lineThrough
-                                      : null,
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.notifications_active,
+                          color: Colors.orange,
+                        ),
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration:
+                                task.status == TaskStatus.completed
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (task.description != null &&
+                                task.description!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  task.description!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(height: 4),
+                            if (task.deadline != null)
+                              Row(
                                 children: [
-                                  if (task.description != null &&
-                                      task.description!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        task.description!,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  const SizedBox(height: 4),
-                                  if (task.deadline != null)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.event,
-                                          size: 16,
-                                          color: task.deadline!
-                                                  .isBefore(DateTime.now())
+                                  Icon(
+                                    Icons.event,
+                                    size: 16,
+                                    color:
+                                        task.deadline!.isBefore(DateTime.now())
+                                            ? Colors.red
+                                            : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDate(task.deadline!),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          task.deadline!.isBefore(
+                                                DateTime.now(),
+                                              )
                                               ? Colors.red
                                               : Colors.grey,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _formatDate(task.deadline!),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: task.deadline!
-                                                    .isBefore(DateTime.now())
-                                                ? Colors.red
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                      ],
                                     ),
+                                  ),
                                 ],
                               ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(task.status),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Text(
-                                  _getStatusText(task.status),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              onTap: () {
-                                Navigator.of(context).pushNamed(
-                                  '/tasks/detail',
-                                  arguments: task.id,
-                                );
-                              },
+                          ],
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(task.status),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            _getStatusText(task.status),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
-                          );
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed('/tasks/detail', arguments: task.id);
                         },
                       ),
-                    ),
+                    );
+                  },
+                ),
+              ),
     );
   }
 }

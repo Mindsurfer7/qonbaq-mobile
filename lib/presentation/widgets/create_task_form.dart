@@ -44,6 +44,10 @@ class CreateTaskForm extends StatefulWidget {
 class _CreateTaskFormState extends State<CreateTaskForm> {
   final _formKey = GlobalKey<FormBuilderState>();
   final _descriptionController = TextEditingController();
+  final _titleFocusNode = FocusNode();
+  final _descriptionFocusNode = FocusNode();
+  final _voiceNoteUrlFocusNode = FocusNode();
+  final _observerIdsFocusNode = FocusNode();
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
@@ -143,9 +147,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       _descriptionController.text = taskData.description!;
       formState.fields['description']?.didChange(taskData.description);
     }
-    if (taskData.priority != null) {
-      formState.fields['priority']?.didChange(taskData.priority);
-    }
     formState.fields['status']?.didChange(taskData.status);
     if (taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
       _assignedToId = taskData.assignedTo;
@@ -197,6 +198,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _titleFocusNode.dispose();
+    _descriptionFocusNode.dispose();
+    _voiceNoteUrlFocusNode.dispose();
+    _observerIdsFocusNode.dispose();
     super.dispose();
   }
 
@@ -206,7 +211,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     final directMapping = {
       'title': 'title',
       'description': 'description',
-      'priority': 'priority',
       'status': 'status',
       'assignedTo': 'assignedTo',
       'assignedBy': 'assignedBy',
@@ -284,12 +288,17 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Заголовок
             FormBuilderTextField(
               name: 'title',
+              focusNode: _titleFocusNode,
               decoration: InputDecoration(
                 labelText: 'Название задачи *',
                 border: const OutlineInputBorder(),
                 errorText: _fieldErrors['title'],
                 errorMaxLines: 2,
               ),
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) {
+                _descriptionFocusNode.requestFocus();
+              },
               validator: FormBuilderValidators.required(
                 errorText: 'Название задачи обязательно',
               ),
@@ -300,6 +309,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             FormBuilderTextField(
               name: 'description',
               controller: _descriptionController,
+              focusNode: _descriptionFocusNode,
               decoration: InputDecoration(
                 labelText: 'Описание',
                 border: const OutlineInputBorder(),
@@ -307,37 +317,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorMaxLines: 2,
               ),
               maxLines: 4,
-            ),
-            const SizedBox(height: 16),
-
-            // Приоритет
-            FormBuilderDropdown<TaskPriority>(
-              name: 'priority',
-              decoration: InputDecoration(
-                labelText: 'Приоритет',
-                border: const OutlineInputBorder(),
-                errorText: _fieldErrors['priority'],
-                errorMaxLines: 2,
-              ),
-              dropdownColor: context.appTheme.backgroundSurface,
-              borderRadius: BorderRadius.circular(
-                context.appTheme.borderRadius,
-              ),
-              selectedItemBuilder: (BuildContext context) {
-                return TaskPriority.values.map<Widget>((TaskPriority priority) {
-                  return Text(_getPriorityText(priority));
-                }).toList();
-              },
-              items:
-                  TaskPriority.values
-                      .map(
-                        (priority) => createStyledDropdownItem<TaskPriority>(
-                          context: context,
-                          value: priority,
-                          child: Text(_getPriorityText(priority)),
-                        ),
-                      )
-                      .toList(),
+              textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: 16),
 
@@ -473,7 +453,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // Не забыть выполнить
             FormBuilderCheckbox(
               name: 'dontForget',
-              title: const Text('Не забыть выполнить'),
+              title: const Text('Заметки на ходу'),
               initialValue: _dontForget,
               onChanged: (value) {
                 setState(() {
@@ -486,18 +466,24 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             // URL голосовой заметки
             FormBuilderTextField(
               name: 'voiceNoteUrl',
+              focusNode: _voiceNoteUrlFocusNode,
               decoration: InputDecoration(
                 labelText: 'URL голосовой заметки',
                 border: const OutlineInputBorder(),
                 errorText: _fieldErrors['voiceNoteUrl'],
                 errorMaxLines: 2,
               ),
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) {
+                _observerIdsFocusNode.requestFocus();
+              },
             ),
             const SizedBox(height: 16),
 
             // ID наблюдателей (через запятую)
             FormBuilderTextField(
               name: 'observerIds',
+              focusNode: _observerIdsFocusNode,
               decoration: InputDecoration(
                 labelText: 'ID наблюдателей',
                 border: const OutlineInputBorder(),
@@ -506,6 +492,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorText: _fieldErrors['observerIds'],
                 errorMaxLines: 2,
               ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                _handleSubmit();
+              },
             ),
             const SizedBox(height: 24),
 
@@ -550,7 +540,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         title: formData['title'] as String,
         description: formData['description'] as String?,
         status: formData['status'] as TaskStatus? ?? TaskStatus.pending,
-        priority: formData['priority'] as TaskPriority?,
         assignedTo: _assignedToId,
         assignedBy: _assignedById,
         assignmentDate:
@@ -590,19 +579,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             .where((id) => id.isNotEmpty)
             .toList();
     return ids.isEmpty ? null : ids;
-  }
-
-  String _getPriorityText(TaskPriority priority) {
-    switch (priority) {
-      case TaskPriority.low:
-        return 'Низкий';
-      case TaskPriority.medium:
-        return 'Средний';
-      case TaskPriority.high:
-        return 'Высокий';
-      case TaskPriority.urgent:
-        return 'Срочный';
-    }
   }
 
   String _getStatusText(TaskStatus status) {

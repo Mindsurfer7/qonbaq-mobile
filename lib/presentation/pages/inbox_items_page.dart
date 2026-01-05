@@ -34,14 +34,15 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
   }
 
   void _loadInboxItems() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
     final selectedBusiness = profileProvider.selectedBusiness;
 
     if (selectedBusiness != null) {
-      inboxProvider.loadInboxItems(
-        businessId: selectedBusiness.id,
-      );
+      inboxProvider.loadInboxItems(businessId: selectedBusiness.id);
     }
   }
 
@@ -53,128 +54,139 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
 
   void _showEditDialog(InboxItem item) {
     final titleController = TextEditingController(text: item.title ?? '');
-    final descriptionController = TextEditingController(text: item.description ?? '');
+    final descriptionController = TextEditingController(
+      text: item.description ?? '',
+    );
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Редактировать'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Название',
-                border: OutlineInputBorder(),
-              ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Редактировать'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Название',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Описание',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Описание',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
               ),
-              maxLines: 4,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final inboxProvider = Provider.of<InboxProvider>(
-                context,
-                listen: false,
-              );
-              final success = await inboxProvider.updateItem(
-                id: item.id,
-                title: titleController.text.trim().isEmpty
-                    ? null
-                    : titleController.text.trim(),
-                description: descriptionController.text.trim().isEmpty
-                    ? null
-                    : descriptionController.text.trim(),
-              );
-              if (mounted) {
-                Navigator.of(context).pop();
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Успешно обновлено')),
+              ElevatedButton(
+                onPressed: () async {
+                  final inboxProvider = Provider.of<InboxProvider>(
+                    context,
+                    listen: false,
                   );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(inboxProvider.error ?? 'Ошибка обновления'),
-                      backgroundColor: Colors.red,
-                    ),
+                  final success = await inboxProvider.updateItem(
+                    id: item.id,
+                    title:
+                        titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                    description:
+                        descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
                   );
-                }
-              }
-            },
-            child: const Text('Сохранить'),
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Успешно обновлено')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            inboxProvider.error ?? 'Ошибка обновления',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Сохранить'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   void _showDeleteConfirmDialog(InboxItem item) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Удалить?'),
-        content: const Text('Вы уверены, что хотите удалить этот элемент?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final inboxProvider = Provider.of<InboxProvider>(
-                context,
-                listen: false,
-              );
-              final success = await inboxProvider.deleteItem(item.id);
-              if (mounted) {
-                Navigator.of(context).pop();
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Успешно удалено')),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Удалить?'),
+            content: const Text('Вы уверены, что хотите удалить этот элемент?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final inboxProvider = Provider.of<InboxProvider>(
+                    context,
+                    listen: false,
                   );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(inboxProvider.error ?? 'Ошибка удаления'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Удалить'),
+                  final success = await inboxProvider.deleteItem(item.id);
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Успешно удалено')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            inboxProvider.error ?? 'Ошибка удаления',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Удалить'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   void _showCreateDialog(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
 
     if (selectedBusiness == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Бизнес не выбран')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
       return;
     }
 
@@ -183,54 +195,113 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Создать элемент'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Название',
-                border: OutlineInputBorder(),
-              ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Создать элемент'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Название',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Описание',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Описание',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
               ),
-              maxLines: 4,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
+              ElevatedButton(
+                onPressed: () async {
+                  final inboxProvider = Provider.of<InboxProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final success = await inboxProvider.createItem(
+                    businessId: selectedBusiness.id,
+                    title:
+                        titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                    description:
+                        descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                  );
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Успешно создано')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            inboxProvider.error ?? 'Ошибка создания',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Создать'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final inboxProvider = Provider.of<InboxProvider>(
-                context,
-                listen: false,
-              );
-              final success = await inboxProvider.createItem(
+    );
+  }
+
+  void _handleVoiceRecording(BuildContext context) async {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
+      return;
+    }
+
+    // Показываем диалог записи
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => _VoiceRecordingDialog(
+            businessId: selectedBusiness.id,
+            onResult: (audioFile, audioBytes) async {
+              Navigator.of(context).pop();
+
+              // Отправляем на backend
+              final success = await inboxProvider.createItemFromVoice(
+                audioFile: audioFile,
+                audioBytes: audioBytes,
                 businessId: selectedBusiness.id,
-                title: titleController.text.trim().isEmpty
-                    ? null
-                    : titleController.text.trim(),
-                description: descriptionController.text.trim().isEmpty
-                    ? null
-                    : descriptionController.text.trim(),
               );
+
               if (mounted) {
-                Navigator.of(context).pop();
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Успешно создано')),
+                    const SnackBar(content: Text('Элемент успешно создан')),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -242,81 +313,31 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                 }
               }
             },
-            child: const Text('Создать'),
+            onError: (error) {
+              Navigator.of(context).pop();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error), backgroundColor: Colors.red),
+                );
+              }
+            },
           ),
-        ],
-      ),
-    );
-  }
-
-  void _handleVoiceRecording(BuildContext context) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
-    final selectedBusiness = profileProvider.selectedBusiness;
-
-    if (selectedBusiness == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Бизнес не выбран')),
-      );
-      return;
-    }
-
-    // Показываем диалог записи
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _VoiceRecordingDialog(
-        businessId: selectedBusiness.id,
-        onResult: (audioFile, audioBytes) async {
-          Navigator.of(context).pop();
-          
-          // Отправляем на backend
-          final success = await inboxProvider.createItemFromVoice(
-            audioFile: audioFile,
-            audioBytes: audioBytes,
-            businessId: selectedBusiness.id,
-          );
-
-          if (mounted) {
-            if (success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Элемент успешно создан')),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(inboxProvider.error ?? 'Ошибка создания'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        },
-        onError: (error) {
-          Navigator.of(context).pop();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-      ),
     );
   }
 
   void _showCreateTaskDialog(InboxItem item) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
     final userRepository = Provider.of<UserRepository>(context, listen: false);
 
     if (selectedBusiness == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Бизнес не выбран')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Бизнес не выбран')));
       return;
     }
 
@@ -353,18 +374,19 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
 
     showDialog(
       context: context,
-      builder: (context) => _CreateTaskDialog(
-        businessId: selectedBusiness.id,
-        userRepository: userRepository,
-        createTaskUseCase: createTaskUseCase,
-        inboxItemId: item.id,
-        initialTaskData: initialTaskData,
-        onSuccess: () {
-          // После успешного создания задачи inbox item будет заархивирован автоматически
-          // Обновляем список
-          _loadInboxItems();
-        },
-      ),
+      builder:
+          (context) => _CreateTaskDialog(
+            businessId: selectedBusiness.id,
+            userRepository: userRepository,
+            createTaskUseCase: createTaskUseCase,
+            inboxItemId: item.id,
+            initialTaskData: initialTaskData,
+            onSuccess: () {
+              // После успешного создания задачи inbox item будет заархивирован автоматически
+              // Обновляем список
+              _loadInboxItems();
+            },
+          ),
     );
   }
 
@@ -372,7 +394,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Не забыть выполнить'),
+        title: const Text('Заметки на ходу'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -406,9 +428,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
           final selectedBusiness = profileProvider.selectedBusiness;
 
           if (selectedBusiness == null) {
-            return const Center(
-              child: Text('Выберите компанию'),
-            );
+            return const Center(child: Text('Выберите компанию'));
           }
 
           if (inboxProvider.isLoading) {
@@ -463,16 +483,18 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                     child: Text(
                       'Активные',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  ...activeItems.map((item) => _buildInboxItemCard(
-                        context,
-                        item,
-                        inboxProvider,
-                        isArchived: false,
-                      )),
+                  ...activeItems.map(
+                    (item) => _buildInboxItemCard(
+                      context,
+                      item,
+                      inboxProvider,
+                      isArchived: false,
+                    ),
+                  ),
                 ],
 
                 // Заархивированные элементы
@@ -483,16 +505,18 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                     child: Text(
                       'Заархивированные',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  ...archivedItems.map((item) => _buildInboxItemCard(
-                        context,
-                        item,
-                        inboxProvider,
-                        isArchived: true,
-                      )),
+                  ...archivedItems.map(
+                    (item) => _buildInboxItemCard(
+                      context,
+                      item,
+                      inboxProvider,
+                      isArchived: true,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -525,18 +549,17 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                 item.title ?? 'Без названия',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  decoration: isArchived
-                      ? TextDecoration.lineThrough
-                      : null,
+                  decoration: isArchived ? TextDecoration.lineThrough : null,
                 ),
               ),
-              subtitle: item.description != null && item.description!.isNotEmpty
-                  ? Text(
-                      item.description!,
-                      maxLines: isExpanded ? null : 2,
-                      overflow: isExpanded ? null : TextOverflow.ellipsis,
-                    )
-                  : null,
+              subtitle:
+                  item.description != null && item.description!.isNotEmpty
+                      ? Text(
+                        item.description!,
+                        maxLines: isExpanded ? null : 2,
+                        overflow: isExpanded ? null : TextOverflow.ellipsis,
+                      )
+                      : null,
               trailing: IconButton(
                 icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                 onPressed: () => _toggleExpanded(item.id),
@@ -631,10 +654,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     });
 
     final result = await widget.createTaskUseCase.call(
-      CreateTaskParams(
-        task: task,
-        inboxItemId: widget.inboxItemId,
-      ),
+      CreateTaskParams(task: task, inboxItemId: widget.inboxItemId),
     );
 
     result.fold(
@@ -653,9 +673,9 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
       (createdTask) {
         Navigator.of(context).pop();
         widget.onSuccess();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Задача успешно создана')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Задача успешно создана')));
       },
     );
   }
@@ -719,7 +739,10 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
   }
 
   Future<void> _startRecording() async {
-    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
     try {
       await audioService.startRecording();
     } catch (e) {
@@ -728,8 +751,11 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
   }
 
   Future<void> _stopAndSend() async {
-    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
-    
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
+
     try {
       // Останавливаем запись
       if (audioService.state == RecordingState.recording) {
@@ -751,7 +777,9 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
         try {
           final audioResponse = await http.get(Uri.parse(blobUrl));
           if (audioResponse.statusCode != 200) {
-            widget.onError('Ошибка загрузки из Blob: ${audioResponse.statusCode}');
+            widget.onError(
+              'Ошибка загрузки из Blob: ${audioResponse.statusCode}',
+            );
             return;
           }
 
@@ -787,7 +815,10 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
   }
 
   void _cancel() {
-    final audioService = Provider.of<AudioRecordingService>(context, listen: false);
+    final audioService = Provider.of<AudioRecordingService>(
+      context,
+      listen: false,
+    );
     audioService.cancelRecording();
     Navigator.of(context).pop();
   }
@@ -811,7 +842,10 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
                 const SizedBox(height: 16),
                 Text(
                   timeText,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text('Идет запись...'),
@@ -820,7 +854,10 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
                 const SizedBox(height: 16),
                 Text(
                   timeText,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text('Запись завершена'),
@@ -832,16 +869,14 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: _cancel,
-              child: const Text('Отмена'),
-            ),
+            TextButton(onPressed: _cancel, child: const Text('Отмена')),
             if (audioService.state == RecordingState.recording ||
                 audioService.state == RecordingState.recorded)
               ElevatedButton(
-                onPressed: audioService.state == RecordingState.loading
-                    ? null
-                    : _stopAndSend,
+                onPressed:
+                    audioService.state == RecordingState.loading
+                        ? null
+                        : _stopAndSend,
                 child: const Text('Отправить'),
               ),
           ],
@@ -850,4 +885,3 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
     );
   }
 }
-

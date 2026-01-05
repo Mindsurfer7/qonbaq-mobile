@@ -80,6 +80,8 @@ class _LoginTabState extends State<LoginTab> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
 
   @override
@@ -106,6 +108,8 @@ class _LoginTabState extends State<LoginTab> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -149,12 +153,17 @@ class _LoginTabState extends State<LoginTab> {
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailController,
+                  focusNode: _emailFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    _passwordFocusNode.requestFocus();
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите email';
@@ -170,6 +179,7 @@ class _LoginTabState extends State<LoginTab> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
+                  focusNode: _passwordFocusNode,
                   decoration: InputDecoration(
                     labelText: 'Пароль',
                     prefixIcon: const Icon(Icons.lock),
@@ -188,6 +198,12 @@ class _LoginTabState extends State<LoginTab> {
                     border: const OutlineInputBorder(),
                   ),
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    if (!authProvider.isLoading) {
+                      _handleLogin();
+                    }
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите пароль';
@@ -258,6 +274,10 @@ class _RegisterTabState extends State<RegisterTab> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _usernameFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _confirmPasswordFocusNode = FocusNode();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _inviteCode;
@@ -275,6 +295,10 @@ class _RegisterTabState extends State<RegisterTab> {
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _confirmPasswordFocusNode.dispose();
     super.dispose();
   }
 
@@ -347,12 +371,17 @@ class _RegisterTabState extends State<RegisterTab> {
                 ],
                 TextFormField(
                   controller: _emailController,
+                  focusNode: _emailFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    _usernameFocusNode.requestFocus();
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите email';
@@ -368,12 +397,17 @@ class _RegisterTabState extends State<RegisterTab> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _usernameController,
+                  focusNode: _usernameFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Имя пользователя',
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                     helperText: 'От 3 до 30 символов',
                   ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    _passwordFocusNode.requestFocus();
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите имя пользователя';
@@ -387,6 +421,7 @@ class _RegisterTabState extends State<RegisterTab> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
+                  focusNode: _passwordFocusNode,
                   decoration: InputDecoration(
                     labelText: 'Пароль',
                     prefixIcon: const Icon(Icons.lock),
@@ -406,6 +441,10 @@ class _RegisterTabState extends State<RegisterTab> {
                     helperText: 'От 6 до 100 символов',
                   ),
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    _confirmPasswordFocusNode.requestFocus();
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите пароль';
@@ -419,6 +458,7 @@ class _RegisterTabState extends State<RegisterTab> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
+                  focusNode: _confirmPasswordFocusNode,
                   decoration: InputDecoration(
                     labelText: 'Подтвердите пароль',
                     prefixIcon: const Icon(Icons.lock_outline),
@@ -437,6 +477,12 @@ class _RegisterTabState extends State<RegisterTab> {
                     border: const OutlineInputBorder(),
                   ),
                   obscureText: _obscureConfirmPassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    if (!authProvider.isLoading) {
+                      _handleRegister();
+                    }
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Подтвердите пароль';

@@ -198,12 +198,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             '/approvals',
             Icons.check_circle,
           ),
-          _buildNavItem(
-            context,
-            'Не забыть выполнить',
-            '/remember',
-            Icons.notifications,
-          ),
+          _buildNavItem(context, 'Заметки на ходу', '/remember', Icons.note),
           _buildNavItem(context, 'Избранное', '/favorites', Icons.star),
         ],
       ),
