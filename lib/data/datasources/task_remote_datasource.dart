@@ -6,7 +6,7 @@ import '../models/task_comment_model.dart';
 /// Удаленный источник данных для задач (API)
 abstract class TaskRemoteDataSource extends DataSource {
   /// Создать задачу
-  Future<TaskModel> createTask(TaskModel task);
+  Future<TaskModel> createTask(TaskModel task, {String? inboxItemId});
 
   /// Получить задачу по ID
   Future<TaskModel> getTaskById(String id);

@@ -155,9 +155,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       _assignedById = taskData.assignedBy;
       formState.fields['assignedBy']?.didChange(taskData.assignedBy);
     }
-    if (taskData.assignmentDate != null) {
-      formState.fields['assignmentDate']?.didChange(taskData.assignmentDate);
-    }
+    // assignmentDate не обрабатываем, так как оно всегда устанавливается автоматически
     if (taskData.deadline != null) {
       formState.fields['deadline']?.didChange(taskData.deadline);
     }
@@ -405,17 +403,17 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ),
             const SizedBox(height: 16),
 
-            // Дата поручения
-            FormBuilderDateTimePicker(
-              name: 'assignmentDate',
+            // Дата поручения (readonly, автоматически устанавливается при создании)
+            TextFormField(
+              initialValue: _formatDateTime(DateTime.now()),
+              readOnly: true,
               decoration: InputDecoration(
                 labelText: 'Дата поручения',
                 border: const OutlineInputBorder(),
                 suffixIcon: const Icon(Icons.calendar_today),
-                errorText: _fieldErrors['assignmentDate'],
-                errorMaxLines: 2,
+                filled: true,
+                fillColor: Colors.grey.shade100,
               ),
-              inputType: InputType.both,
             ),
             const SizedBox(height: 16),
 
@@ -555,7 +553,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         priority: formData['priority'] as TaskPriority?,
         assignedTo: _assignedToId,
         assignedBy: _assignedById,
-        assignmentDate: formData['assignmentDate'] as DateTime?,
+        assignmentDate:
+            DateTime.now(), // Всегда текущая дата/время при создании
         deadline: formData['deadline'] as DateTime?,
         isImportant: formData['isImportant'] as bool? ?? false,
         isRecurring: formData['isRecurring'] as bool? ?? false,
@@ -617,5 +616,9 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       case TaskStatus.cancelled:
         return 'Отменена';
     }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

@@ -8,7 +8,7 @@ import '../repositories/repository.dart';
 /// Реализация находится в data слое
 abstract class TaskRepository extends Repository {
   /// Создать задачу
-  Future<Either<Failure, Task>> createTask(Task task);
+  Future<Either<Failure, Task>> createTask(Task task, {String? inboxItemId});
 
   /// Получить задачу по ID
   Future<Either<Failure, Task>> getTaskById(String id);

@@ -26,10 +26,18 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
   }
 
   @override
-  Future<TaskModel> createTask(TaskModel task) async {
+  Future<TaskModel> createTask(TaskModel task, {String? inboxItemId}) async {
     try {
+      final queryParams = <String, String>{};
+      if (inboxItemId != null) {
+        queryParams['inboxItemId'] = inboxItemId;
+      }
+      final queryString = queryParams.isEmpty
+          ? ''
+          : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+
       final response = await apiClient.post(
-        '/api/tasks',
+        '/api/tasks$queryString',
         headers: _getAuthHeaders(),
         body: task.toCreateJson(),
       );
