@@ -13,6 +13,7 @@ import 'package:qonbaq/domain/usecases/refresh_token.dart';
 import 'package:qonbaq/presentation/pages/auth_page.dart';
 import 'package:qonbaq/presentation/pages/home_page.dart';
 import 'package:qonbaq/presentation/pages/start_page.dart';
+import 'package:qonbaq/presentation/pages/workspace_selector_page.dart';
 import 'package:qonbaq/presentation/pages/business_main_page.dart';
 import 'package:qonbaq/presentation/pages/operational_block_page.dart';
 import 'package:qonbaq/presentation/pages/financial_block_page.dart';
@@ -393,6 +394,8 @@ class MyApp extends StatelessWidget {
         routes: {
           // Стартовая страница
           '/': (context) => const StartPage(),
+          // Выбор workspace (семья или бизнес)
+          '/workspace-selector': (context) => const WorkspaceSelectorPage(),
           // Регистрация с invite кодом (обрабатывает /register?invite=...)
           '/register': (context) => const RegisterPage(),
           // Авторизация

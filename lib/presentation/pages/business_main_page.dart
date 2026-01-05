@@ -16,11 +16,19 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   void initState() {
     super.initState();
     // Загружаем компании при инициализации страницы
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
       // Загружаем компании, если они еще не загружены
       if (provider.businesses == null && !provider.isLoading) {
-        provider.loadBusinesses();
+        await provider.loadBusinesses();
+      }
+      
+      // Проверяем, есть ли выбранный workspace
+      if (!mounted) return;
+      
+      if (provider.selectedWorkspace == null) {
+        // Если workspace не выбран, перенаправляем на страницу выбора
+        Navigator.of(context).pushReplacementNamed('/workspace-selector');
       }
     });
   }
@@ -29,7 +37,15 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Business Main'),
+        title: Consumer<ProfileProvider>(
+          builder: (context, provider, child) {
+            // Показываем "Семья" если выбран первый бизнес (семья), иначе "Бизнес"
+            final isFamily = provider.selectedWorkspace != null &&
+                provider.familyBusiness != null &&
+                provider.selectedWorkspace!.id == provider.familyBusiness!.id;
+            return Text(isFamily ? 'Семья' : 'Business Main');
+          },
+        ),
         leading: IconButton(
           icon: const Icon(Icons.home),
           tooltip: 'Главная',
@@ -38,6 +54,13 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.swap_horiz),
+            tooltip: 'Сменить workspace',
+            onPressed: () {
+              Navigator.of(context).pushReplacementNamed('/workspace-selector');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             tooltip: 'Профиль',

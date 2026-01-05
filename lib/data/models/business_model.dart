@@ -12,9 +12,28 @@ class BusinessModel extends Business implements Model {
     super.department,
     super.hireDate,
     super.createdAt,
+    super.type,
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
+    // Парсим тип бизнеса
+    BusinessType? type;
+    if (json['type'] != null) {
+      final typeValue = json['type'];
+      String typeStr;
+      if (typeValue is String) {
+        typeStr = typeValue.toLowerCase();
+      } else {
+        typeStr = typeValue.toString().toLowerCase();
+      }
+      
+      if (typeStr == 'family') {
+        type = BusinessType.family;
+      } else if (typeStr == 'business') {
+        type = BusinessType.business;
+      }
+    }
+
     return BusinessModel(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -30,6 +49,7 @@ class BusinessModel extends Business implements Model {
           json['createdAt'] != null
               ? DateTime.parse(json['createdAt'] as String)
               : null,
+      type: type,
     );
   }
 
@@ -44,6 +64,7 @@ class BusinessModel extends Business implements Model {
       if (department != null) 'department': department,
       if (hireDate != null) 'hireDate': hireDate!.toIso8601String(),
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (type != null) 'type': type == BusinessType.family ? 'Family' : 'Business',
     };
   }
 
@@ -57,6 +78,7 @@ class BusinessModel extends Business implements Model {
       department: department,
       hireDate: hireDate,
       createdAt: createdAt,
+      type: type,
     );
   }
 
@@ -70,6 +92,7 @@ class BusinessModel extends Business implements Model {
       department: business.department,
       hireDate: business.hireDate,
       createdAt: business.createdAt,
+      type: business.type,
     );
   }
 }

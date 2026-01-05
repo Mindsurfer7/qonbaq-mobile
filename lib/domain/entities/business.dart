@@ -1,5 +1,11 @@
 import '../entities/entity.dart';
 
+/// Тип workspace
+enum BusinessType {
+  family,
+  business,
+}
+
 /// Доменная сущность компании
 class Business extends Entity {
   final String id;
@@ -10,6 +16,7 @@ class Business extends Entity {
   final String? department;
   final DateTime? hireDate;
   final DateTime? createdAt;
+  final BusinessType? type;
 
   const Business({
     required this.id,
@@ -20,6 +27,7 @@ class Business extends Entity {
     this.department,
     this.hireDate,
     this.createdAt,
+    this.type,
   });
 
   @override

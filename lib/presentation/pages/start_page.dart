@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/deep_link_service.dart';
+import '../../core/utils/workspace_storage.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'auth_page.dart';
 
@@ -40,8 +41,18 @@ class _StartPageState extends State<StartPage> {
       if (!mounted) return;
       
       if (isValid) {
-        // Токен валиден, перенаправляем на главную страницу
-        Navigator.of(context).pushReplacementNamed('/business');
+        // Токен валиден, проверяем есть ли сохраненный workspace
+        final hasWorkspace = await WorkspaceStorage.hasSelectedWorkspace();
+        if (!mounted) return;
+        
+        if (hasWorkspace) {
+          // Если есть сохраненный workspace, переходим на главную страницу
+          // BusinessMainPage сам загрузит workspace из ProfileProvider
+          Navigator.of(context).pushReplacementNamed('/business');
+        } else {
+          // Если нет сохраненного workspace, переходим на выбор workspace
+          Navigator.of(context).pushReplacementNamed('/workspace-selector');
+        }
       } else {
         // Токен невалиден, перенаправляем на страницу логина
         Navigator.of(context).pushReplacementNamed('/auth');
