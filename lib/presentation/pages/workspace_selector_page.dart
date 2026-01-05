@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/invite_provider.dart';
 import '../../domain/entities/business.dart';
 import '../widgets/create_business_dialog.dart';
+import '../widgets/voice_record_widget.dart';
+import '../../core/services/voice_context.dart';
+import 'package:flutter/services.dart';
 
 /// Страница выбора workspace (семья или бизнес)
 class WorkspaceSelectorPage extends StatefulWidget {
@@ -13,6 +17,8 @@ class WorkspaceSelectorPage extends StatefulWidget {
 }
 
 class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
+  int _selectedTab = 0; // 0 - Семья, 1 - Бизнес
+
   @override
   void initState() {
     super.initState();
@@ -35,9 +41,69 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
     Navigator.of(context).pushReplacementNamed('/business');
   }
 
+  Future<void> _showInviteDialog(bool isFamily) async {
+    final inviteProvider = Provider.of<InviteProvider>(context, listen: false);
+
+    await inviteProvider.createInviteLink();
+
+    if (!mounted) return;
+
+    if (inviteProvider.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(inviteProvider.error!),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final inviteResult = inviteProvider.inviteResult;
+    if (inviteResult != null) {
+      // Копируем deep link в буфер обмена
+      await Clipboard.setData(ClipboardData(text: inviteResult.links.deepLink));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ссылка скопирована в буфер обмена'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showVoiceRecordDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              child: VoiceRecordWidget(
+                context: VoiceContext.dontForget,
+                onResultReceived: (result) {
+                  Navigator.of(context).pop();
+                  // Переходим на страницу "Не забыть" с результатом
+                  Navigator.of(context).pushNamed('/remember');
+                },
+                onError: (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error), backgroundColor: Colors.red),
+                  );
+                },
+                style: VoiceRecordStyle.fullscreen,
+              ),
+            ),
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text('Выберите пространство'),
         automaticallyImplyLeading: false,
@@ -84,40 +150,390 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
             }
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Выберите пространство',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
+            children: [
+              // Кнопки приглашения
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
                   children: [
-                    // Левая часть - кнопка "Семья" (синяя)
                     Expanded(
-                      child:
-                          familyBusiness != null
-                              ? _buildFamilyButton(familyBusiness)
-                              : _buildAddFamilyButton(),
+                      child: _buildInviteButton(
+                        title: 'Пригласить члена семьи',
+                        icon: Icons.family_restroom,
+                        color: Colors.green,
+                        onTap: () => _showInviteDialog(true),
+                      ),
                     ),
-                    if (businessList.isNotEmpty) const SizedBox(width: 12),
-                    // Правая часть - список бизнесов (желтые) или кнопка создания
-                    if (businessList.isNotEmpty)
-                      Expanded(child: _buildBusinessList(businessList))
-                    else
-                      // Если нет бизнесов, показываем кнопку создания
-                      Expanded(child: _buildAddBusinessButton()),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildInviteButton(
+                        title: 'Пригласить коллегу',
+                        icon: Icons.business,
+                        color: Colors.blue,
+                        onTap: () => _showInviteDialog(false),
+                      ),
+                    ),
                   ],
+                ),
+              ),
+
+              // Вкладки Семья/Бизнес
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildTabButton(
+                        title: 'Семья',
+                        icon: Icons.people,
+                        isSelected: _selectedTab == 0,
+                        color: Colors.green,
+                        onTap: () => setState(() => _selectedTab = 0),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildTabButton(
+                        title: 'Бизнес',
+                        icon: Icons.business,
+                        isSelected: _selectedTab == 1,
+                        color: Colors.blue,
+                        onTap: () => setState(() => _selectedTab = 1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Контент под вкладками - два столбца (Семья и Бизнес)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      // Столбец "Семья"
+                      Expanded(child: _buildFamilyColumn(familyBusiness)),
+                      const SizedBox(width: 12),
+                      // Столбец "Бизнес"
+                      Expanded(
+                        child: _buildBusinessColumn(businessList, provider),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Нижняя панель действий
+              _buildBottomActionBar(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildInviteButton({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final darkerColor = Color.fromRGBO(
+      (color.red * 0.7).round(),
+      (color.green * 0.7).round(),
+      (color.blue * 0.7).round(),
+      1.0,
+    );
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, darkerColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final darkerColor = Color.fromRGBO(
+      (color.red * 0.7).round(),
+      (color.green * 0.7).round(),
+      (color.blue * 0.7).round(),
+      1.0,
+    );
+    return Container(
+      decoration: BoxDecoration(
+        gradient:
+            isSelected
+                ? LinearGradient(
+                  colors: [color, darkerColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+                : null,
+        color: isSelected ? null : Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFamilyColumn(Business? familyBusiness) {
+    return Column(
+      children: [
+        // Flex-колонка с двумя элементами (flex-рядами)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              // Первый flex-ряд: иконка слева, цифра справа
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(
+                    Icons.notifications,
+                    color: Colors.amber.shade700,
+                    size: 20,
+                  ),
+                  Text(
+                    '0', // TODO: заменить на данные из endpoint
+                    style: TextStyle(
+                      color: Colors.brown.shade700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Второй flex-ряд: иконка слева, цифра справа
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(Icons.push_pin, color: Colors.red, size: 20),
+                  Text(
+                    '3', // TODO: заменить на данные из endpoint
+                    style: TextStyle(
+                      color: Colors.brown.shade700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Кнопка выбора семьи
+        if (familyBusiness != null)
+          Expanded(child: _buildFamilyButton(familyBusiness))
+        else
+          Expanded(child: _buildAddFamilyButton()),
+      ],
+    );
+  }
+
+  Widget _buildBusinessColumn(
+    List<Business> businessList,
+    ProfileProvider provider,
+  ) {
+    return Column(
+      children: [
+        // Flex-колонка с двумя элементами (flex-рядами)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              // Первый flex-ряд: иконка слева, цифра справа
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(
+                    Icons.notifications,
+                    color: Colors.amber.shade700,
+                    size: 20,
+                  ),
+                  Text(
+                    '0', // TODO: заменить на данные из endpoint
+                    style: TextStyle(
+                      color: Colors.brown.shade700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Второй flex-ряд: иконка слева, цифра справа
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(Icons.push_pin, color: Colors.red, size: 20),
+                  Text(
+                    '5', // TODO: заменить на данные из endpoint
+                    style: TextStyle(
+                      color: Colors.brown.shade700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Список бизнесов или кнопка создания
+        if (businessList.isNotEmpty)
+          Expanded(child: _buildBusinessList(businessList))
+        else
+          Expanded(child: _buildAddBusinessButton()),
+      ],
+    );
+  }
+
+  Widget _buildBottomActionBar() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade800,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Expanded(
+            child: _buildBottomActionItem(
+              icon: Icons.add,
+              label: 'Создать задачу',
+              onTap: () {
+                // Переход на создание задачи
+                Navigator.of(context).pushNamed('/tasks');
+              },
+            ),
+          ),
+          Expanded(
+            child: _buildBottomActionItem(
+              icon: Icons.edit_note,
+              label: 'Не забыть',
+              onTap: () {
+                Navigator.of(context).pushNamed('/remember');
+              },
+            ),
+          ),
+          Expanded(
+            child: _buildBottomActionItem(
+              icon: Icons.mic,
+              label: '',
+              onTap: _showVoiceRecordDialog,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomActionItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
