@@ -187,6 +187,203 @@ class _RememberPageState extends State<RememberPage> {
     }
   }
 
+  void _showItemDetailsDialog(BuildContext context, InboxItem item) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder:
+          (context) => Dialog(
+            insetPadding: EdgeInsets.zero,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+              ),
+              child: Column(
+                children: [
+                  // AppBar с кнопкой закрытия
+                  AppBar(
+                    title: const Text('Детали элемента'),
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  // Контент
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Название
+                          if (item.title != null && item.title!.isNotEmpty) ...[
+                            const Text(
+                              'Название',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.title!,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          // Категория
+                          if (item.category != null) ...[
+                            const Text(
+                              'Категория',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                item.category!.displayName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          // Описание
+                          if (item.description != null &&
+                              item.description!.isNotEmpty) ...[
+                            const Text(
+                              'Описание',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.description!,
+                              style: const TextStyle(fontSize: 16, height: 1.5),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          // Статус
+                          Row(
+                            children: [
+                              const Text(
+                                'Статус: ',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      item.isArchived
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        item.isArchived
+                                            ? Colors.green.withOpacity(0.3)
+                                            : Colors.orange.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      item.isArchived
+                                          ? Icons.check_circle
+                                          : Icons.pending,
+                                      size: 16,
+                                      color:
+                                          item.isArchived
+                                              ? Colors.green
+                                              : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      item.isArchived
+                                          ? 'Обработано'
+                                          : 'Не обработано',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color:
+                                            item.isArchived
+                                                ? Colors.green
+                                                : Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          // Даты
+                          const Text(
+                            'Даты',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Создано: ${_formatDateTime(item.createdAt)}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Обновлено: ${_formatDateTime(item.updatedAt)}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
   void _showEditDialog(BuildContext context, InboxItem item) {
     final titleController = TextEditingController(text: item.title ?? '');
     final descriptionController = TextEditingController(
@@ -602,6 +799,11 @@ class _RememberPageState extends State<RememberPage> {
                                         onEdit:
                                             () =>
                                                 _showEditDialog(context, item),
+                                        onShowDetails:
+                                            () => _showItemDetailsDialog(
+                                              context,
+                                              item,
+                                            ),
                                         onToggleCheck:
                                             (item) => _toggleArchiveStatus(
                                               context,
@@ -1055,6 +1257,7 @@ class _DraggableInboxItem extends StatefulWidget {
   final VoidCallback onConvertToTask;
   final VoidCallback onArchive;
   final VoidCallback onEdit;
+  final VoidCallback onShowDetails;
   final Function(InboxItem) onToggleCheck;
   final VoidCallback? onDragStart;
   final VoidCallback? onDragEnd;
@@ -1064,6 +1267,7 @@ class _DraggableInboxItem extends StatefulWidget {
     required this.onConvertToTask,
     required this.onArchive,
     required this.onEdit,
+    required this.onShowDetails,
     required this.onToggleCheck,
     this.onDragStart,
     this.onDragEnd,
@@ -1077,6 +1281,7 @@ class _DraggableInboxItemState extends State<_DraggableInboxItem>
     with SingleTickerProviderStateMixin {
   late AnimationController _checkAnimationController;
   late Animation<double> _checkAnimation;
+  bool _showControls = false;
 
   @override
   void initState() {
@@ -1277,28 +1482,63 @@ class _DraggableInboxItemState extends State<_DraggableInboxItem>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Круг операций (всегда видимый)
+            // Троеточие и иконки управления
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Иконки управления (показываются при нажатии на троеточие)
+                if (_showControls) ...[
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, size: 16),
+                    onPressed: () {
+                      setState(() => _showControls = false);
+                      widget.onShowDetails();
+                    },
+                    tooltip: 'Детали',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.task, size: 16),
+                    onPressed: () {
+                      setState(() => _showControls = false);
+                      widget.onConvertToTask();
+                    },
+                    tooltip: 'Превратить в задачу',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.archive, size: 16),
+                    onPressed: () {
+                      setState(() => _showControls = false);
+                      widget.onArchive();
+                    },
+                    tooltip: 'Обработать',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 16),
+                    onPressed: () {
+                      setState(() => _showControls = false);
+                      widget.onEdit();
+                    },
+                    tooltip: 'Редактировать',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+                // Иконка троеточия
                 IconButton(
-                  icon: const Icon(Icons.task, size: 16),
-                  onPressed: widget.onConvertToTask,
-                  tooltip: 'Превратить в задачу',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.archive, size: 16),
-                  onPressed: widget.onArchive,
-                  tooltip: 'Обработать',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 16),
-                  onPressed: widget.onEdit,
-                  tooltip: 'Редактировать',
+                  icon: Icon(
+                    _showControls ? Icons.close : Icons.more_vert,
+                    size: 16,
+                  ),
+                  onPressed: () {
+                    setState(() => _showControls = !_showControls);
+                  },
+                  tooltip: 'Действия',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
