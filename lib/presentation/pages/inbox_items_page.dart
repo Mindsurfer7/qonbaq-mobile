@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import '../../domain/entities/inbox_item.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/create_task.dart';
@@ -741,10 +742,35 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
 
       if (kIsWeb) {
         // Для веба нужно получить байты из blob URL
-        // AudioRecordingService должен предоставить способ получить байты
-        // Пока используем заглушку - в реальности нужно получить из service
-        widget.onError('Веб-платформа пока не поддерживается');
-        return;
+        final blobUrl = audioService.currentRecordingPath;
+        if (blobUrl == null) {
+          widget.onError('Blob URL не найден');
+          return;
+        }
+
+        try {
+          final audioResponse = await http.get(Uri.parse(blobUrl));
+          if (audioResponse.statusCode != 200) {
+            widget.onError('Ошибка загрузки из Blob: ${audioResponse.statusCode}');
+            return;
+          }
+
+          audioBytes = audioResponse.bodyBytes;
+          if (audioBytes.isEmpty) {
+            widget.onError('Запись пустая');
+            return;
+          }
+
+          // Проверяем размер файла (максимум 25 МБ)
+          const maxSizeInBytes = 25 * 1024 * 1024; // 25 МБ
+          if (audioBytes.length > maxSizeInBytes) {
+            widget.onError('Файл слишком большой. Максимум: 25 МБ');
+            return;
+          }
+        } catch (e) {
+          widget.onError('Ошибка получения аудио из Blob: $e');
+          return;
+        }
       } else {
         audioFile = audioService.currentRecordingPath;
         if (audioFile == null) {
