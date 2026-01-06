@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/inbox_item.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/create_task.dart';
@@ -10,6 +12,8 @@ import '../../data/models/task_model.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/profile_provider.dart';
 import '../../core/services/audio_recording_service.dart';
+import '../../core/utils/dropdown_helpers.dart';
+import '../../core/theme/theme_extensions.dart';
 import '../widgets/create_task_form.dart';
 
 /// Страница "Заметки на ходу" с 4 блоками по категориям
@@ -761,6 +765,8 @@ class _RememberPageState extends State<RememberPage> {
                               (isHovered && !isSourceCategory);
 
                           return Container(
+                            width: double.infinity,
+                            constraints: const BoxConstraints(minHeight: 35),
                             decoration: BoxDecoration(
                               color:
                                   shouldHighlight
@@ -772,21 +778,22 @@ class _RememberPageState extends State<RememberPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Список элементов категории
-                                if (items.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(
-                                      'Нет элементов',
-                                      style: TextStyle(
-                                        color: Colors.grey[400],
-                                        fontSize: 12,
-                                      ),
+                                ...items.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final item = entry.value;
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      top: index == 0 ? 4.0 : 0.0,
+                                      bottom: 4.0,
                                     ),
-                                  )
-                                else
-                                  ...items.map(
-                                    (item) => Padding(
-                                      padding: const EdgeInsets.only(top: 4.0),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.grey.withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                       child: _DraggableInboxItem(
                                         item: item,
                                         onConvertToTask:
@@ -824,7 +831,8 @@ class _RememberPageState extends State<RememberPage> {
                                         },
                                       ),
                                     ),
-                                  ),
+                                  );
+                                }),
                               ],
                             ),
                           );
@@ -942,34 +950,69 @@ class _RememberPageState extends State<RememberPage> {
       return;
     }
 
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
+    final _formKey = GlobalKey<FormBuilderState>();
 
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
             title: const Text('Создать элемент'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Название',
-                    border: OutlineInputBorder(),
+            content: FormBuilder(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FormBuilderTextField(
+                    name: 'title',
+                    decoration: const InputDecoration(
+                      labelText: 'Название',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Описание',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  FormBuilderTextField(
+                    name: 'description',
+                    decoration: const InputDecoration(
+                      labelText: 'Описание',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 4,
                   ),
-                  maxLines: 4,
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  FormBuilderDropdown<InboxItemCategory>(
+                    name: 'category',
+                    decoration: InputDecoration(
+                      labelText: 'Категория *',
+                      border: const OutlineInputBorder(),
+                    ),
+                    dropdownColor: context.appTheme.backgroundSurface,
+                    borderRadius: BorderRadius.circular(
+                      context.appTheme.borderRadius,
+                    ),
+                    validator: FormBuilderValidators.required(
+                      errorText: 'Категория обязательна',
+                    ),
+                    selectedItemBuilder: (BuildContext context) {
+                      return InboxItemCategory.values.map<Widget>((
+                        InboxItemCategory category,
+                      ) {
+                        return Text(category.displayName);
+                      }).toList();
+                    },
+                    items:
+                        InboxItemCategory.values
+                            .map(
+                              (category) =>
+                                  createStyledDropdownItem<InboxItemCategory>(
+                                    context: context,
+                                    value: category,
+                                    child: Text(category.displayName),
+                                  ),
+                            )
+                            .toList(),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -978,36 +1021,43 @@ class _RememberPageState extends State<RememberPage> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  final inboxProvider = Provider.of<InboxProvider>(
-                    context,
-                    listen: false,
-                  );
-                  final success = await inboxProvider.createItem(
-                    businessId: selectedBusiness.id,
-                    title:
-                        titleController.text.trim().isEmpty
-                            ? null
-                            : titleController.text.trim(),
-                    description:
-                        descriptionController.text.trim().isEmpty
-                            ? null
-                            : descriptionController.text.trim(),
-                  );
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Успешно создано')),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            inboxProvider.error ?? 'Ошибка создания',
+                  if (_formKey.currentState?.saveAndValidate() ?? false) {
+                    final formData = _formKey.currentState!.value;
+                    final inboxProvider = Provider.of<InboxProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final success = await inboxProvider.createItem(
+                      businessId: selectedBusiness.id,
+                      title:
+                          (formData['title'] as String?)?.trim().isEmpty ?? true
+                              ? null
+                              : (formData['title'] as String?)?.trim(),
+                      description:
+                          (formData['description'] as String?)
+                                      ?.trim()
+                                      .isEmpty ??
+                                  true
+                              ? null
+                              : (formData['description'] as String?)?.trim(),
+                      category: formData['category'] as InboxItemCategory?,
+                    );
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Успешно создано')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              inboxProvider.error ?? 'Ошибка создания',
+                            ),
+                            backgroundColor: Colors.red,
                           ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                        );
+                      }
                     }
                   }
                 },
@@ -1427,7 +1477,7 @@ class _DraggableInboxItemState extends State<_DraggableInboxItem>
     return Opacity(
       opacity: isArchived ? 0.65 : 1.0, // 0.65 в диапазоне 0.6-0.7
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
