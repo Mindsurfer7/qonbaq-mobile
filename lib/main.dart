@@ -154,7 +154,12 @@ import 'package:qonbaq/domain/repositories/service_repository.dart';
 import 'package:qonbaq/data/datasources/resource_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/resource_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/resource_repository.dart';
+import 'package:qonbaq/data/datasources/time_slot_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/time_slot_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/time_slot_repository.dart';
+import 'package:qonbaq/domain/entities/service.dart';
 import 'package:qonbaq/presentation/pages/services_admin_page.dart';
+import 'package:qonbaq/presentation/pages/service_detail_page.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -393,6 +398,12 @@ class MyApp extends StatelessWidget {
       remoteDataSource: resourceRemoteDataSource,
     );
 
+    // Инициализация зависимостей для тайм-слотов
+    final timeSlotRemoteDataSource = TimeSlotRemoteDataSourceImpl(apiClient: apiClient);
+    final TimeSlotRepository timeSlotRepository = TimeSlotRepositoryImpl(
+      remoteDataSource: timeSlotRemoteDataSource,
+    );
+
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
@@ -432,6 +443,7 @@ class MyApp extends StatelessWidget {
         Provider<GetFinancialForm>(create: (_) => getFinancialForm),
         Provider<ServiceRepository>(create: (_) => serviceRepository),
         Provider<ResourceRepository>(create: (_) => resourceRepository),
+        Provider<TimeSlotRepository>(create: (_) => timeSlotRepository),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),
@@ -494,6 +506,10 @@ class MyApp extends StatelessWidget {
               (context) => const MonitorPanelPage(),
           '/business/operational/services-admin':
               (context) => const ServicesAdminPage(),
+          '/business/operational/services-admin/service-detail': (context) {
+            final service = ModalRoute.of(context)!.settings.arguments as Service;
+            return ServiceDetailPage(service: service);
+          },
           // Финансовый блок
           '/business/financial': (context) => const FinancialBlockPage(),
           '/business/financial/payment_requests':

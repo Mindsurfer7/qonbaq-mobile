@@ -1,4 +1,3 @@
-import '../../domain/entities/service.dart';
 import '../models/service_model.dart';
 import '../models/service_assignment_model.dart';
 
@@ -36,7 +35,6 @@ abstract class ServiceRemoteDataSource {
   Future<ServiceAssignmentModel> createAssignment(
     String serviceId, {
     String? employmentId,
-    String? resourceId,
   });
 
   /// Обновить назначение (включить/выключить доступность)

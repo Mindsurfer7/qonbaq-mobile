@@ -42,6 +42,16 @@ class TimeSlotRepositoryImpl extends RepositoryImpl implements TimeSlotRepositor
   }
 
   @override
+  Future<Either<Failure, List<TimeSlotGroup>>> getTimeSlotsByService(String serviceId) async {
+    try {
+      final groups = await remoteDataSource.getTimeSlotsByService(serviceId);
+      return Right(groups.map((model) => model.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении тайм-слотов: $e'));
+    }
+  }
+
+  @override
   Future<Either<Failure, TimeSlot>> getTimeSlotById(String id) async {
     try {
       final timeSlot = await remoteDataSource.getTimeSlotById(id);

@@ -2,7 +2,7 @@ import 'dart:convert';
 import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/error_handler.dart';
-import '../../domain/entities/time_slot.dart';
+import '../../domain/entities/time_slot.dart' show TimeSlotStatus;
 import '../datasources/time_slot_remote_datasource.dart';
 import '../models/time_slot_model.dart';
 import '../models/api_response.dart';
@@ -87,6 +87,39 @@ class TimeSlotRemoteDataSourceImpl extends TimeSlotRemoteDataSource {
         return apiResponse.data;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
+      } else {
+        throw Exception(ErrorHandler.getErrorMessage(response.statusCode, response.body));
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<List<TimeSlotGroupModel>> getTimeSlotsByService(String serviceId) async {
+    try {
+      // Endpoint публичный, не требует авторизации
+      final response = await apiClient.get(
+        '/api/time-slots/by-service/$serviceId',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final groupsList = data as List<dynamic>;
+            return groupsList
+                .map((item) => TimeSlotGroupModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          },
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 404) {
+        throw Exception('Услуга не найдена');
       } else {
         throw Exception(ErrorHandler.getErrorMessage(response.statusCode, response.body));
       }

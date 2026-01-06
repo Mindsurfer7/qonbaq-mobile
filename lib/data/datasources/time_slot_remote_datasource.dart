@@ -14,6 +14,9 @@ abstract class TimeSlotRemoteDataSource {
     TimeSlotStatus? status,
   });
 
+  /// Получить тайм-слоты по serviceId с группировкой по исполнителю
+  Future<List<TimeSlotGroupModel>> getTimeSlotsByService(String serviceId);
+
   /// Получить тайм-слот по ID
   Future<TimeSlotModel> getTimeSlotById(String id);
 

@@ -57,6 +57,7 @@ class _CreateServiceDialogState extends State<CreateServiceDialog> {
       description: _descriptionController.text.trim().isEmpty
           ? null
           : _descriptionController.text.trim(),
+      type: ServiceType.personBased, // По умолчанию услуга людей
       duration: int.tryParse(_durationController.text) ?? 60,
       price: _priceController.text.isNotEmpty
           ? double.tryParse(_priceController.text)

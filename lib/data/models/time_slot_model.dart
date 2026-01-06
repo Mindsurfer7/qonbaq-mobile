@@ -1,106 +1,48 @@
 import '../../domain/entities/time_slot.dart';
-import '../models/model.dart';
 
-/// Модель тайм-слота
-class TimeSlotModel extends TimeSlot implements Model {
+/// Модель тайм-слота для data слоя
+class TimeSlotModel {
+  final String id;
+  final String serviceId;
+  final String? employmentId;
+  final DateTime startTime;
+  final DateTime endTime;
+  final bool isAvailable;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
   const TimeSlotModel({
-    required super.id,
-    super.employmentId,
-    super.resourceId,
-    super.serviceId,
-    required super.startTime,
-    required super.endTime,
-    required super.status,
-    required super.createdAt,
-    required super.updatedAt,
+    required this.id,
+    required this.serviceId,
+    this.employmentId,
+    required this.startTime,
+    required this.endTime,
+    required this.isAvailable,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory TimeSlotModel.fromJson(Map<String, dynamic> json) {
     return TimeSlotModel(
       id: json['id'] as String,
+      serviceId: json['serviceId'] as String,
       employmentId: json['employmentId'] as String?,
-      resourceId: json['resourceId'] as String?,
-      serviceId: json['serviceId'] as String?,
       startTime: DateTime.parse(json['startTime'] as String),
       endTime: DateTime.parse(json['endTime'] as String),
-      status: _parseStatus(json['status'] as String),
+      isAvailable: json['isAvailable'] as bool? ?? true,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 
-  static TimeSlotStatus _parseStatus(String status) {
-    switch (status.toUpperCase()) {
-      case 'AVAILABLE':
-        return TimeSlotStatus.available;
-      case 'BOOKED':
-        return TimeSlotStatus.booked;
-      case 'UNAVAILABLE':
-        return TimeSlotStatus.unavailable;
-      default:
-        return TimeSlotStatus.available;
-    }
-  }
-
-  static String _statusToString(TimeSlotStatus status) {
-    switch (status) {
-      case TimeSlotStatus.available:
-        return 'AVAILABLE';
-      case TimeSlotStatus.booked:
-        return 'BOOKED';
-      case TimeSlotStatus.unavailable:
-        return 'UNAVAILABLE';
-    }
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      if (employmentId != null) 'employmentId': employmentId,
-      if (resourceId != null) 'resourceId': resourceId,
-      if (serviceId != null) 'serviceId': serviceId,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'status': _statusToString(status),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
-
-  /// Преобразование в JSON для создания тайм-слота
-  Map<String, dynamic> toCreateJson() {
-    return {
-      if (employmentId != null) 'employmentId': employmentId,
-      if (resourceId != null) 'resourceId': resourceId,
-      if (serviceId != null) 'serviceId': serviceId,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'status': _statusToString(status),
-    };
-  }
-
-  /// Преобразование в JSON для обновления тайм-слота
-  Map<String, dynamic> toUpdateJson() {
-    return {
-      if (employmentId != null) 'employmentId': employmentId,
-      if (resourceId != null) 'resourceId': resourceId,
-      if (serviceId != null) 'serviceId': serviceId,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'status': _statusToString(status),
-    };
-  }
-
   TimeSlot toEntity() {
     return TimeSlot(
       id: id,
-      employmentId: employmentId,
-      resourceId: resourceId,
       serviceId: serviceId,
+      employmentId: employmentId,
       startTime: startTime,
       endTime: endTime,
-      status: status,
+      isAvailable: isAvailable,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -109,15 +51,71 @@ class TimeSlotModel extends TimeSlot implements Model {
   factory TimeSlotModel.fromEntity(TimeSlot timeSlot) {
     return TimeSlotModel(
       id: timeSlot.id,
-      employmentId: timeSlot.employmentId,
-      resourceId: timeSlot.resourceId,
       serviceId: timeSlot.serviceId,
+      employmentId: timeSlot.employmentId,
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
-      status: timeSlot.status,
+      isAvailable: timeSlot.isAvailable,
       createdAt: timeSlot.createdAt,
       updatedAt: timeSlot.updatedAt,
     );
   }
+
+  Map<String, dynamic> toCreateJson() {
+    return {
+      'serviceId': serviceId,
+      if (employmentId != null) 'employmentId': employmentId,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'isAvailable': isAvailable,
+    };
+  }
+
+  Map<String, dynamic> toUpdateJson() {
+    return {
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'isAvailable': isAvailable,
+    };
+  }
 }
 
+/// Модель группы тайм-слотов для data слоя
+class TimeSlotGroupModel {
+  final String serviceId;
+  final String serviceName;
+  final String? employmentId;
+  final String? executorName;
+  final List<TimeSlotModel> timeSlots;
+
+  const TimeSlotGroupModel({
+    required this.serviceId,
+    required this.serviceName,
+    this.employmentId,
+    this.executorName,
+    required this.timeSlots,
+  });
+
+  factory TimeSlotGroupModel.fromJson(Map<String, dynamic> json) {
+    return TimeSlotGroupModel(
+      serviceId: json['serviceId'] as String,
+      serviceName: json['serviceName'] as String,
+      employmentId: json['employmentId'] as String?,
+      executorName: json['executorName'] as String?,
+      timeSlots: (json['timeSlots'] as List<dynamic>?)
+              ?.map((item) => TimeSlotModel.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  TimeSlotGroup toEntity() {
+    return TimeSlotGroup(
+      serviceId: serviceId,
+      serviceName: serviceName,
+      employmentId: employmentId,
+      executorName: executorName,
+      timeSlots: timeSlots.map((model) => model.toEntity()).toList(),
+    );
+  }
+}

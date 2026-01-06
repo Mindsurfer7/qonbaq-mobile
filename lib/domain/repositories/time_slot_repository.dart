@@ -16,6 +16,9 @@ abstract class TimeSlotRepository extends Repository {
     TimeSlotStatus? status,
   });
 
+  /// Получить тайм-слоты по serviceId с группировкой по исполнителю
+  Future<Either<Failure, List<TimeSlotGroup>>> getTimeSlotsByService(String serviceId);
+
   /// Получить тайм-слот по ID
   Future<Either<Failure, TimeSlot>> getTimeSlotById(String id);
 

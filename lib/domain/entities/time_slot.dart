@@ -10,23 +10,21 @@ enum TimeSlotStatus {
 /// Доменная сущность тайм-слота
 class TimeSlot extends Entity {
   final String id;
-  final String? employmentId; // ID сотрудника
-  final String? resourceId; // ID ресурса
-  final String? serviceId; // ID услуги
+  final String serviceId;
+  final String? employmentId; // ID исполнителя (может быть null для RESOURCE_BASED)
   final DateTime startTime;
   final DateTime endTime;
-  final TimeSlotStatus status;
+  final bool isAvailable;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const TimeSlot({
     required this.id,
+    required this.serviceId,
     this.employmentId,
-    this.resourceId,
-    this.serviceId,
     required this.startTime,
     required this.endTime,
-    required this.status,
+    required this.isAvailable,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +40,36 @@ class TimeSlot extends Entity {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'TimeSlot(id: $id, startTime: $startTime)';
+  String toString() => 'TimeSlot(id: $id, startTime: $startTime, endTime: $endTime)';
 }
 
+/// Группа тайм-слотов по исполнителю
+class TimeSlotGroup extends Entity {
+  final String serviceId;
+  final String serviceName;
+  final String? employmentId; // null для RESOURCE_BASED услуг
+  final String? executorName; // null для RESOURCE_BASED услуг
+  final List<TimeSlot> timeSlots;
+
+  const TimeSlotGroup({
+    required this.serviceId,
+    required this.serviceName,
+    this.employmentId,
+    this.executorName,
+    required this.timeSlots,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimeSlotGroup &&
+          runtimeType == other.runtimeType &&
+          serviceId == other.serviceId &&
+          employmentId == other.employmentId;
+
+  @override
+  int get hashCode => serviceId.hashCode ^ employmentId.hashCode;
+
+  @override
+  String toString() => 'TimeSlotGroup(serviceId: $serviceId, executorName: $executorName, slots: ${timeSlots.length})';
+}

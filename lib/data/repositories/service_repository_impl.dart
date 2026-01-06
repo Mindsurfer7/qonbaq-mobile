@@ -3,7 +3,6 @@ import '../../domain/entities/service.dart';
 import '../../domain/repositories/service_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/service_model.dart';
-import '../models/service_assignment_model.dart';
 import '../datasources/service_remote_datasource.dart';
 import '../repositories/repository_impl.dart';
 import '../datasources/service_remote_datasource_impl.dart' show ValidationException;
@@ -115,13 +114,11 @@ class ServiceRepositoryImpl extends RepositoryImpl implements ServiceRepository 
   Future<Either<Failure, ServiceAssignment>> createAssignment(
     String serviceId, {
     String? employmentId,
-    String? resourceId,
   }) async {
     try {
       final assignment = await remoteDataSource.createAssignment(
         serviceId,
         employmentId: employmentId,
-        resourceId: resourceId,
       );
       return Right(assignment.toEntity());
     } on ValidationException catch (e) {

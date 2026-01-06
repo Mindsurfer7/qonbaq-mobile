@@ -351,6 +351,32 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
     );
   }
 
+  String _buildServiceSubtitle(Service service) {
+    final parts = <String>[];
+
+    // Тип услуги
+    final typeLabel =
+        service.type == ServiceType.personBased ? 'Услуга' : 'Ресурс';
+    parts.add(typeLabel);
+
+    // Для PERSON_BASED услуг показываем duration и price
+    if (service.type == ServiceType.personBased) {
+      if (service.duration != null) {
+        parts.add('Длительность: ${service.duration} мин.');
+      }
+      if (service.price != null) {
+        parts.add('Цена: ${service.price} ${service.currency ?? 'KZT'}');
+      }
+    }
+
+    // Для RESOURCE_BASED услуг показываем capacity
+    if (service.type == ServiceType.resourceBased && service.capacity != null) {
+      parts.add('Вместимость: ${service.capacity}');
+    }
+
+    return parts.join(' | ');
+  }
+
   Widget _buildServiceCard(Service service) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -360,15 +386,25 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
           color: service.isActive ? Colors.green : Colors.grey,
         ),
         title: Text(service.name),
-        subtitle: Text(
-          'Длительность: ${service.duration} мин.${service.price != null ? ' | Цена: ${service.price} ${service.currency ?? ''}' : ''}',
-        ),
+        subtitle: Text(_buildServiceSubtitle(service)),
         trailing: SizedBox(
-          width: 100,
+          width: 140,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    '/business/operational/services-admin/service-detail',
+                    arguments: service,
+                  );
+                },
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(8),
+                tooltip: 'Тайм-слоты',
+              ),
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => _editService(service),
@@ -426,11 +462,7 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
             ...service.assignments!.map((assignment) {
               return ListTile(
                 leading: const Icon(Icons.person),
-                title: Text(
-                  assignment.employee?.fullName ??
-                      assignment.resource?.name ??
-                      'Неизвестно',
-                ),
+                title: Text(assignment.employee?.fullName ?? 'Неизвестно'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => _deleteAssignment(assignment),

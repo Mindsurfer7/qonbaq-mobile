@@ -40,7 +40,7 @@ class ServiceRemoteDataSourceImpl extends ServiceRemoteDataSource {
           : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
       final response = await apiClient.get(
-        '/api/businesses/$businessId/services$queryString',
+        '/api/businesses/$businessId/services/admin$queryString',
         headers: _getAuthHeaders(),
       );
 
@@ -252,15 +252,11 @@ class ServiceRemoteDataSourceImpl extends ServiceRemoteDataSource {
   Future<ServiceAssignmentModel> createAssignment(
     String serviceId, {
     String? employmentId,
-    String? resourceId,
   }) async {
     try {
       final body = <String, dynamic>{};
       if (employmentId != null) {
         body['employmentId'] = employmentId;
-      }
-      if (resourceId != null) {
-        body['resourceId'] = resourceId;
       }
 
       final response = await apiClient.post(

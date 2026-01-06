@@ -10,9 +10,11 @@ class ServiceModel extends Service implements Model {
     required super.businessId,
     required super.name,
     super.description,
-    required super.duration,
+    required super.type,
+    super.duration,
     super.price,
     super.currency,
+    super.capacity,
     super.isActive,
     required super.createdAt,
     required super.updatedAt,
@@ -45,7 +47,16 @@ class ServiceModel extends Service implements Model {
       }).toList();
     }
 
-    // Парсинг price - может быть строкой или числом
+    // Парсинг type
+    final type = ServiceType.fromString(json['type'] as String? ?? 'PERSON_BASED');
+
+    // Парсинг duration - опционально
+    int? duration;
+    if (json['duration'] != null) {
+      duration = json['duration'] as int;
+    }
+
+    // Парсинг price - может быть строкой или числом, опционально
     double? price;
     if (json['price'] != null) {
       if (json['price'] is String) {
@@ -55,14 +66,22 @@ class ServiceModel extends Service implements Model {
       }
     }
 
+    // Парсинг capacity - опционально
+    int? capacity;
+    if (json['capacity'] != null) {
+      capacity = json['capacity'] as int;
+    }
+
     return ServiceModel(
       id: json['id'] as String,
       businessId: json['businessId'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      duration: json['duration'] as int,
+      type: type,
+      duration: duration,
       price: price,
       currency: json['currency'] as String?,
+      capacity: capacity,
       isActive: json['isActive'] as bool? ?? true,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -78,9 +97,11 @@ class ServiceModel extends Service implements Model {
       'businessId': businessId,
       'name': name,
       if (description != null) 'description': description,
-      'duration': duration,
+      'type': type.value,
+      if (duration != null) 'duration': duration,
       if (price != null) 'price': price,
       if (currency != null) 'currency': currency,
+      if (capacity != null) 'capacity': capacity,
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -99,9 +120,11 @@ class ServiceModel extends Service implements Model {
     return {
       'name': name,
       if (description != null && description!.isNotEmpty) 'description': description,
-      'duration': duration,
+      'type': type.value,
+      if (duration != null) 'duration': duration,
       if (price != null) 'price': price,
       if (currency != null) 'currency': currency,
+      if (capacity != null) 'capacity': capacity,
       if (employmentIds != null && employmentIds.isNotEmpty) 'employmentIds': employmentIds,
     };
   }
@@ -111,9 +134,11 @@ class ServiceModel extends Service implements Model {
     return {
       if (name.isNotEmpty) 'name': name,
       if (description != null) 'description': description,
-      if (duration > 0) 'duration': duration,
+      'type': type.value,
+      if (duration != null && duration! > 0) 'duration': duration,
       if (price != null) 'price': price,
       if (currency != null) 'currency': currency,
+      if (capacity != null) 'capacity': capacity,
       'isActive': isActive,
     };
   }
@@ -124,9 +149,11 @@ class ServiceModel extends Service implements Model {
       businessId: businessId,
       name: name,
       description: description,
+      type: type,
       duration: duration,
       price: price,
       currency: currency,
+      capacity: capacity,
       isActive: isActive,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -141,9 +168,11 @@ class ServiceModel extends Service implements Model {
       businessId: service.businessId,
       name: service.name,
       description: service.description,
+      type: service.type,
       duration: service.duration,
       price: service.price,
       currency: service.currency,
+      capacity: service.capacity,
       isActive: service.isActive,
       createdAt: service.createdAt,
       updatedAt: service.updatedAt,

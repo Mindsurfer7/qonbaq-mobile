@@ -1,9 +1,7 @@
 import '../../domain/entities/service.dart';
 import '../../domain/entities/employee.dart';
-import '../../domain/entities/resource.dart';
 import '../models/model.dart';
 import 'employee_model.dart';
-import 'resource_model.dart';
 
 /// Модель назначения услуги
 class ServiceAssignmentModel extends ServiceAssignment implements Model {
@@ -11,12 +9,10 @@ class ServiceAssignmentModel extends ServiceAssignment implements Model {
     required super.id,
     required super.serviceId,
     super.employmentId,
-    super.resourceId,
     super.isActive,
     required super.createdAt,
     required super.updatedAt,
     super.employee,
-    super.resource,
   });
 
   factory ServiceAssignmentModel.fromJson(Map<String, dynamic> json) {
@@ -39,22 +35,14 @@ class ServiceAssignmentModel extends ServiceAssignment implements Model {
       }
     }
 
-    // Парсинг resource
-    Resource? resource;
-    if (json['resource'] != null) {
-      resource = ResourceModel.fromJson(json['resource'] as Map<String, dynamic>).toEntity();
-    }
-
     return ServiceAssignmentModel(
       id: json['id'] as String,
       serviceId: json['serviceId'] as String,
       employmentId: json['employmentId'] as String?,
-      resourceId: json['resourceId'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       employee: employee,
-      resource: resource,
     );
   }
 
@@ -64,7 +52,6 @@ class ServiceAssignmentModel extends ServiceAssignment implements Model {
       'id': id,
       'serviceId': serviceId,
       if (employmentId != null) 'employmentId': employmentId,
-      if (resourceId != null) 'resourceId': resourceId,
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -76,12 +63,10 @@ class ServiceAssignmentModel extends ServiceAssignment implements Model {
       id: id,
       serviceId: serviceId,
       employmentId: employmentId,
-      resourceId: resourceId,
       isActive: isActive,
       createdAt: createdAt,
       updatedAt: updatedAt,
       employee: employee,
-      resource: resource,
     );
   }
 
@@ -90,12 +75,10 @@ class ServiceAssignmentModel extends ServiceAssignment implements Model {
       id: assignment.id,
       serviceId: assignment.serviceId,
       employmentId: assignment.employmentId,
-      resourceId: assignment.resourceId,
       isActive: assignment.isActive,
       createdAt: assignment.createdAt,
       updatedAt: assignment.updatedAt,
       employee: assignment.employee,
-      resource: assignment.resource,
     );
   }
 }

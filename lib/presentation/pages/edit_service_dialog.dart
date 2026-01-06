@@ -70,6 +70,7 @@ class _EditServiceDialogState extends State<EditServiceDialog> {
       description: _descriptionController.text.trim().isEmpty
           ? null
           : _descriptionController.text.trim(),
+      type: widget.service.type, // Сохраняем тип услуги
       duration: int.tryParse(_durationController.text) ?? 60,
       price: _priceController.text.isNotEmpty
           ? double.tryParse(_priceController.text)

@@ -1,7 +1,22 @@
 import '../entities/entity.dart';
 import 'employee.dart';
-import 'resource.dart';
 import 'user_profile.dart';
+
+/// Тип услуги
+enum ServiceType {
+  personBased('PERSON_BASED'),
+  resourceBased('RESOURCE_BASED');
+
+  final String value;
+  const ServiceType(this.value);
+
+  static ServiceType fromString(String value) {
+    return ServiceType.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => ServiceType.personBased,
+    );
+  }
+}
 
 /// Доменная сущность услуги
 class Service extends Entity {
@@ -9,13 +24,15 @@ class Service extends Entity {
   final String businessId;
   final String name;
   final String? description;
-  final int duration; // Длительность в минутах
-  final double? price;
-  final String? currency;
+  final ServiceType type; // Тип услуги: PERSON_BASED или RESOURCE_BASED
+  final int? duration; // Длительность в минутах (обязательно для PERSON_BASED)
+  final double? price; // Цена (обязательно для PERSON_BASED)
+  final String? currency; // Валюта (по умолчанию KZT для PERSON_BASED)
+  final int? capacity; // Вместимость (для RESOURCE_BASED)
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<ServiceAssignment>? assignments; // Назначения сотрудников/ресурсов
+  final List<ServiceAssignment>? assignments; // Назначения сотрудников
   final List<ProfileUser>? users; // Пользователи, участвующие в услуге
 
   const Service({
@@ -23,9 +40,11 @@ class Service extends Entity {
     required this.businessId,
     required this.name,
     this.description,
-    required this.duration,
+    required this.type,
+    this.duration,
     this.price,
     this.currency,
+    this.capacity,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -47,30 +66,26 @@ class Service extends Entity {
   String toString() => 'Service(id: $id, name: $name)';
 }
 
-/// Назначение сотрудника или ресурса на услугу
+/// Назначение сотрудника на услугу
 class ServiceAssignment extends Entity {
   final String id;
   final String serviceId;
-  final String? employmentId; // ID сотрудника (employment)
-  final String? resourceId; // ID ресурса
+  final String? employmentId; // ID сотрудника (employment) - обязательно для PERSON_BASED услуг
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
   
   // Детальные данные (для детальной страницы)
   final Employee? employee; // Данные сотрудника
-  final Resource? resource; // Данные ресурса
 
   const ServiceAssignment({
     required this.id,
     required this.serviceId,
     this.employmentId,
-    this.resourceId,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
     this.employee,
-    this.resource,
   });
 
   @override

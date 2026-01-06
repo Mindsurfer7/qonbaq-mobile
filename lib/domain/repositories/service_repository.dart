@@ -37,7 +37,6 @@ abstract class ServiceRepository extends Repository {
   Future<Either<Failure, ServiceAssignment>> createAssignment(
     String serviceId, {
     String? employmentId,
-    String? resourceId,
   });
 
   /// Обновить назначение (включить/выключить доступность)
