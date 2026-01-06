@@ -223,6 +223,53 @@ class ApiClient {
     }
   }
 
+  /// PATCH запрос
+  Future<http.Response> patch(
+    String endpoint, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final url = Uri.parse('$baseUrl$endpoint');
+    final defaultHeaders = {'Content-Type': 'application/json', ...?headers};
+    final bodyString = body != null ? jsonEncode(body) : null;
+    _logRequest('PATCH', url, defaultHeaders, body: body);
+
+    try {
+      var response = await client.patch(
+        url,
+        headers: defaultHeaders,
+        body: bodyString,
+      );
+      _logResponse(response);
+
+      // Обрабатываем через интерсептор, если он есть
+      if (authInterceptor != null && response.statusCode == 401) {
+        final shouldRetry = await authInterceptor!.interceptResponse(response);
+        if (shouldRetry) {
+          // Обновляем заголовки с новым токеном
+          final newHeaders = Map<String, String>.from(defaultHeaders);
+          final newToken = await _getAccessToken();
+          if (newToken != null) {
+            newHeaders['Authorization'] = 'Bearer $newToken';
+          }
+          // Повторяем запрос
+          print('🔄 Retrying PATCH request after token refresh...');
+          response = await client.patch(
+            url,
+            headers: newHeaders,
+            body: bodyString,
+          );
+          _logResponse(response, isRetry: true);
+        }
+      }
+
+      return response;
+    } catch (e, stackTrace) {
+      _logError('PATCH', url, e, stackTrace);
+      rethrow;
+    }
+  }
+
   /// DELETE запрос
   Future<http.Response> delete(
     String endpoint, {

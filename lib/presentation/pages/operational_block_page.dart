@@ -55,6 +55,12 @@ class OperationalBlockPage extends StatelessWidget {
             '/business/operational/monitor_panel',
             Icons.monitor,
           ),
+          _buildSectionCard(
+            context,
+            'Управление услугами',
+            '/business/operational/services-admin',
+            Icons.room_service,
+          ),
         ],
       ),
     );

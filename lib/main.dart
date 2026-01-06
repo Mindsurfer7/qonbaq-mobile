@@ -148,6 +148,13 @@ import 'package:qonbaq/domain/usecases/delete_inbox_item.dart';
 import 'package:qonbaq/data/datasources/transcription_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/voice_assist_remote_datasource_impl.dart';
 import 'package:qonbaq/core/services/audio_recording_service.dart';
+import 'package:qonbaq/data/datasources/service_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/service_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/service_repository.dart';
+import 'package:qonbaq/data/datasources/resource_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/resource_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/resource_repository.dart';
+import 'package:qonbaq/presentation/pages/services_admin_page.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -374,6 +381,18 @@ class MyApp extends StatelessWidget {
       voiceAssistDataSource,
     );
 
+    // Инициализация зависимостей для услуг
+    final serviceRemoteDataSource = ServiceRemoteDataSourceImpl(apiClient: apiClient);
+    final ServiceRepository serviceRepository = ServiceRepositoryImpl(
+      remoteDataSource: serviceRemoteDataSource,
+    );
+
+    // Инициализация зависимостей для ресурсов
+    final resourceRemoteDataSource = ResourceRemoteDataSourceImpl(apiClient: apiClient);
+    final ResourceRepository resourceRepository = ResourceRepositoryImpl(
+      remoteDataSource: resourceRemoteDataSource,
+    );
+
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
@@ -411,6 +430,8 @@ class MyApp extends StatelessWidget {
         Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
         Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
         Provider<GetFinancialForm>(create: (_) => getFinancialForm),
+        Provider<ServiceRepository>(create: (_) => serviceRepository),
+        Provider<ResourceRepository>(create: (_) => resourceRepository),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),
@@ -471,6 +492,8 @@ class MyApp extends StatelessWidget {
               (context) => const HumanResourcesPage(),
           '/business/operational/monitor_panel':
               (context) => const MonitorPanelPage(),
+          '/business/operational/services-admin':
+              (context) => const ServicesAdminPage(),
           // Финансовый блок
           '/business/financial': (context) => const FinancialBlockPage(),
           '/business/financial/payment_requests':
