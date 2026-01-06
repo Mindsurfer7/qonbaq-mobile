@@ -68,6 +68,9 @@ dependencies:
   
   # Работа с путями файловой системы
   path_provider: ^2.1.4
+  
+  # Share API для мобильных платформ
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

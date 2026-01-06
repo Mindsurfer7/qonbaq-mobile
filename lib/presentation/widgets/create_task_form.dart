@@ -46,8 +46,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   final _descriptionController = TextEditingController();
   final _titleFocusNode = FocusNode();
   final _descriptionFocusNode = FocusNode();
-  final _voiceNoteUrlFocusNode = FocusNode();
-  final _observerIdsFocusNode = FocusNode();
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
@@ -184,13 +182,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       });
       formState.fields['dontForget']?.didChange(true);
     }
-    if (taskData.voiceNoteUrl != null && taskData.voiceNoteUrl!.isNotEmpty) {
-      formState.fields['voiceNoteUrl']?.didChange(taskData.voiceNoteUrl);
-    }
-    if (taskData.observerIds != null && taskData.observerIds!.isNotEmpty) {
-      final observerIdsString = taskData.observerIds!.join(', ');
-      formState.fields['observerIds']?.didChange(observerIdsString);
-    }
 
     setState(() {});
   }
@@ -200,8 +191,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     _descriptionController.dispose();
     _titleFocusNode.dispose();
     _descriptionFocusNode.dispose();
-    _voiceNoteUrlFocusNode.dispose();
-    _observerIdsFocusNode.dispose();
     super.dispose();
   }
 
@@ -220,8 +209,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       'isRecurring': 'isRecurring',
       'hasControlPoint': 'hasControlPoint',
       'dontForget': 'dontForget',
-      'voiceNoteUrl': 'voiceNoteUrl',
-      'observerIds': 'observerIds',
       'businessId':
           'businessId', // Хотя этого поля нет в форме, но может быть ошибка
     };
@@ -461,42 +448,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 });
               },
             ),
-            const SizedBox(height: 16),
-
-            // URL голосовой заметки
-            FormBuilderTextField(
-              name: 'voiceNoteUrl',
-              focusNode: _voiceNoteUrlFocusNode,
-              decoration: InputDecoration(
-                labelText: 'URL голосовой заметки',
-                border: const OutlineInputBorder(),
-                errorText: _fieldErrors['voiceNoteUrl'],
-                errorMaxLines: 2,
-              ),
-              textInputAction: TextInputAction.next,
-              onSubmitted: (_) {
-                _observerIdsFocusNode.requestFocus();
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // ID наблюдателей (через запятую)
-            FormBuilderTextField(
-              name: 'observerIds',
-              focusNode: _observerIdsFocusNode,
-              decoration: InputDecoration(
-                labelText: 'ID наблюдателей',
-                border: const OutlineInputBorder(),
-                hintText: 'Введите ID через запятую',
-                helperText: 'Разделите ID запятой, например: id1,id2,id3',
-                errorText: _fieldErrors['observerIds'],
-                errorMaxLines: 2,
-              ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                _handleSubmit();
-              },
-            ),
             const SizedBox(height: 24),
 
             // Кнопки
@@ -549,10 +500,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         isRecurring: formData['isRecurring'] as bool? ?? false,
         hasControlPoint: formData['hasControlPoint'] as bool? ?? false,
         dontForget: formData['dontForget'] as bool? ?? false,
-        voiceNoteUrl: formData['voiceNoteUrl'] as String?,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        observerIds: _parseObserverIds(formData['observerIds'] as String?),
       );
 
       widget.onSubmit(task);
@@ -566,19 +515,6 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         );
       }
     }
-  }
-
-  List<String>? _parseObserverIds(String? observerIdsString) {
-    if (observerIdsString == null || observerIdsString.trim().isEmpty) {
-      return null;
-    }
-    final ids =
-        observerIdsString
-            .split(',')
-            .map((id) => id.trim())
-            .where((id) => id.isNotEmpty)
-            .toList();
-    return ids.isEmpty ? null : ids;
   }
 
   String _getStatusText(TaskStatus status) {

@@ -44,7 +44,7 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
         body: body,
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final apiResponse = ApiResponse.fromJson(
           json,
