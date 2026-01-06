@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../core/utils/dropdown_helpers.dart';
-import '../../core/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
+import 'searchable_dropdown.dart';
 
 /// Виджет для выбора пользователя (исполнитель/поручитель)
 class UserSelectorWidget extends StatefulWidget {
@@ -178,80 +177,76 @@ class _UserSelectorWidgetState extends State<UserSelectorWidget> {
       );
     }
 
-    return DropdownButtonFormField<Employee>(
+    return SearchableDropdown<Employee>(
       value: _selectedEmployee,
-      decoration: InputDecoration(
-        labelText: widget.label + (widget.required ? ' *' : ''),
-        border: const OutlineInputBorder(),
-      ),
-      isDense: true,
-      dropdownColor: context.appTheme.backgroundSurface,
-      borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
-      // Показываем только имя когда dropdown закрыт (выбранное значение)
-      selectedItemBuilder: (BuildContext context) {
-        return _employees!.map<Widget>((Employee employee) {
-          return Text(
-            employee.fullName,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          );
-        }).toList();
-      },
-      // В открытом списке показываем имя и роль
-      items:
-          _employees!.map((employee) {
-            return createStyledDropdownItem<Employee>(
-              context: context,
-              value: employee,
-              child: SizedBox(
-                height: 48,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        employee.fullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        maxLines: 1,
-                      ),
-                    ),
-                    if (employee.role != null && employee.role!.isNotEmpty)
-                      Flexible(
-                        child: Text(
-                          employee.role!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          maxLines: 1,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+      items: _employees!,
+      getDisplayText: (employee) => employee.fullName,
+      getSubtitleText: (employee) => employee.role,
+      labelText: widget.label,
+      required: widget.required,
       onChanged: (employee) {
         setState(() {
           _selectedEmployee = employee;
         });
         widget.onUserSelected(employee?.id);
       },
-      validator:
-          widget.required
-              ? (value) {
-                if (value == null) {
-                  return 'Выберите ${widget.label.toLowerCase()}';
-                }
-                return null;
+      validator: widget.required
+          ? (value) {
+              if (value == null) {
+                return 'Выберите ${widget.label.toLowerCase()}';
               }
-              : null,
+              return null;
+            }
+          : null,
+      // Функция фильтрации для поиска по имени, фамилии и отчеству
+      filterFunction: (employee, query) {
+        final fullName = employee.fullName.toLowerCase();
+        final firstName = employee.firstName.toLowerCase();
+        final lastName = employee.lastName.toLowerCase();
+        final patronymic = employee.patronymic?.toLowerCase() ?? '';
+        final role = employee.role?.toLowerCase() ?? '';
+        
+        return fullName.contains(query) ||
+            firstName.contains(query) ||
+            lastName.contains(query) ||
+            patronymic.contains(query) ||
+            role.contains(query);
+      },
+      // Виджет для отображения элемента в списке
+      itemBuilder: (context, employee) {
+        return SizedBox(
+          height: 48,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  employee.fullName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  maxLines: 1,
+                ),
+              ),
+              if (employee.role != null && employee.role!.isNotEmpty)
+                Flexible(
+                  child: Text(
+                    employee.role!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
