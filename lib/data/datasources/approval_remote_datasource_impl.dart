@@ -240,6 +240,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         businessId: projectId ?? '',
         title: title ?? '',
         createdBy: '',
+        paymentDueDate: DateTime.now(), // Временное значение, используется только для toUpdateJson
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         formData: formData,

@@ -24,7 +24,7 @@ class ApprovalModel extends Approval implements Model {
     super.description,
     super.status,
     required super.createdBy,
-    super.requestDate,
+    required super.paymentDueDate,
     super.formData,
     required super.createdAt,
     required super.updatedAt,
@@ -187,9 +187,9 @@ class ApprovalModel extends Approval implements Model {
               return ApprovalStatus.pending;
             })(), // По умолчанию, если статус не указан
       createdBy: createdById,
-      requestDate: json['requestDate'] != null
-          ? DateTime.parse(json['requestDate'] as String)
-          : null,
+      paymentDueDate: json['paymentDueDate'] != null
+          ? DateTime.parse(json['paymentDueDate'] as String)
+          : (throw FormatException('Поле paymentDueDate обязательно для Approval')),
       formData: formData,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -279,7 +279,7 @@ class ApprovalModel extends Approval implements Model {
       if (templateCode != null) 'templateCode': templateCode,
       'title': title,
       if (description != null && description!.isNotEmpty) 'description': description,
-      if (requestDate != null) 'requestDate': requestDate!.toUtc().toIso8601String(),
+      'paymentDueDate': paymentDueDate.toUtc().toIso8601String(),
       if (formData != null) 'formData': formData,
       if (processType != null) 'processType': processType!.code,
     };
@@ -324,7 +324,7 @@ class ApprovalModel extends Approval implements Model {
       description: description,
       status: status,
       createdBy: createdBy,
-      requestDate: requestDate,
+      paymentDueDate: paymentDueDate,
       formData: formData,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -350,7 +350,7 @@ class ApprovalModel extends Approval implements Model {
       description: approval.description,
       status: approval.status,
       createdBy: approval.createdBy,
-      requestDate: approval.requestDate,
+      paymentDueDate: approval.paymentDueDate,
       formData: approval.formData,
       createdAt: approval.createdAt,
       updatedAt: approval.updatedAt,

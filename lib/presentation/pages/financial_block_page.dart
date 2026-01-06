@@ -406,11 +406,48 @@ class _CreateFinancialRequestDialogState
 
     final formValues = _formKey.currentState!.value;
 
-    // Получаем данные из динамической формы (исключаем системные поля)
+    // Извлекаем paymentDueDate из formData (обязательное поле)
+    // Поддерживаем оба варианта: paymentDueDate и requestDate (на случай, если маппинг не сработал)
+    DateTime? paymentDueDate;
+    if (formValues.containsKey('paymentDueDate')) {
+      final paymentDueDateValue = formValues['paymentDueDate'];
+      if (paymentDueDateValue is DateTime) {
+        paymentDueDate = paymentDueDateValue;
+      } else if (paymentDueDateValue is String) {
+        paymentDueDate = DateTime.tryParse(paymentDueDateValue);
+      }
+    } else if (formValues.containsKey('requestDate')) {
+      // Fallback на старое название (на случай, если маппинг не сработал)
+      final requestDateValue = formValues['requestDate'];
+      if (requestDateValue is DateTime) {
+        paymentDueDate = requestDateValue;
+      } else if (requestDateValue is String) {
+        paymentDueDate = DateTime.tryParse(requestDateValue);
+      }
+    }
+
+    // Проверяем наличие обязательного поля paymentDueDate
+    if (paymentDueDate == null) {
+      setState(() {
+        _isSubmitting = false;
+        _error = 'Поле "Дата оплаты" обязательно для заполнения';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Поле "Дата оплаты" обязательно для заполнения'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Получаем данные из динамической формы (исключаем системные поля и paymentDueDate/requestDate)
     final dynamicFormData = <String, dynamic>{};
     formValues.forEach((key, value) {
-      // Исключаем системные поля формы
-      if (key != 'title' && key != 'description' && value != null) {
+      // Исключаем системные поля формы и paymentDueDate/requestDate (отправляется отдельно)
+      if (key != 'title' && key != 'description' && key != 'paymentDueDate' && key != 'requestDate' && value != null) {
         // Преобразуем DateTime в ISO строку для отправки на сервер
         if (value is DateTime) {
           dynamicFormData[key] = value.toIso8601String();
@@ -442,6 +479,7 @@ class _CreateFinancialRequestDialogState
       title: _template!.name,
       status: ApprovalStatus.pending,
       createdBy: currentUserId,
+      paymentDueDate: paymentDueDate,
       formData: dynamicFormData.isNotEmpty ? dynamicFormData : null,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),

@@ -925,13 +925,52 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     final title = (formValues['title'] as String?)?.trim();
     final description = (formValues['description'] as String?)?.trim();
 
-    // Получаем данные из динамической формы (исключаем системные поля)
+    // Извлекаем paymentDueDate из formValues (обязательное поле)
+    // Поддерживаем оба варианта: paymentDueDate и requestDate (на случай, если маппинг не сработал)
+    DateTime? paymentDueDate;
+    if (formValues.containsKey('paymentDueDate')) {
+      final paymentDueDateValue = formValues['paymentDueDate'];
+      if (paymentDueDateValue is DateTime) {
+        paymentDueDate = paymentDueDateValue;
+      } else if (paymentDueDateValue is String) {
+        paymentDueDate = DateTime.tryParse(paymentDueDateValue);
+      }
+    } else if (formValues.containsKey('requestDate')) {
+      // Fallback на старое название (на случай, если маппинг не сработал)
+      final requestDateValue = formValues['requestDate'];
+      if (requestDateValue is DateTime) {
+        paymentDueDate = requestDateValue;
+      } else if (requestDateValue is String) {
+        paymentDueDate = DateTime.tryParse(requestDateValue);
+      }
+    }
+
+    // Проверяем наличие обязательного поля paymentDueDate
+    if (paymentDueDate == null) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Поле "Дата оплаты" обязательно для заполнения';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Поле "Дата оплаты" обязательно для заполнения'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Получаем данные из динамической формы (исключаем системные поля и paymentDueDate/requestDate)
     final dynamicFormData = <String, dynamic>{};
     formValues.forEach((key, value) {
-      // Исключаем системные поля формы
+      // Исключаем системные поля формы и paymentDueDate/requestDate (отправляется отдельно)
       if (key != 'template' &&
           key != 'title' &&
           key != 'description' &&
+          key != 'paymentDueDate' &&
+          key != 'requestDate' &&
           value != null) {
         // Удаляем processName из formData - бэкенд его автоматически удаляет
         if (key == 'processName') {
@@ -959,30 +998,6 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       }
     }
 
-    // Извлекаем requestDate из formData, ТОЛЬКО если поле есть в форме
-    // requestDate теперь опциональное - если не указано, бэкенд установит текущую дату
-    DateTime? requestDate;
-    if (dynamicFormData.containsKey('requestDate')) {
-      final requestDateValue = dynamicFormData['requestDate'];
-      if (requestDateValue is DateTime) {
-        requestDate = requestDateValue;
-        // Удаляем из formData, так как requestDate отправляется отдельно
-        dynamicFormData.remove('requestDate');
-      } else if (requestDateValue is String) {
-        // Если это уже строка (ISO формат), парсим её
-        requestDate = DateTime.tryParse(requestDateValue);
-        if (requestDate != null) {
-          // Удаляем из formData, так как requestDate отправляется отдельно
-          dynamicFormData.remove('requestDate');
-        } else {
-          // Если не удалось распарсить, удаляем из formData, но не отправляем requestDate
-          dynamicFormData.remove('requestDate');
-        }
-      }
-    }
-    // Если requestDate не найден в formData, НЕ устанавливаем его
-    // Бэкенд сам установит текущую дату, если нужно
-
     setState(() {
       _isLoading = true;
       _error = null;
@@ -1004,10 +1019,9 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       description: description?.isEmpty ?? true ? null : description,
       status: ApprovalStatus.pending,
       createdBy: widget.currentUserId,
-      requestDate:
-          requestDate, // Опциональное - бэкенд установит текущую дату, если не указано
+      paymentDueDate: paymentDueDate,
       formData:
-          dynamicFormData, // Все данные из динамической формы (без processName)
+          dynamicFormData, // Все данные из динамической формы (без processName и paymentDueDate)
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

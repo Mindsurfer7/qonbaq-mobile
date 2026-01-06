@@ -158,12 +158,18 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
       // Можно скрыть поле или оставить только для чтения
       final isProcessName = fieldName == 'processName';
 
+      // Маппим requestDate -> paymentDueDate (бэкенд еще может отправлять старое название)
+      final actualFieldName = fieldName == 'requestDate' ? 'paymentDueDate' : fieldName;
+      
       final fieldType = fieldSchema['type'] as String? ?? 'string';
       final fieldTitle = fieldSchema['title'] as String? ?? fieldName;
       final fieldFormat = fieldSchema['format'] as String?;
       final isRequired = requiredFields.contains(fieldName);
       final defaultValue = fieldSchema['default'];
-      final initialValue = widget.initialValues?[fieldName] ?? defaultValue;
+      // Проверяем оба варианта имени для initialValue
+      final initialValue = widget.initialValues?[actualFieldName] ?? 
+                          widget.initialValues?[fieldName] ?? 
+                          defaultValue;
       final readOnly =
           fieldSchema['readOnly'] == true ||
           isProcessName; // processName всегда только для чтения
@@ -183,7 +189,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
         case 'text':
           if (fieldFormat == 'textarea' || fieldFormat == 'text') {
             field = FormBuilderTextField(
-              name: fieldName,
+              name: actualFieldName,
               initialValue: initialValue?.toString(),
               enabled: !readOnly,
               decoration: InputDecoration(
@@ -214,7 +220,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
             if (enumValues != null) {
               final theme = context.appTheme;
               field = FormBuilderDropdown<String>(
-                name: fieldName,
+                name: actualFieldName,
                 initialValue: initialValue?.toString(),
                 enabled: !readOnly,
                 decoration: InputDecoration(
@@ -260,7 +266,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
               // Динамический список (departments, projects и т.д.)
               // TODO: Загрузить опции через API
               field = FormBuilderDropdown<String>(
-                name: fieldName,
+                name: actualFieldName,
                 initialValue: initialValue?.toString(),
                 enabled: !readOnly,
                 decoration: InputDecoration(
@@ -285,7 +291,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
             } else {
               // Обычное текстовое поле
               field = FormBuilderTextField(
-                name: fieldName,
+                name: actualFieldName,
                 initialValue: initialValue?.toString(),
                 enabled: !readOnly,
                 decoration: InputDecoration(
@@ -319,7 +325,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
               dateValue = initialValue;
             }
             field = FormBuilderDateTimePicker(
-              name: fieldName,
+              name: actualFieldName,
               initialValue: dateValue,
               enabled: !readOnly,
               decoration: InputDecoration(
@@ -344,7 +350,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
               dateValue = initialValue;
             }
             field = FormBuilderDateTimePicker(
-              name: fieldName,
+              name: actualFieldName,
               initialValue: dateValue,
               enabled: !readOnly,
               decoration: InputDecoration(
@@ -364,7 +370,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
           } else if (fieldFormat == 'file') {
             // TODO: Реализовать загрузку файлов
             field = FormBuilderTextField(
-              name: fieldName,
+              name: actualFieldName,
               initialValue: initialValue?.toString(),
               enabled: !readOnly,
               decoration: InputDecoration(
@@ -382,7 +388,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
           } else {
             // Обычное текстовое поле
             field = FormBuilderTextField(
-              name: fieldName,
+              name: actualFieldName,
               initialValue: initialValue?.toString(),
               enabled: !readOnly,
               decoration: InputDecoration(
@@ -413,7 +419,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
         case 'number':
         case 'integer':
           field = FormBuilderTextField(
-            name: fieldName,
+            name: actualFieldName,
             initialValue: initialValue?.toString(),
             enabled: !readOnly,
             decoration: InputDecoration(
@@ -445,7 +451,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
         case 'array':
           // TODO: Реализовать массивы
           field = FormBuilderTextField(
-            name: fieldName,
+            name: actualFieldName,
             initialValue: initialValue?.toString(),
             enabled: !readOnly,
             decoration: InputDecoration(
@@ -465,7 +471,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
 
         default:
           field = FormBuilderTextField(
-            name: fieldName,
+            name: actualFieldName,
             initialValue: initialValue?.toString(),
             enabled: !readOnly,
             decoration: InputDecoration(
@@ -571,7 +577,10 @@ class ElementFormSwitcher extends StatefulWidget {
 
 class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
   String get _fieldName {
-    return '${widget.blockName}.${widget.element['name']}';
+    final elementName = widget.element['name'] as String? ?? '';
+    // Маппим requestDate -> paymentDueDate (бэкенд еще может отправлять старое название)
+    final actualElementName = elementName == 'requestDate' ? 'paymentDueDate' : elementName;
+    return '${widget.blockName}.$actualElementName';
   }
 
   @override

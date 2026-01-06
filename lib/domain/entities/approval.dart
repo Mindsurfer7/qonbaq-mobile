@@ -28,7 +28,7 @@ class Approval extends Entity {
   final String? description;
   final ApprovalStatus status;
   final String createdBy; // ID создателя
-  final DateTime? requestDate; // Дата запроса
+  final DateTime paymentDueDate; // Дата, к которой нужно выдать деньги
   final Map<String, dynamic>? formData; // Данные формы
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -53,7 +53,7 @@ class Approval extends Entity {
     this.description,
     this.status = ApprovalStatus.pending,
     required this.createdBy,
-    this.requestDate,
+    required this.paymentDueDate,
     this.formData,
     required this.createdAt,
     required this.updatedAt,
