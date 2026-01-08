@@ -33,11 +33,15 @@ abstract class FinancialRemoteDataSource extends DataSource {
   Future<TransitModel> createTransit(TransitModel transit);
 
   /// Получить финансовый отчет
+  /// Если указан accountId - отчет по конкретному счету
+  /// Если указан projectId - отчет по проекту
+  /// Если ничего не указано - отчет по всему бизнесу
   Future<FinancialReportModel> getFinancialReport({
     required String businessId,
     required String startDate, // ISO string
     required String endDate, // ISO string
     String? projectId,
+    String? accountId,
   });
 
   /// Получить список счетов (кошельков)

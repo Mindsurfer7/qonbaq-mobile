@@ -12,6 +12,9 @@ class Transit extends Entity {
   final TransitMethod method;
   final String comment;
   final DateTime transactionDate;
+  // Для отчетов: направление транзита и связанный счет
+  final TransitDirection? direction;
+  final String? relatedAccountId; // ID связанного счета (для outgoing - toAccountId, для incoming - fromAccountId)
 
   const Transit({
     this.id,
@@ -23,6 +26,8 @@ class Transit extends Entity {
     required this.method,
     required this.comment,
     required this.transactionDate,
+    this.direction,
+    this.relatedAccountId,
   });
 
   @override

@@ -19,8 +19,7 @@ class ValidationException implements Exception {
   ValidationException(this.validationResponse);
 
   @override
-  String toString() =>
-      validationResponse.message ?? validationResponse.error;
+  String toString() => validationResponse.message ?? validationResponse.error;
 }
 
 /// Реализация удаленного источника данных для финансового блока
@@ -51,9 +50,7 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
   }
 
   @override
-  Future<FinancialFormModel> getIncomeForm({
-    required String businessId,
-  }) async {
+  Future<FinancialFormModel> getIncomeForm({required String businessId}) async {
     final response = await apiClient.get(
       '/api/financial/forms/income?businessId=$businessId',
       headers: _getAuthHeaders(),
@@ -138,9 +135,13 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final apiResponse = ApiResponse.fromJson(
         json,
-        (data) => (data as List<dynamic>)
-            .map((e) => IncomeCategoryModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        (data) =>
+            (data as List<dynamic>)
+                .map(
+                  (e) =>
+                      IncomeCategoryModel.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
       );
       return apiResponse.data;
     } else {
@@ -230,28 +231,44 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
     required String startDate,
     required String endDate,
     String? projectId,
+    String? accountId,
   }) async {
-    var url = '/api/financial/reports?businessId=$businessId&startDate=$startDate&endDate=$endDate';
+    var url =
+        '/api/financial/reports?businessId=$businessId&startDate=$startDate&endDate=$endDate';
     if (projectId != null) {
       url += '&projectId=$projectId';
     }
+    if (accountId != null) {
+      url += '&accountId=$accountId';
+    }
 
-    final response = await apiClient.get(
-      url,
-      headers: _getAuthHeaders(),
-    );
+    final response = await apiClient.get(url, headers: _getAuthHeaders());
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final apiResponse = ApiResponse.fromJson(
         json,
         (data) => FinancialReportModel.fromJson(data as Map<String, dynamic>),
       );
       return apiResponse.data;
+    } else if (response.statusCode == 400) {
+      final errorMessage = _parseErrorMessage(
+        response.body,
+        'Ошибка валидации запроса',
+      );
+      throw Exception(errorMessage);
+    } else if (response.statusCode == 401) {
+      throw Exception('Не авторизован');
+    } else if (response.statusCode == 403) {
+      final errorMessage = _parseErrorMessage(
+        response.body,
+        'Нет доступа к этому бизнесу',
+      );
+      throw Exception(errorMessage);
     } else {
       final errorMessage = _parseErrorMessage(
         response.body,
-        'Ошибка при получении отчета: ${response.statusCode}',
+        'Ошибка при получении отчета',
       );
       throw Exception(errorMessage);
     }
@@ -271,21 +288,21 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
       url += '&accountType=$accountType';
     }
 
-    final response = await apiClient.get(
-      url,
-      headers: _getAuthHeaders(),
-    );
+    final response = await apiClient.get(url, headers: _getAuthHeaders());
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final apiResponse = ApiResponse.fromJson(
         json,
-        (data) => (data as List<dynamic>)
-            .map((e) => AccountModel.fromJson(
-                  e as Map<String, dynamic>,
-                  businessId: businessId,
-                ))
-            .toList(),
+        (data) =>
+            (data as List<dynamic>)
+                .map(
+                  (e) => AccountModel.fromJson(
+                    e as Map<String, dynamic>,
+                    businessId: businessId,
+                  ),
+                )
+                .toList(),
       );
       return apiResponse.data;
     } else {

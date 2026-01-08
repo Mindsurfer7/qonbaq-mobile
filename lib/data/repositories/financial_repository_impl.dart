@@ -146,6 +146,7 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
     required DateTime startDate,
     required DateTime endDate,
     String? projectId,
+    String? accountId,
   }) async {
     try {
       final report = await remoteDataSource.getFinancialReport(
@@ -153,6 +154,7 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
         startDate: startDate.toIso8601String(),
         endDate: endDate.toIso8601String(),
         projectId: projectId,
+        accountId: accountId,
       );
       return Right(report);
     } catch (e) {

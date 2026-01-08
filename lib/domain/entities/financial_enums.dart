@@ -38,6 +38,12 @@ enum TransitMethod {
   CASH,
 }
 
+/// Направление транзита
+enum TransitDirection {
+  OUTGOING, // Исходящий транзит (со счета)
+  INCOMING, // Входящий транзит (на счет)
+}
+
 /// Тип финансового счета
 enum AccountType {
   CASH,

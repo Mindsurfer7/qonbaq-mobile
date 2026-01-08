@@ -40,11 +40,15 @@ abstract class FinancialRepository {
   Future<Either<Failure, Transit>> createTransit(Transit transit);
 
   /// Получить финансовый отчет
+  /// Если указан accountId - отчет по конкретному счету
+  /// Если указан projectId - отчет по проекту
+  /// Если ничего не указано - отчет по всему бизнесу
   Future<Either<Failure, FinancialReport>> getFinancialReport({
     required String businessId,
     required DateTime startDate,
     required DateTime endDate,
     String? projectId,
+    String? accountId,
   });
 
   /// Получить список счетов (кошельков) проекта или бизнеса
