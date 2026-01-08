@@ -25,6 +25,31 @@
 - Показывай пользователю понятные сообщения из `error`, а не технические исключения типа "Ошибка сервера: 403"
 - Если `error` отсутствует, используй понятное дефолтное сообщение вместо статус-кода
 
+## HTTP статус-коды - КРИТИЧЕСКИ ВАЖНО
+- **200 OK** и **201 Created** - это УСПЕШНЫЕ статус-коды, НЕ ошибки!
+- В datasources НИКОГДА не обрабатывай 200 или 201 как ошибку
+- Правильный паттерн обработки в datasources:
+  ```dart
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    // Парсим успешный ответ
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final apiResponse = ApiResponse.fromJson(json, parser);
+    return apiResponse.data;
+  } else if (response.statusCode == 400) {
+    // Ошибка валидации
+  } else if (response.statusCode == 401) {
+    // Не авторизован
+  } else if (response.statusCode == 403) {
+    // Нет доступа
+  } else {
+    // Другие ошибки
+  }
+  ```
+- НИКОГДА не ставь 200/201 в блок else или в обработку ошибок
+- Если парсинг ответа при статусе 200/201 падает - это баг в парсере, а не ошибка сервера
+- Исправляй парсер, а не обрабатывай как ошибку сервера
+- Проверяй все существующие datasources на наличие неправильной обработки 200/201
+
 ## State Management
 - Используй BLoC или Provider для управления состоянием
 - Храни бизнес-логику в Use Cases, а не в BLoC/Provider

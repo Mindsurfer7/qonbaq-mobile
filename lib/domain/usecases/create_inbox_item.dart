@@ -23,3 +23,4 @@ class CreateInboxItem implements UseCase<InboxItem, CreateInboxItemParams> {
   }
 }
 
+

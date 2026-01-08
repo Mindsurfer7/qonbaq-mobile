@@ -27,3 +27,4 @@ abstract class BookingRepository extends Repository {
   Future<Either<Failure, void>> deleteBooking(String id);
 }
 
+

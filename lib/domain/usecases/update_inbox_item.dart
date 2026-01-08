@@ -27,3 +27,4 @@ class UpdateInboxItem implements UseCase<InboxItem, UpdateInboxItemParams> {
   }
 }
 
+

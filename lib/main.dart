@@ -160,6 +160,14 @@ import 'package:qonbaq/domain/repositories/time_slot_repository.dart';
 import 'package:qonbaq/domain/entities/service.dart';
 import 'package:qonbaq/presentation/pages/services_admin_page.dart';
 import 'package:qonbaq/presentation/pages/service_detail_page.dart';
+import 'package:qonbaq/domain/usecases/get_income_categories.dart';
+import 'package:qonbaq/domain/usecases/create_income.dart';
+import 'package:qonbaq/domain/usecases/create_expense.dart';
+import 'package:qonbaq/domain/usecases/create_transit.dart';
+import 'package:qonbaq/domain/usecases/create_account.dart';
+import 'package:qonbaq/domain/usecases/get_financial_report.dart';
+import 'package:qonbaq/domain/usecases/get_accounts.dart';
+import 'package:qonbaq/presentation/providers/financial_provider.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -359,6 +367,21 @@ class MyApp extends StatelessWidget {
       remoteDataSource: financialRemoteDataSource,
     );
     final getFinancialForm = GetFinancialForm(financialRepository);
+    final getIncomeCategories = GetIncomeCategories(financialRepository);
+    final createIncome = CreateIncome(financialRepository);
+    final createExpense = CreateExpense(financialRepository);
+    final createTransit = CreateTransit(financialRepository);
+    final createAccount = CreateAccount(financialRepository);
+    final getFinancialReport = GetFinancialReport(financialRepository);
+    final getAccounts = GetAccounts(financialRepository);
+    final financialProvider = FinancialProvider(
+      getIncomeCategoriesUseCase: getIncomeCategories,
+      createIncomeUseCase: createIncome,
+      createExpenseUseCase: createExpense,
+      createTransitUseCase: createTransit,
+      getFinancialReportUseCase: getFinancialReport,
+      getAccountsUseCase: getAccounts,
+    );
 
     // Инициализация зависимостей для Inbox Items
     final inboxRemoteDataSource = InboxRemoteDataSourceImpl(apiClient: apiClient);
@@ -416,6 +439,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => departmentProvider),
         ChangeNotifierProvider(create: (_) => projectProvider),
         ChangeNotifierProvider(create: (_) => inboxProvider),
+        ChangeNotifierProvider(create: (_) => financialProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
@@ -441,6 +465,7 @@ class MyApp extends StatelessWidget {
         Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
         Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
         Provider<GetFinancialForm>(create: (_) => getFinancialForm),
+        Provider<CreateAccount>(create: (_) => createAccount),
         Provider<ServiceRepository>(create: (_) => serviceRepository),
         Provider<ResourceRepository>(create: (_) => resourceRepository),
         Provider<TimeSlotRepository>(create: (_) => timeSlotRepository),

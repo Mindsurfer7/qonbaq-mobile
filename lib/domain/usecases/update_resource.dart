@@ -27,3 +27,4 @@ class UpdateResource implements UseCase<Resource, UpdateResourceParams> {
   }
 }
 
+

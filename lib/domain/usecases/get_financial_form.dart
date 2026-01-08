@@ -4,13 +4,36 @@ import '../../core/usecase/usecase.dart';
 import '../entities/approval_template.dart';
 import '../repositories/financial_repository.dart';
 
-/// Тип финансовой формы
-enum FinancialFormType {
-  cashless, // Безналичная оплата
-  cash, // Наличная оплата
+class GetFinancialForm implements UseCase<ApprovalTemplate, GetFinancialFormParams> {
+  final FinancialRepository repository;
+
+  GetFinancialForm(this.repository);
+
+  @override
+  Future<Either<Failure, ApprovalTemplate>> call(GetFinancialFormParams params) async {
+    switch (params.type) {
+      case FinancialFormType.income:
+        return await repository.getIncomeForm(businessId: params.businessId);
+      case FinancialFormType.expense:
+        return await repository.getExpenseForm(businessId: params.businessId);
+      case FinancialFormType.transit:
+        return await repository.getTransitForm(businessId: params.businessId);
+      case FinancialFormType.cashless: // Совместимость со старым кодом
+        return await repository.getIncomeForm(businessId: params.businessId);
+      case FinancialFormType.cash: // Совместимость со старым кодом
+        return await repository.getExpenseForm(businessId: params.businessId);
+    }
+  }
 }
 
-/// Параметры для получения финансовой формы
+enum FinancialFormType {
+  income,
+  expense,
+  transit,
+  cashless, // Legacy
+  cash, // Legacy
+}
+
 class GetFinancialFormParams {
   final FinancialFormType type;
   final String businessId;
@@ -20,21 +43,3 @@ class GetFinancialFormParams {
     required this.businessId,
   });
 }
-
-/// Use Case для получения финансовой формы
-class GetFinancialForm implements UseCase<ApprovalTemplate, GetFinancialFormParams> {
-  final FinancialRepository repository;
-
-  GetFinancialForm(this.repository);
-
-  @override
-  Future<Either<Failure, ApprovalTemplate>> call(GetFinancialFormParams params) async {
-    switch (params.type) {
-      case FinancialFormType.cashless:
-        return await repository.getCashlessForm(businessId: params.businessId);
-      case FinancialFormType.cash:
-        return await repository.getCashForm(businessId: params.businessId);
-    }
-  }
-}
-

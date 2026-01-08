@@ -36,3 +36,4 @@ class CreateInboxItemFromVoice implements UseCase<InboxItem, CreateInboxItemFrom
   }
 }
 
+

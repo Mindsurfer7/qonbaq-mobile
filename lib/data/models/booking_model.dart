@@ -147,3 +147,4 @@ class BookingModel extends Booking implements Model {
   }
 }
 
+

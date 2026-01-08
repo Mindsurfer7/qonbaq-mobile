@@ -24,3 +24,4 @@ abstract class ResourceRepository extends Repository {
   Future<Either<Failure, void>> deleteResource(String id);
 }
 
+

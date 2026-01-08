@@ -1,21 +1,30 @@
-import '../entities/entity.dart';
+import 'entity.dart';
+import 'financial_enums.dart';
 
-/// Доменная сущность ресурса
-class Resource extends Entity {
+/// Счет (кошелек) бизнеса
+class Account extends Entity {
   final String id;
-  final String businessId;
   final String name;
+  final String businessId;
+  final String? projectId;
+  final double balance;
+  final String currency;
+  final AccountType type;
   final String? description;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const Resource({
+  const Account({
     required this.id,
-    required this.businessId,
     required this.name,
+    required this.businessId,
+    this.projectId,
+    required this.balance,
+    required this.currency,
+    required this.type,
     this.description,
-    this.isActive = true,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,15 +32,11 @@ class Resource extends Entity {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Resource &&
+      other is Account &&
           runtimeType == other.runtimeType &&
           id == other.id;
 
   @override
   int get hashCode => id.hashCode;
-
-  @override
-  String toString() => 'Resource(id: $id, name: $name)';
 }
-
 
