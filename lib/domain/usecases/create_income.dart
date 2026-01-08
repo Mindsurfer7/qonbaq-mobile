@@ -15,3 +15,4 @@ class CreateIncome implements UseCase<Income, Income> {
   }
 }
 
+

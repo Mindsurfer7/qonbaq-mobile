@@ -44,3 +44,4 @@ class Income extends Entity {
   int get hashCode => id?.hashCode ?? 0;
 }
 
+

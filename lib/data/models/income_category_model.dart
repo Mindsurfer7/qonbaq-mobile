@@ -21,3 +21,4 @@ class IncomeCategoryModel extends IncomeCategory {
   }
 }
 
+

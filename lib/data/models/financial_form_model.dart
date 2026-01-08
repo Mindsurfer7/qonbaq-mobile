@@ -1,3 +1,4 @@
+import '../../core/utils/json_utils.dart';
 import '../../domain/entities/approval_template.dart';
 import '../models/model.dart';
 import '../models/approval_template_model.dart';
@@ -7,22 +8,39 @@ class FinancialFormModel implements Model {
   final ApprovalTemplateModel template;
   final Map<String, dynamic> formSchema;
 
-  const FinancialFormModel({
-    required this.template,
-    required this.formSchema,
-  });
+  const FinancialFormModel({required this.template, required this.formSchema});
 
   factory FinancialFormModel.fromJson(Map<String, dynamic> json) {
-    final templateJson = json['template'] as Map<String, dynamic>;
-    final formSchemaJson = json['formSchema'] as Map<String, dynamic>;
+    final templateJson = JsonUtils.mapOrEmpty(json['template']);
+    final formSchemaJson = JsonUtils.mapOrEmpty(json['formSchema']);
+
+    // Если template отсутствует, создаем минимальный template из formSchema
+    if (templateJson.isEmpty || formSchemaJson.isEmpty) {
+      // Создаем минимальный template, если его нет
+      final minimalTemplate = ApprovalTemplateModel(
+        id: '',
+        businessId: '',
+        code: 'income',
+        name: 'Приход',
+        formSchema: formSchemaJson,
+        steps: [],
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      return FinancialFormModel(
+        template: minimalTemplate,
+        formSchema: formSchemaJson,
+      );
+    }
 
     // Объединяем formSchema из ответа с шаблоном
     // Создаем новый template с обновленным formSchema
     final templateModel = ApprovalTemplateModel.fromJson(templateJson);
-    
+
     // Обновляем formSchema в шаблоне, добавляя опции из ответа
     final updatedFormSchema = Map<String, dynamic>.from(formSchemaJson);
-    
+
     // Создаем новый template с обновленным formSchema
     final updatedTemplate = ApprovalTemplateModel(
       id: templateModel.id,
@@ -57,10 +75,6 @@ class FinancialFormModel implements Model {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'template': template.toJson(),
-      'formSchema': formSchema,
-    };
+    return {'template': template.toJson(), 'formSchema': formSchema};
   }
 }
-

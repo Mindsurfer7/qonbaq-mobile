@@ -1,15 +1,40 @@
 /// Стандартный формат ответа API
-/// 
+///
 /// Все успешные ответы API теперь используют обертку `data`.
 /// Для списков также может быть поле `meta` с информацией о пагинации.
 class ApiResponse<T> {
   final T data;
   final ApiMeta? meta;
 
-  ApiResponse({
-    required this.data,
-    this.meta,
-  });
+  ApiResponse({required this.data, this.meta});
+
+  /// Нормализует входные данные: Map → Map<String,dynamic>, List → List<dynamic>.
+  /// Это позволяет избежать TypeError при кастах `as Map<String,dynamic>` на ответах 200/201.
+  static dynamic _normalizeData(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List) return List<dynamic>.from(value);
+    return value;
+  }
+
+  /// Жёстко требует Map, иначе бросает FormatException с контекстом.
+  static Map<String, dynamic> expectMap(dynamic value, {String? where}) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    throw FormatException(
+      'Ожидался Map в ApiResponse.data${where != null ? ' ($where)' : ''}, '
+      'получено ${value.runtimeType}: $value',
+    );
+  }
+
+  /// Жёстко требует List, иначе бросает FormatException с контекстом.
+  static List<dynamic> expectList(dynamic value, {String? where}) {
+    if (value is List<dynamic>) return value;
+    if (value is List) return List<dynamic>.from(value);
+    throw FormatException(
+      'Ожидался List в ApiResponse.data${where != null ? ' ($where)' : ''}, '
+      'получено ${value.runtimeType}: $value',
+    );
+  }
 
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
@@ -23,8 +48,16 @@ class ApiResponse<T> {
       );
     }
 
-    // Парсим data используя переданную функцию
-    final parsedData = fromJsonT(dataJson);
+    // Нормализуем data (Map/List) и парсим с обработкой ошибок
+    late final T parsedData;
+    try {
+      final normalized = _normalizeData(dataJson);
+      parsedData = fromJsonT(normalized);
+    } catch (e) {
+      throw FormatException(
+        'Не удалось распарсить ApiResponse.data: $e; data=$dataJson',
+      );
+    }
 
     // Парсим meta, если есть
     ApiMeta? parsedMeta;
@@ -32,17 +65,11 @@ class ApiResponse<T> {
       parsedMeta = ApiMeta.fromJson(json['meta'] as Map<String, dynamic>);
     }
 
-    return ApiResponse<T>(
-      data: parsedData,
-      meta: parsedMeta,
-    );
+    return ApiResponse<T>(data: parsedData, meta: parsedMeta);
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'data': data,
-      if (meta != null) 'meta': meta!.toJson(),
-    };
+    return {'data': data, if (meta != null) 'meta': meta!.toJson()};
   }
 }
 
@@ -54,13 +81,7 @@ class ApiMeta {
   final int? totalPages;
   final int? count;
 
-  ApiMeta({
-    this.total,
-    this.page,
-    this.limit,
-    this.totalPages,
-    this.count,
-  });
+  ApiMeta({this.total, this.page, this.limit, this.totalPages, this.count});
 
   factory ApiMeta.fromJson(Map<String, dynamic> json) {
     return ApiMeta(
@@ -82,4 +103,3 @@ class ApiMeta {
     };
   }
 }
-

@@ -15,3 +15,4 @@ class GetIncomeCategories implements UseCase<List<IncomeCategory>, String> {
   }
 }
 
+

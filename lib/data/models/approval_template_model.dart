@@ -1,7 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/business.dart';
 import '../models/model.dart';
-import 'dart:convert';
 
 /// Модель шаблона согласования
 class ApprovalTemplateModel extends ApprovalTemplate implements Model {
@@ -26,6 +27,9 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
   });
 
   factory ApprovalTemplateModel.fromJson(Map<String, dynamic> json) {
+    // #region agent log
+    try{File('/Users/a1/Documents/Workspace/Flutter/qonbaq-mobile/.cursor/debug.log').writeAsStringSync('${jsonEncode({'location':'approval_template_model.dart:29','message':'ApprovalTemplateModel input json','data':{'keys':json.keys.toList(),'hasId':json.containsKey('id'),'hasCode':json.containsKey('code'),'hasName':json.containsKey('name')},'timestamp':DateTime.now().millisecondsSinceEpoch,'sessionId':'debug-session','hypothesisId':'H4'})}\n',mode:FileMode.append);}catch(_){}
+    // #endregion
     Business? business;
     if (json['business'] != null) {
       final businessJson = json['business'] as Map<String, dynamic>;

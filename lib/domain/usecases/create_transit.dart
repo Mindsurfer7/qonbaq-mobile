@@ -15,3 +15,4 @@ class CreateTransit implements UseCase<Transit, Transit> {
   }
 }
 
+
