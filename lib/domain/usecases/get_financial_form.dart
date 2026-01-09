@@ -19,7 +19,7 @@ class GetFinancialForm implements UseCase<ApprovalTemplate, GetFinancialFormPara
       case FinancialFormType.transit:
         return await repository.getTransitForm(businessId: params.businessId);
       case FinancialFormType.cashless: // Совместимость со старым кодом
-        return await repository.getIncomeForm(businessId: params.businessId);
+        return await repository.getExpenseForm(businessId: params.businessId);
       case FinancialFormType.cash: // Совместимость со старым кодом
         return await repository.getExpenseForm(businessId: params.businessId);
     }
