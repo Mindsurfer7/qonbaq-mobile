@@ -105,18 +105,28 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children:
-            blocks.map((blockName) {
+            blocks.asMap().entries.map((entry) {
+              final index = entry.key;
+              final blockName = entry.value;
               final blockNameStr = blockName.toString();
               final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
               if (block == null) return const SizedBox.shrink();
 
-              return UniversalBlock(
-                key: ValueKey(blockNameStr),
-                blockName: blockNameStr,
-                label: block['label'] as String? ?? blockNameStr,
-                elements: block['elements'] as List<dynamic>? ?? [],
-                formKey: widget.formKey!,
-                initialValues: widget.initialValues,
+              final isLast = index == blocks.length - 1;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  UniversalBlock(
+                    key: ValueKey(blockNameStr),
+                    blockName: blockNameStr,
+                    label: block['label'] as String? ?? blockNameStr,
+                    elements: block['elements'] as List<dynamic>? ?? [],
+                    formKey: widget.formKey!,
+                    initialValues: widget.initialValues,
+                  ),
+                  if (!isLast) const SizedBox(height: 16),
+                ],
               );
             }).toList(),
       );
@@ -126,17 +136,27 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children:
-              blocks.map((blockName) {
+              blocks.asMap().entries.map((entry) {
+                final index = entry.key;
+                final blockName = entry.value;
                 final blockNameStr = blockName.toString();
                 final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
                 if (block == null) return const SizedBox.shrink();
 
-                return UniversalBlock(
-                  key: ValueKey(blockNameStr),
-                  blockName: blockNameStr,
-                  label: block['label'] as String? ?? blockNameStr,
-                  elements: block['elements'] as List<dynamic>? ?? [],
-                  initialValues: widget.initialValues,
+                final isLast = index == blocks.length - 1;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    UniversalBlock(
+                      key: ValueKey(blockNameStr),
+                      blockName: blockNameStr,
+                      label: block['label'] as String? ?? blockNameStr,
+                      elements: block['elements'] as List<dynamic>? ?? [],
+                      initialValues: widget.initialValues,
+                    ),
+                    if (!isLast) const SizedBox(height: 16),
+                  ],
                 );
               }).toList(),
         ),
@@ -159,17 +179,19 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
       final isProcessName = fieldName == 'processName';
 
       // Маппим requestDate -> paymentDueDate (бэкенд еще может отправлять старое название)
-      final actualFieldName = fieldName == 'requestDate' ? 'paymentDueDate' : fieldName;
-      
+      final actualFieldName =
+          fieldName == 'requestDate' ? 'paymentDueDate' : fieldName;
+
       final fieldType = fieldSchema['type'] as String? ?? 'string';
       final fieldTitle = fieldSchema['title'] as String? ?? fieldName;
       final fieldFormat = fieldSchema['format'] as String?;
       final isRequired = requiredFields.contains(fieldName);
       final defaultValue = fieldSchema['default'];
       // Проверяем оба варианта имени для initialValue
-      final initialValue = widget.initialValues?[actualFieldName] ?? 
-                          widget.initialValues?[fieldName] ?? 
-                          defaultValue;
+      final initialValue =
+          widget.initialValues?[actualFieldName] ??
+          widget.initialValues?[fieldName] ??
+          defaultValue;
       final readOnly =
           fieldSchema['readOnly'] == true ||
           isProcessName; // processName всегда только для чтения
@@ -543,12 +565,20 @@ class UniversalBlock extends StatelessWidget {
         ...elements.asMap().entries.map((entry) {
           final index = entry.key;
           final element = entry.value as Map<String, dynamic>;
-          return ElementFormSwitcher(
-            key: ValueKey('$blockName-${element['name']}-$index'),
-            element: element,
-            blockName: blockName,
-            formKey: formKey,
-            initialValues: initialValues,
+          final isLast = index == elements.length - 1;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElementFormSwitcher(
+                key: ValueKey('$blockName-${element['name']}-$index'),
+                element: element,
+                blockName: blockName,
+                formKey: formKey,
+                initialValues: initialValues,
+              ),
+              if (!isLast) const SizedBox(height: 16),
+            ],
           );
         }),
       ],
@@ -579,7 +609,8 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
   String get _fieldName {
     final elementName = widget.element['name'] as String? ?? '';
     // Маппим requestDate -> paymentDueDate (бэкенд еще может отправлять старое название)
-    final actualElementName = elementName == 'requestDate' ? 'paymentDueDate' : elementName;
+    final actualElementName =
+        elementName == 'requestDate' ? 'paymentDueDate' : elementName;
     return '${widget.blockName}.$actualElementName';
   }
 
@@ -811,9 +842,19 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     Map<String, dynamic> flattenedValues,
     String fieldPath,
   ) {
+    // Сначала ищем поле в том же блоке (с префиксом блока)
+    final blockPrefix = widget.blockName;
+    final fullFieldPath = '$blockPrefix.$fieldPath';
+    var value = flattenedValues[fullFieldPath];
+    if (value != null) return value;
+
+    // Ищем без префикса (для совместимости со старым форматом)
+    value = flattenedValues[fieldPath];
+    if (value != null) return value;
+
     // Поддержка путей вида "blocks_new.CheckIn.status"
     final normalizedPath = fieldPath.replaceAll('[', '.').replaceAll(']', '');
-    return flattenedValues[normalizedPath] ?? flattenedValues[fieldPath];
+    return flattenedValues[normalizedPath];
   }
 
   /// Преобразует вложенный объект в плоский
