@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+
 import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/business.dart';
 import '../models/model.dart';
@@ -27,9 +27,6 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
   });
 
   factory ApprovalTemplateModel.fromJson(Map<String, dynamic> json) {
-    // #region agent log
-    try{File('/Users/a1/Documents/Workspace/Flutter/qonbaq-mobile/.cursor/debug.log').writeAsStringSync('${jsonEncode({'location':'approval_template_model.dart:29','message':'ApprovalTemplateModel input json','data':{'keys':json.keys.toList(),'hasId':json.containsKey('id'),'hasCode':json.containsKey('code'),'hasName':json.containsKey('name')},'timestamp':DateTime.now().millisecondsSinceEpoch,'sessionId':'debug-session','hypothesisId':'H4'})}\n',mode:FileMode.append);}catch(_){}
-    // #endregion
     Business? business;
     if (json['business'] != null) {
       final businessJson = json['business'] as Map<String, dynamic>;
@@ -42,15 +39,16 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
     List<ApprovalStep> steps = [];
     if (json['steps'] != null) {
       final stepsList = json['steps'] as List<dynamic>;
-      steps = stepsList.map((stepJson) {
-        return ApprovalStep(
-          order: stepJson['order'] as int,
-          type: _parseStepType(stepJson['type'] as String),
-          departmentId: stepJson['departmentId'] as String?,
-          userId: stepJson['userId'] as String?,
-          isRequired: stepJson['isRequired'] as bool? ?? true,
-        );
-      }).toList();
+      steps =
+          stepsList.map((stepJson) {
+            return ApprovalStep(
+              order: stepJson['order'] as int,
+              type: _parseStepType(stepJson['type'] as String),
+              departmentId: stepJson['departmentId'] as String?,
+              userId: stepJson['userId'] as String?,
+              isRequired: stepJson['isRequired'] as bool? ?? true,
+            );
+          }).toList();
     }
 
     // Парсинг formSchema
@@ -60,7 +58,8 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
         formSchema = json['formSchema'] as Map<String, dynamic>;
       } else if (json['formSchema'] is String) {
         try {
-          formSchema = jsonDecode(json['formSchema'] as String) as Map<String, dynamic>;
+          formSchema =
+              jsonDecode(json['formSchema'] as String) as Map<String, dynamic>;
         } catch (e) {
           // Если не удалось распарсить, оставляем null
         }
@@ -74,7 +73,9 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
         workflowConfig = json['workflowConfig'] as Map<String, dynamic>;
       } else if (json['workflowConfig'] is String) {
         try {
-          workflowConfig = jsonDecode(json['workflowConfig'] as String) as Map<String, dynamic>;
+          workflowConfig =
+              jsonDecode(json['workflowConfig'] as String)
+                  as Map<String, dynamic>;
         } catch (e) {
           // Если не удалось распарсить, оставляем null
         }
@@ -87,13 +88,15 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
       code: json['code'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      category: json['category'] != null
-          ? _parseCategory(json['category'] as String)
-          : null,
+      category:
+          json['category'] != null
+              ? _parseCategory(json['category'] as String)
+              : null,
       formSchema: formSchema,
-      workflowType: json['workflowType'] != null
-          ? _parseWorkflowType(json['workflowType'] as String)
-          : null,
+      workflowType:
+          json['workflowType'] != null
+              ? _parseWorkflowType(json['workflowType'] as String)
+              : null,
       workflowConfig: workflowConfig,
       finalApproverRole: json['finalApproverRole'] as String?,
       executorDepartment: json['executorDepartment'] as String?,
@@ -102,12 +105,14 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
       steps: steps,
       // В списках согласований сервер может отдавать "короткий" template без createdAt/updatedAt.
       // В этом случае используем дефолтные значения, чтобы не падать на парсинге.
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      createdAt:
+          json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'] as String)
+              : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'] as String)
+              : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       business: business,
     );
   }
@@ -174,19 +179,26 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
       if (description != null) 'description': description,
       if (category != null) 'category': _categoryToString(category!),
       if (formSchema != null) 'formSchema': formSchema,
-      if (workflowType != null) 'workflowType': _workflowTypeToString(workflowType!),
+      if (workflowType != null)
+        'workflowType': _workflowTypeToString(workflowType!),
       if (workflowConfig != null) 'workflowConfig': workflowConfig,
       if (finalApproverRole != null) 'finalApproverRole': finalApproverRole,
       if (executorDepartment != null) 'executorDepartment': executorDepartment,
       if (executorAction != null) 'executorAction': executorAction,
       'isActive': isActive,
-      'steps': steps.map((step) => {
-        'order': step.order,
-        'type': _stepTypeToString(step.type),
-        if (step.departmentId != null) 'departmentId': step.departmentId,
-        if (step.userId != null) 'userId': step.userId,
-        'isRequired': step.isRequired,
-      }).toList(),
+      'steps':
+          steps
+              .map(
+                (step) => {
+                  'order': step.order,
+                  'type': _stepTypeToString(step.type),
+                  if (step.departmentId != null)
+                    'departmentId': step.departmentId,
+                  if (step.userId != null) 'userId': step.userId,
+                  'isRequired': step.isRequired,
+                },
+              )
+              .toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -260,4 +272,3 @@ class ApprovalTemplateModel extends ApprovalTemplate implements Model {
     );
   }
 }
-
