@@ -68,6 +68,20 @@ class FixedAssetModel extends FixedAsset implements Model {
     Project? project;
     if (json['project'] != null) {
       final projectJson = json['project'] as Map<String, dynamic>;
+      // Безопасный парсинг дат - в упрощенных ответах они могут отсутствовать
+      DateTime createdAt;
+      DateTime updatedAt;
+      try {
+        createdAt = projectJson['createdAt'] != null
+            ? DateTime.parse(projectJson['createdAt'] as String)
+            : DateTime.now();
+        updatedAt = projectJson['updatedAt'] != null
+            ? DateTime.parse(projectJson['updatedAt'] as String)
+            : DateTime.now();
+      } catch (e) {
+        createdAt = DateTime.now();
+        updatedAt = DateTime.now();
+      }
       project = Project(
         id: projectJson['id'] as String,
         name: projectJson['name'] as String,
@@ -77,8 +91,8 @@ class FixedAssetModel extends FixedAsset implements Model {
         country: projectJson['country'] as String?,
         address: projectJson['address'] as String?,
         isActive: projectJson['isActive'] as bool? ?? true,
-        createdAt: DateTime.parse(projectJson['createdAt'] as String),
-        updatedAt: DateTime.parse(projectJson['updatedAt'] as String),
+        createdAt: createdAt,
+        updatedAt: updatedAt,
       );
     }
 

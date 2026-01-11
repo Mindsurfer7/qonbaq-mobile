@@ -42,6 +42,7 @@ import 'package:qonbaq/presentation/pages/employee_card_page.dart';
 import 'package:qonbaq/presentation/pages/imprest_page.dart';
 import 'package:qonbaq/presentation/pages/assets_card_page.dart';
 import 'package:qonbaq/presentation/pages/fixed_assets_page.dart';
+import 'package:qonbaq/presentation/pages/fixed_asset_detail_page.dart';
 import 'package:qonbaq/presentation/pages/hr_documents_page.dart';
 import 'package:qonbaq/presentation/pages/staff_schedule_page.dart';
 import 'package:qonbaq/presentation/pages/timesheet_page.dart';
@@ -624,6 +625,16 @@ class MyApp extends StatelessWidget {
               (context) => const AssetsCardPage(),
           '/business/admin/fixed_assets':
               (context) => const FixedAssetsPage(),
+          '/business/admin/fixed_assets/detail': (context) {
+            final assetId =
+                ModalRoute.of(context)!.settings.arguments as String?;
+            if (assetId == null) {
+              return const Scaffold(
+                body: Center(child: Text('ID основного средства не указан')),
+              );
+            }
+            return FixedAssetDetailPage(assetId: assetId);
+          },
           '/business/admin/hr_documents': (context) => const HrDocumentsPage(),
           '/business/admin/staff_schedule':
               (context) => const StaffSchedulePage(),

@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/fixed_asset.dart';
 import '../../domain/usecases/get_fixed_assets.dart';
+import '../../domain/usecases/create_fixed_asset.dart';
+import '../../domain/repositories/user_repository.dart';
+import '../../core/error/failures.dart';
+import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
+import '../widgets/create_fixed_asset_form.dart';
+import '../widgets/fixed_asset_card.dart';
+import '../../core/theme/theme_extensions.dart';
 
 /// Страница основных средств
 class FixedAssetsPage extends StatefulWidget {
@@ -67,6 +74,27 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     );
   }
 
+  void _showCreateAssetDialog() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final createFixedAssetUseCase = Provider.of<CreateFixedAsset>(context, listen: false);
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+
+    if (selectedBusiness == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => _CreateFixedAssetDialog(
+        businessId: selectedBusiness.id,
+        userRepository: userRepository,
+        createFixedAssetUseCase: createFixedAssetUseCase,
+        onSuccess: () {
+          _loadAssets();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -100,6 +128,13 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
         ],
       ),
       body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        heroTag: "create_fixed_asset",
+        onPressed: _showCreateAssetDialog,
+        backgroundColor: context.appTheme.accentPrimary,
+        foregroundColor: Colors.black,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
@@ -133,24 +168,16 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _assets.length,
       itemBuilder: (context, index) {
         final asset = _assets[index];
-        return ListTile(
-          title: Text(asset.name),
-          subtitle: Text(
-            'Тип: ${_getAssetTypeName(asset.type)}\n'
-            'Состояние: ${_getAssetConditionName(asset.condition)}\n'
-            'Владелец: ${asset.currentOwner?.firstName ?? asset.currentOwnerId}',
-          ),
-          trailing: const Icon(Icons.chevron_right),
+        return FixedAssetCard(
+          asset: asset,
           onTap: () {
-            // TODO: Навигация на детальную страницу актива
-            // Пока просто показываем snackbar
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Актив: ${asset.name} (ID: ${asset.id})'),
-              ),
+            Navigator.of(context).pushNamed(
+              '/business/admin/fixed_assets/detail',
+              arguments: asset.id,
             );
           },
         );
@@ -158,31 +185,129 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     );
   }
 
-  String _getAssetTypeName(AssetType type) {
-    switch (type) {
-      case AssetType.equipment:
-        return 'Оборудование';
-      case AssetType.furniture:
-        return 'Мебель';
-      case AssetType.officeTech:
-        return 'Орг.техника';
-      case AssetType.other:
-        return 'Прочее';
+}
+
+/// Диалог создания основного средства
+class _CreateFixedAssetDialog extends StatefulWidget {
+  final String businessId;
+  final UserRepository userRepository;
+  final CreateFixedAsset createFixedAssetUseCase;
+  final VoidCallback onSuccess;
+
+  const _CreateFixedAssetDialog({
+    required this.businessId,
+    required this.userRepository,
+    required this.createFixedAssetUseCase,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_CreateFixedAssetDialog> createState() => _CreateFixedAssetDialogState();
+}
+
+class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
+  String? _error;
+  List<ValidationError>? _validationErrors;
+
+  String _getErrorMessage(Failure failure) {
+    if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    } else if (failure is ServerFailure) {
+      return failure.message;
+    } else if (failure is NetworkFailure) {
+      return failure.message;
     }
+    return 'Произошла ошибка';
   }
 
-  String _getAssetConditionName(AssetCondition condition) {
-    switch (condition) {
-      case AssetCondition.newUpTo3Months:
-        return 'Новое (до 3-х месяцев)';
-      case AssetCondition.good:
-        return 'Хорошее';
-      case AssetCondition.satisfactory:
-        return 'Удовлетворительное';
-      case AssetCondition.notWorking:
-        return 'Не рабочее';
-      case AssetCondition.writtenOff:
-        return 'Списано по акту';
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+        child: Column(
+          children: [
+            // Заголовок
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'Создать основное средство',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Форма
+            Expanded(
+              child: CreateFixedAssetForm(
+                businessId: widget.businessId,
+                userRepository: widget.userRepository,
+                error: _error,
+                validationErrors: _validationErrors,
+                onError: (error) {
+                  setState(() {
+                    _error = error;
+                  });
+                },
+                onSubmit: (asset) async {
+                  final result = await widget.createFixedAssetUseCase.call(
+                    CreateFixedAssetParams(asset: asset),
+                  );
+
+                  result.fold(
+                    (failure) {
+                      // Обрабатываем ошибки валидации
+                      if (failure is ValidationFailure) {
+                        setState(() {
+                          _error = failure.serverMessage ?? failure.message;
+                          _validationErrors = failure.errors;
+                        });
+                      } else {
+                        setState(() {
+                          _error = _getErrorMessage(failure);
+                          _validationErrors = null;
+                        });
+                      }
+                    },
+                    (createdAsset) {
+                      // Закрываем диалог и показываем успех
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Основное средство успешно создано'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        widget.onSuccess();
+                      }
+                    },
+                  );
+                },
+                onCancel: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
