@@ -11,7 +11,7 @@ class Income extends Entity {
   final String currency;
   final IncomeArticle article;
   final Periodicity periodicity;
-  final String categoryId;
+  final IncomeCategory category;
   final String? serviceId;
   final PaymentMethod paymentMethod;
   final String comment;
@@ -26,7 +26,7 @@ class Income extends Entity {
     required this.currency,
     required this.article,
     required this.periodicity,
-    required this.categoryId,
+    required this.category,
     this.serviceId,
     required this.paymentMethod,
     required this.comment,

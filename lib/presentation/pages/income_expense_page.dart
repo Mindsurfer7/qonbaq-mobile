@@ -390,12 +390,12 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
       onTap: onToggle,
       borderRadius: BorderRadius.circular(16),
       child: Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.3), width: 1),
-      ),
-      color: color.withOpacity(0.05),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: color.withOpacity(0.3), width: 1),
+        ),
+        color: color.withOpacity(0.05),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -532,7 +532,9 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
   }
 
   /// Получить транзакции для выбранного счета
-  AccountReportData? _getSelectedAccountData(FinancialProvider financialProvider) {
+  AccountReportData? _getSelectedAccountData(
+    FinancialProvider financialProvider,
+  ) {
     if (_financialReport == null || financialProvider.selectedAccount == null) {
       return null;
     }
@@ -555,7 +557,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
   /// Построить список транзакций
   Widget _buildTransactionsList(FinancialProvider financialProvider) {
     final accountData = _getSelectedAccountData(financialProvider);
-    
+
     if (financialProvider.selectedAccount == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 32.0),
@@ -582,7 +584,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
 
     // Собираем все транзакции в один список в зависимости от видимости
     final transactions = <Widget>[];
-    
+
     if (_showIncomeTransactions && accountData.incomes.isNotEmpty) {
       transactions.add(_buildTransactionSectionTitle('Приходы', Colors.green));
       transactions.addAll(
@@ -599,15 +601,23 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
 
     if (_showTransitTransactions) {
       if (accountData.outgoingTransits.isNotEmpty) {
-        transactions.add(_buildTransactionSectionTitle('Исходящие транзиты', Colors.orange));
+        transactions.add(
+          _buildTransactionSectionTitle('Исходящие транзиты', Colors.orange),
+        );
         transactions.addAll(
-          accountData.outgoingTransits.map((transit) => _buildTransitItem(transit, true)),
+          accountData.outgoingTransits.map(
+            (transit) => _buildTransitItem(transit, true),
+          ),
         );
       }
       if (accountData.incomingTransits.isNotEmpty) {
-        transactions.add(_buildTransactionSectionTitle('Входящие транзиты', Colors.orange));
+        transactions.add(
+          _buildTransactionSectionTitle('Входящие транзиты', Colors.orange),
+        );
         transactions.addAll(
-          accountData.incomingTransits.map((transit) => _buildTransitItem(transit, false)),
+          accountData.incomingTransits.map(
+            (transit) => _buildTransitItem(transit, false),
+          ),
         );
       }
     }
@@ -1033,12 +1043,12 @@ class _CreateFinancialMovementDialogState
       case FinancialFormType.income:
         // Проверяем обязательные поля для Income
         final accountId = formData['accountId'] as String?;
-        final categoryId = formData['categoryId'] as String?;
-        
+        final categoryValue = formData['category'] as String?;
+
         if (accountId == null || accountId.isEmpty) {
           return Left(ValidationFailure('Не выбран счет', []));
         }
-        if (categoryId == null || categoryId.isEmpty) {
+        if (categoryValue == null || categoryValue.isEmpty) {
           return Left(ValidationFailure('Не выбрана категория', []));
         }
 
@@ -1061,7 +1071,10 @@ class _CreateFinancialMovementDialogState
             (e) => e.name == formData['periodicity'],
             orElse: () => Periodicity.CONSTANT,
           ),
-          categoryId: categoryId,
+          category: IncomeCategory.values.firstWhere(
+            (e) => e.name == categoryValue,
+            orElse: () => IncomeCategory.OTHER,
+          ),
           serviceId: formData['serviceId'] as String?,
           paymentMethod: PaymentMethod.values.firstWhere(
             (e) => e.name == formData['paymentMethod'],
@@ -1078,7 +1091,7 @@ class _CreateFinancialMovementDialogState
       case FinancialFormType.expense:
         // Проверяем обязательные поля для Expense
         final accountId = formData['accountId'] as String?;
-        
+
         if (accountId == null || accountId.isEmpty) {
           return Left(ValidationFailure('Не выбран счет', []));
         }
@@ -1097,12 +1110,13 @@ class _CreateFinancialMovementDialogState
             (e) => e.name == formData['category'],
             orElse: () => ExpenseCategory.COMMON,
           ),
-          article: formData['article'] != null
-              ? ExpenseArticle.values.firstWhere(
-                  (e) => e.name == formData['article'],
-                  orElse: () => ExpenseArticle.OTHER,
-                )
-              : null,
+          article:
+              formData['article'] != null
+                  ? ExpenseArticle.values.firstWhere(
+                    (e) => e.name == formData['article'],
+                    orElse: () => ExpenseArticle.OTHER,
+                  )
+                  : null,
           periodicity: Periodicity.values.firstWhere(
             (e) => e.name == formData['periodicity'],
             orElse: () => Periodicity.CONSTANT,
@@ -1124,7 +1138,7 @@ class _CreateFinancialMovementDialogState
         // Проверяем обязательные поля для Transit
         final fromAccountId = formData['fromAccountId'] as String?;
         final toAccountId = formData['toAccountId'] as String?;
-        
+
         if (fromAccountId == null || fromAccountId.isEmpty) {
           return Left(ValidationFailure('Не выбран счет отправителя', []));
         }

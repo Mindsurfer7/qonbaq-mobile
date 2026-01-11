@@ -5,6 +5,14 @@ enum IncomeArticle {
   OTHER_INCOME,
 }
 
+/// Категория дохода
+enum IncomeCategory {
+  MAIN_INCOME,
+  SUBSIDY,
+  INVESTMENT,
+  OTHER,
+}
+
 /// Периодичность платежа
 enum Periodicity {
   CONSTANT,

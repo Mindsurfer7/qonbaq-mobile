@@ -83,7 +83,7 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
         currency: income.currency,
         article: income.article,
         periodicity: income.periodicity,
-        categoryId: income.categoryId,
+        category: income.category,
         serviceId: income.serviceId,
         paymentMethod: income.paymentMethod,
         comment: income.comment,

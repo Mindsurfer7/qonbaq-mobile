@@ -177,6 +177,19 @@ import 'package:qonbaq/domain/repositories/employment_repository.dart';
 import 'package:qonbaq/domain/usecases/get_business_employments_with_roles.dart';
 import 'package:qonbaq/domain/usecases/update_employments_roles.dart';
 import 'package:qonbaq/presentation/providers/roles_provider.dart';
+import 'package:qonbaq/data/datasources/fixed_asset_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/fixed_asset_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/fixed_asset_repository.dart';
+import 'package:qonbaq/domain/usecases/get_fixed_assets.dart';
+import 'package:qonbaq/domain/usecases/get_fixed_asset_by_id.dart';
+import 'package:qonbaq/domain/usecases/create_fixed_asset.dart';
+import 'package:qonbaq/domain/usecases/update_fixed_asset.dart';
+import 'package:qonbaq/domain/usecases/transfer_fixed_asset.dart';
+import 'package:qonbaq/domain/usecases/add_repair.dart';
+import 'package:qonbaq/domain/usecases/add_inventory.dart';
+import 'package:qonbaq/domain/usecases/add_photo.dart';
+import 'package:qonbaq/domain/usecases/write_off_fixed_asset.dart';
+import 'package:qonbaq/domain/usecases/archive_fixed_asset.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -452,6 +465,24 @@ class MyApp extends StatelessWidget {
       updateEmploymentsRoles: updateEmploymentsRoles,
     );
 
+    // Инициализация зависимостей для основных средств
+    final fixedAssetRemoteDataSource = FixedAssetRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final FixedAssetRepository fixedAssetRepository = FixedAssetRepositoryImpl(
+      remoteDataSource: fixedAssetRemoteDataSource,
+    );
+    final getFixedAssets = GetFixedAssets(fixedAssetRepository);
+    final getFixedAssetById = GetFixedAssetById(fixedAssetRepository);
+    final createFixedAsset = CreateFixedAsset(fixedAssetRepository);
+    final updateFixedAsset = UpdateFixedAsset(fixedAssetRepository);
+    final transferFixedAsset = TransferFixedAsset(fixedAssetRepository);
+    final addRepair = AddRepair(fixedAssetRepository);
+    final addInventory = AddInventory(fixedAssetRepository);
+    final addPhoto = AddPhoto(fixedAssetRepository);
+    final writeOffFixedAsset = WriteOffFixedAsset(fixedAssetRepository);
+    final archiveFixedAsset = ArchiveFixedAsset(fixedAssetRepository);
+
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
@@ -499,6 +530,17 @@ class MyApp extends StatelessWidget {
         Provider<ServiceRepository>(create: (_) => serviceRepository),
         Provider<ResourceRepository>(create: (_) => resourceRepository),
         Provider<TimeSlotRepository>(create: (_) => timeSlotRepository),
+        Provider<FixedAssetRepository>(create: (_) => fixedAssetRepository),
+        Provider<GetFixedAssets>(create: (_) => getFixedAssets),
+        Provider<GetFixedAssetById>(create: (_) => getFixedAssetById),
+        Provider<CreateFixedAsset>(create: (_) => createFixedAsset),
+        Provider<UpdateFixedAsset>(create: (_) => updateFixedAsset),
+        Provider<TransferFixedAsset>(create: (_) => transferFixedAsset),
+        Provider<AddRepair>(create: (_) => addRepair),
+        Provider<AddInventory>(create: (_) => addInventory),
+        Provider<AddPhoto>(create: (_) => addPhoto),
+        Provider<WriteOffFixedAsset>(create: (_) => writeOffFixedAsset),
+        Provider<ArchiveFixedAsset>(create: (_) => archiveFixedAsset),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),
