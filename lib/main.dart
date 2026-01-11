@@ -169,6 +169,13 @@ import 'package:qonbaq/domain/usecases/create_account.dart';
 import 'package:qonbaq/domain/usecases/get_financial_report.dart';
 import 'package:qonbaq/domain/usecases/get_accounts.dart';
 import 'package:qonbaq/presentation/providers/financial_provider.dart';
+import 'package:qonbaq/data/datasources/employment_remote_datasource.dart';
+import 'package:qonbaq/data/datasources/employment_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/employment_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/employment_repository.dart';
+import 'package:qonbaq/domain/usecases/get_business_employments_with_roles.dart';
+import 'package:qonbaq/domain/usecases/update_employments_roles.dart';
+import 'package:qonbaq/presentation/providers/roles_provider.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -428,6 +435,22 @@ class MyApp extends StatelessWidget {
       remoteDataSource: timeSlotRemoteDataSource,
     );
 
+    // Инициализация зависимостей для ролей
+    final employmentRemoteDataSource = EmploymentRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final EmploymentRepository employmentRepository = EmploymentRepositoryImpl(
+      remoteDataSource: employmentRemoteDataSource,
+    );
+    final getBusinessEmploymentsWithRoles = GetBusinessEmploymentsWithRoles(
+      employmentRepository,
+    );
+    final updateEmploymentsRoles = UpdateEmploymentsRoles(employmentRepository);
+    final rolesProvider = RolesProvider(
+      getBusinessEmploymentsWithRoles: getBusinessEmploymentsWithRoles,
+      updateEmploymentsRoles: updateEmploymentsRoles,
+    );
+
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
@@ -441,6 +464,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => projectProvider),
         ChangeNotifierProvider(create: (_) => inboxProvider),
         ChangeNotifierProvider(create: (_) => financialProvider),
+        ChangeNotifierProvider(create: (_) => rolesProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
