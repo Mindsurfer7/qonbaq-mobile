@@ -33,7 +33,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
   FinancialReport? _financialReport;
   bool _isLoading = false;
   String? _error;
-  
+
   // Состояние видимости списков транзакций
   bool _showIncomeTransactions = false;
   bool _showExpenseTransactions = false;
@@ -390,51 +390,55 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
       onTap: onToggle,
       borderRadius: BorderRadius.circular(16),
       child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: color.withOpacity(0.3), width: 1),
-        ),
-        color: color.withOpacity(0.05),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withOpacity(0.3), width: 1),
+      ),
+      color: color.withOpacity(0.05),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    isExpanded ? Icons.visibility : Icons.visibility_off,
-                    color: color.withOpacity(0.6),
-                    size: 18,
+                  Icon(icon, color: color, size: 32),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: color.withOpacity(0.8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      amount,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: color.withOpacity(0.8),
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Icon(
+                isExpanded ? Icons.visibility : Icons.visibility_off,
+                color: color.withOpacity(0.6),
+                size: 18,
               ),
-              const SizedBox(height: 4),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  amount,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
