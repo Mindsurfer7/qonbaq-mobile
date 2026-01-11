@@ -33,17 +33,8 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
 
   /// Обработчик изменения полей формы - перестраивает виджет для обновления видимости
   void _handleFieldChanged(String fieldName, dynamic value) {
-    print('═══════════════════════════════════════════');
-    print('🔄 FIELD CHANGED EVENT');
-    print('  Field: $fieldName');
-    print('  New Value: $value');
-    print('  Old Local Values: $_localFieldValues');
-
     // Обновляем локальное хранилище
     _localFieldValues[fieldName] = value;
-
-    print('  Updated Local Values: $_localFieldValues');
-    print('═══════════════════════════════════════════');
 
     // Используем addPostFrameCallback чтобы дать FormBuilder время обновить свой state
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -713,12 +704,6 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     final visible = props['visible'] as Map<String, dynamic>?;
     if (visible == null) return true;
 
-    final elementName = widget.element['name'] as String? ?? '';
-
-    print('───────────────────────────────────────────');
-    print('🔍 VISIBILITY CHECK: $elementName');
-    print('  Условия видимости: $visible');
-
     // Проверяем все условия видимости
     for (var entry in visible.entries) {
       final fieldPath = entry.key; // например "category" или "periodicity"
@@ -731,7 +716,6 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
       final fullFieldPath = '${widget.blockName}.$fieldPath';
       if (widget.localFieldValues.containsKey(fullFieldPath)) {
         actualValue = widget.localFieldValues[fullFieldPath];
-        print('  📦 Из localFieldValues[$fullFieldPath]: $actualValue');
       } else {
         // Если нет в локальном хранилище, пробуем FormBuilder
         FormBuilderState? formState;
@@ -741,19 +725,14 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
           try {
             formState = FormBuilder.of(context);
           } catch (e) {
-            print('  ⚠️ FormBuilder не найден в контексте');
+            // FormBuilder не найден в контексте
           }
         }
 
         if (formState != null) {
           final formValues = formState.value;
-          print('  📋 FormBuilder values: $formValues');
-
           final flattenedValues = _flattenMap(formValues);
-          print('  📋 Flattened values: $flattenedValues');
-
           actualValue = _getFieldValue(flattenedValues, fieldPath);
-          print('  📋 Из FormBuilder[$fieldPath]: $actualValue');
         }
       }
 
@@ -761,17 +740,11 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
       final expectedStr = expectedValue?.toString();
       final actualStr = actualValue?.toString();
 
-      print('  🔄 Сравнение: "$actualStr" == "$expectedStr" ?');
-
       if (actualStr != expectedStr) {
-        print('  ❌ НЕ СОВПАДАЕТ → поле СКРЫТО');
-        print('───────────────────────────────────────────');
         return false;
       }
     }
 
-    print('  ✅ ВСЕ УСЛОВИЯ ВЫПОЛНЕНЫ → поле ВИДИМО');
-    print('───────────────────────────────────────────');
     return true;
   }
 
@@ -983,11 +956,6 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
                 }
               }).toList(),
       onChanged: (value) {
-        print('═══════════════════════════════════════════');
-        print('📝 SELECT onChanged TRIGGERED');
-        print('  Field: $_fieldName');
-        print('  Value: $value');
-        print('═══════════════════════════════════════════');
         // Уведомляем родителя об изменении для перестройки формы
         widget.onFieldChanged?.call(_fieldName, value);
       },
@@ -1211,11 +1179,6 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
                   }).toList(),
           onChanged: (value) {
             field.didChange(value);
-            print('═══════════════════════════════════════════');
-            print('📝 REACTIVE SELECT onChanged TRIGGERED');
-            print('  Field: ${widget.fieldName}');
-            print('  Value: $value');
-            print('═══════════════════════════════════════════');
             // Уведомляем родителя об изменении для перестройки формы
             widget.onFieldChanged?.call(widget.fieldName, value);
           },
