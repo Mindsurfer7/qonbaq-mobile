@@ -982,6 +982,21 @@ class _CreateFinancialMovementDialogState
     );
   }
 
+  /// Безопасное преобразование amount в double
+  /// Обрабатывает как строку, так и число
+  double _parseAmount(dynamic value) {
+    if (value == null) {
+      return 0.0;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
   Future<Either<Failure, void>> _createEntity(
     Map<String, dynamic> formValues,
     String businessId,
@@ -1016,6 +1031,17 @@ class _CreateFinancialMovementDialogState
 
     switch (widget.formType) {
       case FinancialFormType.income:
+        // Проверяем обязательные поля для Income
+        final accountId = formData['accountId'] as String?;
+        final categoryId = formData['categoryId'] as String?;
+        
+        if (accountId == null || accountId.isEmpty) {
+          return Left(ValidationFailure('Не выбран счет', []));
+        }
+        if (categoryId == null || categoryId.isEmpty) {
+          return Left(ValidationFailure('Не выбрана категория', []));
+        }
+
         final createIncomeUseCase = Provider.of<CreateIncome>(
           context,
           listen: false,
@@ -1024,8 +1050,8 @@ class _CreateFinancialMovementDialogState
         final income = Income(
           businessId: businessId,
           projectId: projectId,
-          accountId: formData['accountId'] as String,
-          amount: (formData['amount'] as num).toDouble(),
+          accountId: accountId,
+          amount: _parseAmount(formData['amount']),
           currency: formData['currency'] as String? ?? 'KZT',
           article: IncomeArticle.values.firstWhere(
             (e) => e.name == formData['article'],
@@ -1035,7 +1061,7 @@ class _CreateFinancialMovementDialogState
             (e) => e.name == formData['periodicity'],
             orElse: () => Periodicity.CONSTANT,
           ),
-          categoryId: formData['categoryId'] as String,
+          categoryId: categoryId,
           serviceId: formData['serviceId'] as String?,
           paymentMethod: PaymentMethod.values.firstWhere(
             (e) => e.name == formData['paymentMethod'],
@@ -1050,6 +1076,13 @@ class _CreateFinancialMovementDialogState
         return await createIncomeUseCase.call(income);
 
       case FinancialFormType.expense:
+        // Проверяем обязательные поля для Expense
+        final accountId = formData['accountId'] as String?;
+        
+        if (accountId == null || accountId.isEmpty) {
+          return Left(ValidationFailure('Не выбран счет', []));
+        }
+
         final createExpenseUseCase = Provider.of<CreateExpense>(
           context,
           listen: false,
@@ -1057,8 +1090,8 @@ class _CreateFinancialMovementDialogState
         final expense = Expense(
           businessId: businessId,
           projectId: projectId,
-          accountId: formData['accountId'] as String,
-          amount: (formData['amount'] as num).toDouble(),
+          accountId: accountId,
+          amount: _parseAmount(formData['amount']),
           currency: formData['currency'] as String? ?? 'KZT',
           category: ExpenseCategory.values.firstWhere(
             (e) => e.name == formData['category'],
@@ -1088,15 +1121,26 @@ class _CreateFinancialMovementDialogState
         return await createExpenseUseCase.call(expense);
 
       case FinancialFormType.transit:
+        // Проверяем обязательные поля для Transit
+        final fromAccountId = formData['fromAccountId'] as String?;
+        final toAccountId = formData['toAccountId'] as String?;
+        
+        if (fromAccountId == null || fromAccountId.isEmpty) {
+          return Left(ValidationFailure('Не выбран счет отправителя', []));
+        }
+        if (toAccountId == null || toAccountId.isEmpty) {
+          return Left(ValidationFailure('Не выбран счет получателя', []));
+        }
+
         final createTransitUseCase = Provider.of<CreateTransit>(
           context,
           listen: false,
         );
         final transit = Transit(
           businessId: businessId,
-          fromAccountId: formData['fromAccountId'] as String,
-          toAccountId: formData['toAccountId'] as String,
-          amount: (formData['amount'] as num).toDouble(),
+          fromAccountId: fromAccountId,
+          toAccountId: toAccountId,
+          amount: _parseAmount(formData['amount']),
           article: TransitArticle.values.firstWhere(
             (e) => e.name == formData['article'],
             orElse: () => TransitArticle.BETWEEN_BANKS,
