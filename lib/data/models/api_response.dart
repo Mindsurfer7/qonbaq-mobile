@@ -80,16 +80,50 @@ class ApiMeta {
   final int? limit;
   final int? totalPages;
   final int? count;
+  final List<MissingRole>? missingRoles;
+  final int? totalMissing;
+  final List<UnassignedRole>? unassignedRoles;
+  final String? message;
 
-  ApiMeta({this.total, this.page, this.limit, this.totalPages, this.count});
+  ApiMeta({
+    this.total,
+    this.page,
+    this.limit,
+    this.totalPages,
+    this.count,
+    this.missingRoles,
+    this.totalMissing,
+    this.unassignedRoles,
+    this.message,
+  });
 
   factory ApiMeta.fromJson(Map<String, dynamic> json) {
+    List<MissingRole>? missingRoles;
+    if (json['missingRoles'] != null) {
+      final rolesList = json['missingRoles'] as List<dynamic>;
+      missingRoles = rolesList
+          .map((role) => MissingRole.fromJson(role as Map<String, dynamic>))
+          .toList();
+    }
+
+    List<UnassignedRole>? unassignedRoles;
+    if (json['unassignedRoles'] != null) {
+      final rolesList = json['unassignedRoles'] as List<dynamic>;
+      unassignedRoles = rolesList
+          .map((role) => UnassignedRole.fromJson(role as Map<String, dynamic>))
+          .toList();
+    }
+
     return ApiMeta(
       total: json['total'] as int?,
       page: json['page'] as int?,
       limit: json['limit'] as int?,
       totalPages: json['totalPages'] as int?,
       count: json['count'] as int?,
+      missingRoles: missingRoles,
+      totalMissing: json['totalMissing'] as int?,
+      unassignedRoles: unassignedRoles,
+      message: json['message'] as String?,
     );
   }
 
@@ -100,6 +134,102 @@ class ApiMeta {
       if (limit != null) 'limit': limit,
       if (totalPages != null) 'totalPages': totalPages,
       if (count != null) 'count': count,
+      if (missingRoles != null)
+        'missingRoles': missingRoles!.map((r) => r.toJson()).toList(),
+      if (totalMissing != null) 'totalMissing': totalMissing,
+      if (unassignedRoles != null)
+        'unassignedRoles': unassignedRoles!.map((r) => r.toJson()).toList(),
+      if (message != null) 'message': message,
+    };
+  }
+}
+
+/// Модель неназначенной роли (для CEO)
+class UnassignedRole {
+  final String code;
+  final String name;
+
+  UnassignedRole({
+    required this.code,
+    required this.name,
+  });
+
+  factory UnassignedRole.fromJson(Map<String, dynamic> json) {
+    return UnassignedRole(
+      code: json['code'] as String,
+      name: json['name'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'name': name,
+    };
+  }
+}
+
+/// Модель отсутствующей роли
+class MissingRole {
+  final String roleCode;
+  final String roleName;
+  final List<AffectedTemplate> affectedTemplates;
+
+  MissingRole({
+    required this.roleCode,
+    required this.roleName,
+    required this.affectedTemplates,
+  });
+
+  factory MissingRole.fromJson(Map<String, dynamic> json) {
+    final templatesList = json['affectedTemplates'] as List<dynamic>;
+    final templates = templatesList
+        .map((template) =>
+            AffectedTemplate.fromJson(template as Map<String, dynamic>))
+        .toList();
+
+    return MissingRole(
+      roleCode: json['roleCode'] as String,
+      roleName: json['roleName'] as String,
+      affectedTemplates: templates,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'roleCode': roleCode,
+      'roleName': roleName,
+      'affectedTemplates':
+          affectedTemplates.map((t) => t.toJson()).toList(),
+    };
+  }
+}
+
+/// Модель шаблона, затронутого отсутствующей ролью
+class AffectedTemplate {
+  final String id;
+  final String name;
+  final String code;
+
+  AffectedTemplate({
+    required this.id,
+    required this.name,
+    required this.code,
+  });
+
+  factory AffectedTemplate.fromJson(Map<String, dynamic> json) {
+    return AffectedTemplate(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      code: json['code'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'code': code,
     };
   }
 }

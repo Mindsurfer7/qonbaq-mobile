@@ -29,6 +29,7 @@ class ApprovalTemplate extends Entity {
   final Map<String, dynamic>? workflowConfig; // Конфигурация workflow
   final String? finalApproverRole; // Роль финального одобряющего
   final String? executorDepartment; // Отдел исполнителя
+  final String? executorRole; // Код роли исполнителя
   final String? executorAction; // Действие исполнителя
   final bool isActive;
   final List<ApprovalStep> steps;
@@ -48,6 +49,7 @@ class ApprovalTemplate extends Entity {
     this.workflowConfig,
     this.finalApproverRole,
     this.executorDepartment,
+    this.executorRole,
     this.executorAction,
     this.isActive = true,
     required this.steps,

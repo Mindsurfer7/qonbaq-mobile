@@ -81,7 +81,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   }
 
   @override
-  Future<List<ApprovalTemplateModel>> getTemplates({String? businessId}) async {
+  Future<ApiResponse<List<ApprovalTemplateModel>>> getTemplates({String? businessId}) async {
     try {
       final queryParams = <String, String>{};
       if (businessId != null) queryParams['businessId'] = businessId;
@@ -108,7 +108,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
               )
               .toList();
         });
-        return apiResponse.data;
+        return apiResponse;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
@@ -299,7 +299,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   }
 
   @override
-  Future<List<ApprovalModel>> getApprovals({
+  Future<ApiResponse<List<ApprovalModel>>> getApprovals({
     String? businessId,
     ApprovalStatus? status,
     String? createdBy,
@@ -338,7 +338,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
               )
               .toList();
         });
-        return apiResponse.data;
+        return apiResponse;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {

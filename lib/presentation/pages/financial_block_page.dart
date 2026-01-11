@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/account.dart';
+import '../../domain/entities/expense.dart';
 import '../../domain/entities/financial_enums.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/usecases/get_financial_form.dart';
-import '../../domain/usecases/create_approval.dart';
+import '../../domain/usecases/create_expense.dart';
 import '../../domain/usecases/create_account.dart';
 import '../../core/error/failures.dart';
 import '../providers/auth_provider.dart';
@@ -816,88 +816,73 @@ class _CreateFinancialRequestDialogState
 
     final formValues = _formKey.currentState!.value;
 
-    // Извлекаем paymentDueDate из formData (обязательное поле)
-    // Поддерживаем оба варианта: paymentDueDate и requestDate (на случай, если маппинг не сработал)
-    DateTime? paymentDueDate;
-    if (formValues.containsKey('paymentDueDate')) {
-      final paymentDueDateValue = formValues['paymentDueDate'];
-      if (paymentDueDateValue is DateTime) {
-        paymentDueDate = paymentDueDateValue;
-      } else if (paymentDueDateValue is String) {
-        paymentDueDate = DateTime.tryParse(paymentDueDateValue);
-      }
-    } else if (formValues.containsKey('requestDate')) {
-      // Fallback на старое название (на случай, если маппинг не сработал)
-      final requestDateValue = formValues['requestDate'];
-      if (requestDateValue is DateTime) {
-        paymentDueDate = requestDateValue;
-      } else if (requestDateValue is String) {
-        paymentDueDate = DateTime.tryParse(requestDateValue);
-      }
-    }
-
-    // Проверяем наличие обязательного поля paymentDueDate
-    if (paymentDueDate == null) {
-      setState(() {
-        _isSubmitting = false;
-        _error = 'Поле "Дата оплаты" обязательно для заполнения';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Поле "Дата оплаты" обязательно для заполнения'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Получаем данные из динамической формы (исключаем системные поля и paymentDueDate/requestDate)
-    final dynamicFormData = <String, dynamic>{};
+    // Преобразуем formValues в нужный формат, убирая префиксы блоков
+    // formValues содержит данные вида {'main.accountId': '...', 'transaction.transactionDate': '...'}
+    // Нужно убрать префиксы блоков и оставить только имена полей
+    final formData = <String, dynamic>{};
     formValues.forEach((key, value) {
-      // Исключаем системные поля формы и paymentDueDate/requestDate (отправляется отдельно)
-      if (key != 'title' && key != 'description' && key != 'paymentDueDate' && key != 'requestDate' && value != null) {
-        // Преобразуем DateTime в ISO строку для отправки на сервер
-        if (value is DateTime) {
-          dynamicFormData[key] = value.toIso8601String();
-        } else {
-          dynamicFormData[key] = value;
+      if (value != null) {
+        // Убираем префикс блока (main., transaction. и т.д.)
+        final fieldName = key.contains('.') ? key.split('.').last : key;
+        // Исключаем системные поля
+        if (fieldName != 'title' && 
+            fieldName != 'description' && 
+            fieldName != 'paymentDueDate' && 
+            fieldName != 'requestDate') {
+          if (value is DateTime) {
+            formData[fieldName] = value.toIso8601String();
+          } else {
+            formData[fieldName] = value;
+          }
         }
       }
     });
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final currentUserId = authProvider.user?.id;
-    if (currentUserId == null) {
-      setState(() {
-        _isSubmitting = false;
-        _error = 'Пользователь не авторизован';
-      });
-      return;
+    // Если transactionDate не заполнено, используем текущее время
+    if (!formData.containsKey('transactionDate')) {
+      formData['transactionDate'] = DateTime.now().toIso8601String();
     }
 
-    final createApprovalUseCase = Provider.of<CreateApproval>(
+    // Получаем projectId из formData или из финансового провайдера
+    String? projectId = formData['projectId'] as String?;
+    if (projectId == null || projectId.isEmpty) {
+      final financialProvider = Provider.of<FinancialProvider>(context, listen: false);
+      projectId = financialProvider.selectedProject?.id;
+    }
+
+    final createExpenseUseCase = Provider.of<CreateExpense>(
       context,
       listen: false,
     );
 
-    final approval = Approval(
-      id: '',
+    // Преобразуем formData в Expense entity
+    final expense = Expense(
       businessId: widget.businessId,
-      templateCode: _template!.code,
-      title: _template!.name,
-      status: ApprovalStatus.pending,
-      createdBy: currentUserId,
-      paymentDueDate: paymentDueDate,
-      formData: dynamicFormData.isNotEmpty ? dynamicFormData : null,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      projectId: projectId,
+      accountId: formData['accountId'] as String,
+      amount: (formData['amount'] as num).toDouble(),
+      currency: formData['currency'] as String? ?? 'KZT',
+      category: ExpenseCategory.values.firstWhere(
+        (e) => e.name == formData['category'],
+        orElse: () => ExpenseCategory.COMMON,
+      ),
+      articleId: formData['articleId'] as String?,
+      periodicity: Periodicity.values.firstWhere(
+        (e) => e.name == formData['periodicity'],
+        orElse: () => Periodicity.VARIABLE,
+      ),
+      serviceId: formData['serviceId'] as String?,
+      paymentMethod: PaymentMethod.values.firstWhere(
+        (e) => e.name == formData['paymentMethod'],
+        orElse: () => PaymentMethod.CASH,
+      ),
+      comment: formData['comment'] as String? ?? '',
+      transactionDate: formData['transactionDate'] is String
+          ? DateTime.parse(formData['transactionDate'] as String)
+          : formData['transactionDate'] as DateTime,
     );
 
-    final result = await createApprovalUseCase.call(
-      CreateApprovalParams(approval: approval),
-    );
+    final result = await createExpenseUseCase.call(expense);
 
     result.fold(
       (failure) {
@@ -914,7 +899,7 @@ class _CreateFinancialRequestDialogState
           );
         }
       },
-      (createdApproval) {
+      (createdExpense) {
         setState(() {
           _isSubmitting = false;
         });
@@ -922,7 +907,7 @@ class _CreateFinancialRequestDialogState
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Финансовая заявка успешно создана'),
+              content: Text('Расход успешно создан'),
               backgroundColor: Colors.green,
             ),
           );

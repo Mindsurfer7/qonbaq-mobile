@@ -9,6 +9,8 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
 import '../../domain/usecases/create_approval.dart';
 import '../../domain/usecases/get_approval_templates.dart';
+import '../../domain/entities/approvals_result.dart';
+import '../../domain/entities/missing_role_info.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
@@ -146,11 +148,16 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           );
         }
       },
-      (approvals) {
+      (result) {
         setState(() {
           _isLoadingAllApprovals = false;
-          _allCanApproveApprovals = approvals;
+          _allCanApproveApprovals = result.approvals;
         });
+        
+        // Показываем поп-ап о неназначенных ролях, если они есть
+        if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+          _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+        }
       },
     );
   }
@@ -216,11 +223,16 @@ class _ApprovalsPageState extends State<ApprovalsPage>
               _error = _getErrorMessage(failure);
             });
           },
-          (approvals) {
+          (result) {
             setState(() {
               _isLoading = false;
-              _canApproveApprovals = approvals;
+              _canApproveApprovals = result.approvals;
             });
+            
+            // Показываем поп-ап о неназначенных ролях, если они есть
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
           },
         );
       } else if (actualTabIndex == 1) {
@@ -241,11 +253,21 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         List<Approval> allPending = [];
         draftResult.fold(
           (failure) => _error = _getErrorMessage(failure),
-          (approvals) => allPending.addAll(approvals),
+          (result) {
+            allPending.addAll(result.approvals);
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
         );
         pendingResult.fold(
           (failure) => _error = _getErrorMessage(failure),
-          (approvals) => allPending.addAll(approvals),
+          (result) {
+            allPending.addAll(result.approvals);
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
         );
 
         setState(() {
@@ -279,15 +301,30 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
         completedResult.fold(
           (failure) => _error = _getErrorMessage(failure),
-          (approvals) => completed = approvals,
+          (result) {
+            completed = result.approvals;
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
         );
         approvedResult.fold(
           (failure) => _error = _getErrorMessage(failure),
-          (approvals) => approved = approvals,
+          (result) {
+            approved = result.approvals;
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
         );
         rejectedResult.fold(
           (failure) => _error = _getErrorMessage(failure),
-          (approvals) => rejected = approvals,
+          (result) {
+            rejected = result.approvals;
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
         );
 
         setState(() {
@@ -318,6 +355,70 @@ class _ApprovalsPageState extends State<ApprovalsPage>
       return failure.message;
     }
     return 'Произошла ошибка';
+  }
+
+  void _showUnassignedRolesPopup(List<UnassignedRoleInfo> roles, String message) {
+    // Используем флаг, чтобы не показывать несколько диалогов одновременно
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('Неназначенные роли'),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ...roles.map((role) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_off, size: 20, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            role.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Закрыть'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushNamed('/roles-assignment');
+            },
+            child: const Text('Назначить роли'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showCreateApprovalDialog() {
@@ -871,11 +972,17 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           _error = _getErrorMessage(failure);
         });
       },
-      (templates) {
+      (result) {
         setState(() {
           _isLoadingTemplates = false;
-          _templates = templates.where((t) => t.isActive).toList();
+          _templates = result.templates.where((t) => t.isActive).toList();
         });
+        // Показываем предупреждение о недостающих ролях, если они есть
+        if (result.totalMissing != null && result.totalMissing! > 0 && result.missingRoles != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showMissingRolesDialog(result.missingRoles!);
+          });
+        }
       },
     );
   }
@@ -925,65 +1032,47 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     final title = (formValues['title'] as String?)?.trim();
     final description = (formValues['description'] as String?)?.trim();
 
-    // Извлекаем paymentDueDate из formValues (обязательное поле)
-    // Поддерживаем оба варианта: paymentDueDate и requestDate (на случай, если маппинг не сработал)
+    // Извлекаем paymentDueDate из formValues
+    // Ищем поле с учетом префиксов блоков (main.paymentDueDate, transaction.paymentDueDate и т.д.)
     DateTime? paymentDueDate;
-    if (formValues.containsKey('paymentDueDate')) {
-      final paymentDueDateValue = formValues['paymentDueDate'];
-      if (paymentDueDateValue is DateTime) {
-        paymentDueDate = paymentDueDateValue;
-      } else if (paymentDueDateValue is String) {
-        paymentDueDate = DateTime.tryParse(paymentDueDateValue);
-      }
-    } else if (formValues.containsKey('requestDate')) {
-      // Fallback на старое название (на случай, если маппинг не сработал)
-      final requestDateValue = formValues['requestDate'];
-      if (requestDateValue is DateTime) {
-        paymentDueDate = requestDateValue;
-      } else if (requestDateValue is String) {
-        paymentDueDate = DateTime.tryParse(requestDateValue);
+    for (final key in formValues.keys) {
+      final fieldName = key.contains('.') ? key.split('.').last : key;
+      if (fieldName == 'paymentDueDate' || fieldName == 'requestDate') {
+        final value = formValues[key];
+        if (value is DateTime) {
+          paymentDueDate = value;
+          break;
+        } else if (value is String && value.isNotEmpty) {
+          paymentDueDate = DateTime.tryParse(value);
+          if (paymentDueDate != null) break;
+        }
       }
     }
 
-    // Проверяем наличие обязательного поля paymentDueDate
-    if (paymentDueDate == null) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Поле "Дата оплаты" обязательно для заполнения';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Поле "Дата оплаты" обязательно для заполнения'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+    // Если paymentDueDate не найден в форме, используем текущую дату
+    // (для форм без этого поля)
+    paymentDueDate ??= DateTime.now();
 
     // Получаем данные из динамической формы (исключаем системные поля и paymentDueDate/requestDate)
     final dynamicFormData = <String, dynamic>{};
     formValues.forEach((key, value) {
+      // Получаем имя поля без префикса блока
+      final fieldName = key.contains('.') ? key.split('.').last : key;
       // Исключаем системные поля формы и paymentDueDate/requestDate (отправляется отдельно)
-      if (key != 'template' &&
-          key != 'title' &&
-          key != 'description' &&
-          key != 'paymentDueDate' &&
-          key != 'requestDate' &&
+      if (fieldName != 'template' &&
+          fieldName != 'title' &&
+          fieldName != 'description' &&
+          fieldName != 'paymentDueDate' &&
+          fieldName != 'requestDate' &&
+          fieldName != 'processName' &&
           value != null) {
-        // Удаляем processName из formData - бэкенд его автоматически удаляет
-        if (key == 'processName') {
-          return; // Пропускаем processName
-        }
-
         // Преобразуем DateTime в ISO строку для отправки на сервер
         if (value is DateTime) {
-          dynamicFormData[key] = value.toIso8601String();
+          dynamicFormData[fieldName] = value.toIso8601String();
         } else if (value is ApprovalTemplate) {
           // Пропускаем объекты шаблонов
         } else {
-          dynamicFormData[key] = value;
+          dynamicFormData[fieldName] = value;
         }
       }
     });
@@ -1081,6 +1170,80 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       return failure.serverMessage ?? failure.message;
     }
     return 'Произошла ошибка';
+  }
+
+  void _showMissingRolesDialog(List<MissingRoleInfo> missingRoles) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('Отсутствуют назначенные роли'),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Для работы согласований необходимо назначить сотрудников на следующие роли:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ...missingRoles.map((role) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          role.roleName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...role.affectedTemplates.map((template) => Padding(
+                              padding: const EdgeInsets.only(left: 16, bottom: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.description, size: 16),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      template.name,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Закрыть'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushNamed('/roles-assignment');
+            },
+            child: const Text('Перейти к распределению ролей'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -4,6 +4,8 @@ import '../entities/approval_template.dart';
 import '../entities/approval_comment.dart';
 import '../entities/approval_attachment.dart';
 import '../entities/approval_decision.dart';
+import '../entities/templates_result.dart';
+import '../entities/approvals_result.dart';
 import '../../core/error/failures.dart';
 import '../repositories/repository.dart';
 
@@ -13,8 +15,8 @@ abstract class ApprovalRepository extends Repository {
   /// Создать шаблон
   Future<Either<Failure, ApprovalTemplate>> createTemplate(ApprovalTemplate template);
 
-  /// Получить список шаблонов
-  Future<Either<Failure, List<ApprovalTemplate>>> getTemplates({String? businessId});
+  /// Получить список шаблонов с метаданными
+  Future<Either<Failure, TemplatesResult>> getTemplates({String? businessId});
 
   /// Получить шаблон по ID
   Future<Either<Failure, ApprovalTemplate>> getTemplateById(String templateId);
@@ -36,7 +38,7 @@ abstract class ApprovalRepository extends Repository {
   });
 
   /// Получить список согласований
-  Future<Either<Failure, List<Approval>>> getApprovals({
+  Future<Either<Failure, ApprovalsResult>> getApprovals({
     String? businessId,
     ApprovalStatus? status,
     String? createdBy,

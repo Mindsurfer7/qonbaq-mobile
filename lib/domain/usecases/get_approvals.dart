@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../core/error/failures.dart';
 import '../../core/usecase/usecase.dart';
 import '../entities/approval.dart';
+import '../entities/approvals_result.dart';
 import '../repositories/approval_repository.dart';
 
 /// Параметры для получения списка согласований
@@ -26,13 +27,13 @@ class GetApprovalsParams {
 }
 
 /// Use Case для получения списка согласований
-class GetApprovals implements UseCase<List<Approval>, GetApprovalsParams> {
+class GetApprovals implements UseCase<ApprovalsResult, GetApprovalsParams> {
   final ApprovalRepository repository;
 
   GetApprovals(this.repository);
 
   @override
-  Future<Either<Failure, List<Approval>>> call(GetApprovalsParams params) async {
+  Future<Either<Failure, ApprovalsResult>> call(GetApprovalsParams params) async {
     return await repository.getApprovals(
       businessId: params.businessId,
       status: params.status,

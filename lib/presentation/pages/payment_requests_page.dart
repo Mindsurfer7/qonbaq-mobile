@@ -228,53 +228,43 @@ class _CreateFinancialRequestDialogState
 
     final formValues = _formKey.currentState!.value;
 
-    // Извлекаем paymentDueDate из formData (обязательное поле)
-    // Поддерживаем оба варианта: paymentDueDate и requestDate (на случай, если маппинг не сработал)
+    // Извлекаем paymentDueDate из formData
+    // Ищем поле с учетом префиксов блоков (main.paymentDueDate, transaction.paymentDueDate и т.д.)
     DateTime? paymentDueDate;
-    if (formValues.containsKey('paymentDueDate')) {
-      final paymentDueDateValue = formValues['paymentDueDate'];
-      if (paymentDueDateValue is DateTime) {
-        paymentDueDate = paymentDueDateValue;
-      } else if (paymentDueDateValue is String) {
-        paymentDueDate = DateTime.tryParse(paymentDueDateValue);
-      }
-    } else if (formValues.containsKey('requestDate')) {
-      // Fallback на старое название (на случай, если маппинг не сработал)
-      final requestDateValue = formValues['requestDate'];
-      if (requestDateValue is DateTime) {
-        paymentDueDate = requestDateValue;
-      } else if (requestDateValue is String) {
-        paymentDueDate = DateTime.tryParse(requestDateValue);
+    for (final key in formValues.keys) {
+      final fieldName = key.contains('.') ? key.split('.').last : key;
+      if (fieldName == 'paymentDueDate' || fieldName == 'requestDate') {
+        final value = formValues[key];
+        if (value is DateTime) {
+          paymentDueDate = value;
+          break;
+        } else if (value is String && value.isNotEmpty) {
+          paymentDueDate = DateTime.tryParse(value);
+          if (paymentDueDate != null) break;
+        }
       }
     }
 
-    // Проверяем наличие обязательного поля paymentDueDate
-    if (paymentDueDate == null) {
-      setState(() {
-        _isSubmitting = false;
-        _error = 'Поле "Дата оплаты" обязательно для заполнения';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Поле "Дата оплаты" обязательно для заполнения'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+    // Если paymentDueDate не найден в форме, используем текущую дату
+    // (для форм без этого поля)
+    paymentDueDate ??= DateTime.now();
 
     // Получаем данные из динамической формы (исключаем системные поля и paymentDueDate/requestDate)
     final dynamicFormData = <String, dynamic>{};
     formValues.forEach((key, value) {
+      // Получаем имя поля без префикса блока
+      final fieldName = key.contains('.') ? key.split('.').last : key;
       // Исключаем системные поля формы и paymentDueDate/requestDate (отправляется отдельно)
-      if (key != 'title' && key != 'description' && key != 'paymentDueDate' && key != 'requestDate' && value != null) {
+      if (fieldName != 'title' && 
+          fieldName != 'description' && 
+          fieldName != 'paymentDueDate' && 
+          fieldName != 'requestDate' && 
+          value != null) {
         // Преобразуем DateTime в ISO строку для отправки на сервер
         if (value is DateTime) {
-          dynamicFormData[key] = value.toIso8601String();
+          dynamicFormData[fieldName] = value.toIso8601String();
         } else {
-          dynamicFormData[key] = value;
+          dynamicFormData[fieldName] = value;
         }
       }
     });

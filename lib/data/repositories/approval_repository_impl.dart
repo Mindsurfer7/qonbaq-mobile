@@ -4,6 +4,9 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_attachment.dart';
 import '../../domain/entities/approval_decision.dart';
+import '../../domain/entities/templates_result.dart';
+import '../../domain/entities/approvals_result.dart';
+import '../../domain/entities/missing_role_info.dart';
 import '../../domain/repositories/approval_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/approval_model.dart';
@@ -39,10 +42,34 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
   }
 
   @override
-  Future<Either<Failure, List<ApprovalTemplate>>> getTemplates({String? businessId}) async {
+  Future<Either<Failure, TemplatesResult>> getTemplates({String? businessId}) async {
     try {
-      final templates = await remoteDataSource.getTemplates(businessId: businessId);
-      return Right(templates.map((model) => model.toEntity()).toList());
+      final result = await remoteDataSource.getTemplates(businessId: businessId);
+      final templates = result.data.map((model) => model.toEntity()).toList();
+      
+      // Преобразуем метаданные из data слоя в domain entities
+      List<MissingRoleInfo>? missingRoles;
+      if (result.meta?.missingRoles != null) {
+        missingRoles = result.meta!.missingRoles!.map((role) {
+          return MissingRoleInfo(
+            roleCode: role.roleCode,
+            roleName: role.roleName,
+            affectedTemplates: role.affectedTemplates.map((template) {
+              return AffectedTemplateInfo(
+                id: template.id,
+                name: template.name,
+                code: template.code,
+              );
+            }).toList(),
+          );
+        }).toList();
+      }
+      
+      return Right(TemplatesResult(
+        templates: templates,
+        missingRoles: missingRoles,
+        totalMissing: result.meta?.totalMissing,
+      ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении шаблонов: $e'));
     }
@@ -115,7 +142,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
   }
 
   @override
-  Future<Either<Failure, List<Approval>>> getApprovals({
+  Future<Either<Failure, ApprovalsResult>> getApprovals({
     String? businessId,
     ApprovalStatus? status,
     String? createdBy,
@@ -125,7 +152,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
     int? limit,
   }) async {
     try {
-      final approvals = await remoteDataSource.getApprovals(
+      final result = await remoteDataSource.getApprovals(
         businessId: businessId,
         status: status,
         createdBy: createdBy,
@@ -134,7 +161,25 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
         page: page,
         limit: limit,
       );
-      return Right(approvals.map((model) => model.toEntity()).toList());
+      
+      final approvals = result.data.map((model) => model.toEntity()).toList();
+      
+      // Преобразуем метаданные из data слоя в domain entities
+      List<UnassignedRoleInfo>? unassignedRoles;
+      if (result.meta?.unassignedRoles != null) {
+        unassignedRoles = result.meta!.unassignedRoles!.map((role) {
+          return UnassignedRoleInfo(
+            code: role.code,
+            name: role.name,
+          );
+        }).toList();
+      }
+      
+      return Right(ApprovalsResult(
+        approvals: approvals,
+        unassignedRoles: unassignedRoles,
+        message: result.meta?.message,
+      ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении согласований: $e'));
     }

@@ -51,6 +51,7 @@ import 'package:qonbaq/presentation/pages/profile_settings_page.dart';
 import 'package:qonbaq/presentation/pages/tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
+import 'package:qonbaq/presentation/pages/roles_assignment_page.dart';
 import 'package:qonbaq/presentation/pages/inbox_items_page.dart';
 import 'package:qonbaq/presentation/pages/remember_page.dart';
 import 'package:qonbaq/presentation/pages/favorites_page.dart';
@@ -589,6 +590,7 @@ class MyApp extends StatelessWidget {
             return TaskDetailPage(taskId: taskId);
           },
           '/approvals': (context) => const ApprovalsPage(),
+          '/roles-assignment': (context) => const RolesAssignmentPage(),
           '/approvals/detail': (context) {
             final approvalId =
                 ModalRoute.of(context)!.settings.arguments as String?;

@@ -1,4 +1,5 @@
 import '../datasources/datasource.dart';
+import '../models/api_response.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_decision.dart';
 import '../models/approval_model.dart';
@@ -13,8 +14,8 @@ abstract class ApprovalRemoteDataSource extends DataSource {
   /// Создать шаблон
   Future<ApprovalTemplateModel> createTemplate(ApprovalTemplateModel template);
 
-  /// Получить список шаблонов
-  Future<List<ApprovalTemplateModel>> getTemplates({String? businessId});
+  /// Получить список шаблонов с метаданными
+  Future<ApiResponse<List<ApprovalTemplateModel>>> getTemplates({String? businessId});
 
   /// Получить шаблон по ID
   Future<ApprovalTemplateModel> getTemplateById(String templateId);
@@ -36,7 +37,7 @@ abstract class ApprovalRemoteDataSource extends DataSource {
   });
 
   /// Получить список согласований
-  Future<List<ApprovalModel>> getApprovals({
+  Future<ApiResponse<List<ApprovalModel>>> getApprovals({
     String? businessId,
     ApprovalStatus? status,
     String? createdBy,

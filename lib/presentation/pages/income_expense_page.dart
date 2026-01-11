@@ -715,18 +715,26 @@ class _CreateFinancialMovementDialogState
     String businessId,
     String? projectId,
   ) async {
-    // Преобразуем formValues в нужный формат
-    // Все поля из формы идут напрямую, бэкенд сам парсит их
+    // Преобразуем formValues в нужный формат, убирая префиксы блоков
+    // formValues содержит данные вида {'main.accountId': '...', 'transaction.transactionDate': '...'}
+    // Нужно убрать префиксы блоков и оставить только имена полей
     final formData = <String, dynamic>{};
     formValues.forEach((key, value) {
       if (value != null) {
+        // Убираем префикс блока (main., transaction. и т.д.)
+        final fieldName = key.contains('.') ? key.split('.').last : key;
         if (value is DateTime) {
-          formData[key] = value.toIso8601String();
+          formData[fieldName] = value.toIso8601String();
         } else {
-          formData[key] = value;
+          formData[fieldName] = value;
         }
       }
     });
+
+    // Если transactionDate не заполнено, используем текущее время
+    if (!formData.containsKey('transactionDate')) {
+      formData['transactionDate'] = DateTime.now().toIso8601String();
+    }
 
     // Добавляем обязательные поля
     formData['businessId'] = businessId;

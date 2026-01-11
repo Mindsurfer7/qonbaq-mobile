@@ -1042,6 +1042,10 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         suffixIcon: const Icon(Icons.event),
       ),
       inputType: InputType.both,
+      onChanged: (value) {
+        // Уведомляем родителя об изменении для реактивности
+        widget.onFieldChanged?.call(_fieldName, value);
+      },
       validator:
           isRequired
               ? FormBuilderValidators.required(
