@@ -4,6 +4,9 @@ import '../../core/theme/theme_extensions.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
+/// Callback для уведомления об изменениях полей формы
+typedef OnFieldChanged = void Function(String fieldName, dynamic value);
+
 /// Виджет для динамического рендеринга формы с блоками на основе formSchema
 /// Поддерживает условную видимость полей и зависимости между полями
 class DynamicBlockForm extends StatefulWidget {
@@ -23,47 +26,46 @@ class DynamicBlockForm extends StatefulWidget {
 }
 
 class _DynamicBlockFormState extends State<DynamicBlockForm> {
+  /// Локальное хранилище значений полей для реактивности
+  /// Это решает проблему timing - FormBuilderState.value может быть не обновлён
+  /// в момент вызова onChanged
+  final Map<String, dynamic> _localFieldValues = {};
+
+  /// Обработчик изменения полей формы - перестраивает виджет для обновления видимости
+  void _handleFieldChanged(String fieldName, dynamic value) {
+    print('═══════════════════════════════════════════');
+    print('🔄 FIELD CHANGED EVENT');
+    print('  Field: $fieldName');
+    print('  New Value: $value');
+    print('  Old Local Values: $_localFieldValues');
+
+    // Обновляем локальное хранилище
+    _localFieldValues[fieldName] = value;
+
+    print('  Updated Local Values: $_localFieldValues');
+    print('═══════════════════════════════════════════');
+
+    // Используем addPostFrameCallback чтобы дать FormBuilder время обновить свой state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.formSchema == null) {
-      print('⚠️ DynamicBlockForm: formSchema is null');
       return const SizedBox.shrink();
     }
-
-    print('=== DYNAMIC BLOCK FORM BUILD ===');
-    print('FormSchema keys: ${widget.formSchema!.keys.toList()}');
 
     // Проверяем, есть ли структура с блоками (новый формат)
     final blocks = widget.formSchema!['blocks'] as List<dynamic>?;
     final blocksInfo =
         widget.formSchema!['blocks_info'] as Map<String, dynamic>?;
 
-    print('Blocks: $blocks');
-    print('BlocksInfo keys: ${blocksInfo?.keys.toList()}');
-
     // Если есть блоки, используем новый формат
     if (blocks != null && blocksInfo != null && blocks.isNotEmpty) {
-      print('✅ Используется формат с блоками');
-      print('Количество блоков: ${blocks.length}');
-      blocksInfo.forEach((blockName, blockData) {
-        print('  Блок "$blockName":');
-        print('    Label: ${blockData['label']}');
-        final elements = blockData['elements'] as List<dynamic>?;
-        print('    Количество элементов: ${elements?.length ?? 0}');
-        if (elements != null) {
-          for (var i = 0; i < elements.length; i++) {
-            final element = elements[i] as Map<String, dynamic>;
-            print('    Элемент $i:');
-            print('      name: ${element['name']}');
-            print('      label: ${element['label']}');
-            print('      type: ${element['type']}');
-            if (element['options'] != null) {
-              print('      options: ${element['options']}');
-            }
-          }
-        }
-      });
-      print('==============================');
       return _buildBlocksFormat(blocks, blocksInfo);
     }
 
@@ -71,28 +73,9 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
     final properties =
         widget.formSchema!['properties'] as Map<String, dynamic>?;
     if (properties != null && properties.isNotEmpty) {
-      print('✅ Используется JSON Schema формат');
-      print('Количество свойств: ${properties.length}');
-      properties.forEach((fieldName, fieldSchema) {
-        print('  Поле "$fieldName":');
-        if (fieldSchema is Map<String, dynamic>) {
-          print('    type: ${fieldSchema['type']}');
-          print('    title: ${fieldSchema['title']}');
-          print('    format: ${fieldSchema['format']}');
-          if (fieldSchema['enum'] != null) {
-            print('    enum: ${fieldSchema['enum']}');
-          }
-          if (fieldSchema['enumNames'] != null) {
-            print('    enumNames: ${fieldSchema['enumNames']}');
-          }
-        }
-      });
-      print('==============================');
       return _buildJsonSchemaFormat(properties);
     }
 
-    print('⚠️ DynamicBlockForm: Не удалось определить формат схемы');
-    print('==============================');
     return const SizedBox.shrink();
   }
 
@@ -124,6 +107,8 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                     elements: block['elements'] as List<dynamic>? ?? [],
                     formKey: widget.formKey!,
                     initialValues: widget.initialValues,
+                    onFieldChanged: _handleFieldChanged,
+                    localFieldValues: _localFieldValues,
                   ),
                   if (!isLast) const SizedBox(height: 16),
                 ],
@@ -154,6 +139,8 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                       label: block['label'] as String? ?? blockNameStr,
                       elements: block['elements'] as List<dynamic>? ?? [],
                       initialValues: widget.initialValues,
+                      onFieldChanged: _handleFieldChanged,
+                      localFieldValues: _localFieldValues,
                     ),
                     if (!isLast) const SizedBox(height: 16),
                   ],
@@ -538,6 +525,8 @@ class UniversalBlock extends StatelessWidget {
   final List<dynamic> elements;
   final GlobalKey<FormBuilderState>? formKey;
   final Map<String, dynamic>? initialValues;
+  final OnFieldChanged? onFieldChanged;
+  final Map<String, dynamic> localFieldValues;
 
   const UniversalBlock({
     super.key,
@@ -546,6 +535,8 @@ class UniversalBlock extends StatelessWidget {
     required this.elements,
     this.formKey,
     this.initialValues,
+    this.onFieldChanged,
+    required this.localFieldValues,
   });
 
   @override
@@ -576,6 +567,8 @@ class UniversalBlock extends StatelessWidget {
                 blockName: blockName,
                 formKey: formKey,
                 initialValues: initialValues,
+                onFieldChanged: onFieldChanged,
+                localFieldValues: localFieldValues,
               ),
               if (!isLast) const SizedBox(height: 16),
             ],
@@ -592,6 +585,8 @@ class ElementFormSwitcher extends StatefulWidget {
   final String blockName;
   final GlobalKey<FormBuilderState>? formKey;
   final Map<String, dynamic>? initialValues;
+  final OnFieldChanged? onFieldChanged;
+  final Map<String, dynamic> localFieldValues;
 
   const ElementFormSwitcher({
     super.key,
@@ -599,6 +594,8 @@ class ElementFormSwitcher extends StatefulWidget {
     required this.blockName,
     this.formKey,
     this.initialValues,
+    this.onFieldChanged,
+    required this.localFieldValues,
   });
 
   @override
@@ -616,9 +613,6 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    // Получаем значения полей, от которых зависит видимость, для реактивности
-    final visibilityKey = _getVisibilityKey(context);
-
     // Проверяем видимость элемента
     final isVisible = _checkVisibility(context);
     if (!isVisible) {
@@ -631,48 +625,12 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     final defaultValue = widget.element['defaultValue'];
     final initialValue = _getInitialValue();
 
-    // Логи для отладки элементов формы
-    print('📝 Элемент формы:');
-    print('  FieldName: $_fieldName');
-    print('  Type: $elementType');
-    print('  Label: $label');
-    print('  Name: ${widget.element['name']}');
-    print('  Required: $isRequired');
-    print('  DefaultValue: $defaultValue');
-    print('  InitialValue: $initialValue');
-
-    if (elementType == 'select') {
-      final options = widget.element['options'] as List<dynamic>?;
-      print('  Select Options (${options?.length ?? 0}):');
-      if (options != null) {
-        for (var i = 0; i < options.length; i++) {
-          final option = options[i];
-          if (option is Map<String, dynamic>) {
-            print(
-              '    [$i] value: ${option['value']}, name: ${option['name']}',
-            );
-          } else {
-            print('    [$i] $option');
-          }
-        }
-      }
-      final parent = widget.element['parent'] as String?;
-      if (parent != null) {
-        print('  Parent field: $parent');
-      }
-    }
-    print('  ---');
-
-    // Используем key для перестройки виджета при изменении значений, влияющих на видимость
-    return KeyedSubtree(
-      key: ValueKey('${_fieldName}-$visibilityKey'),
-      child: _buildFieldByType(
-        elementType,
-        label,
-        isRequired,
-        defaultValue,
-        initialValue,
-      ),
+    return _buildFieldByType(
+      elementType,
+      label,
+      isRequired,
+      defaultValue,
+      initialValue,
     );
   }
 
@@ -747,41 +705,7 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     }
   }
 
-  /// Получает ключ для реактивности на основе значений полей, влияющих на видимость
-  String _getVisibilityKey(BuildContext context) {
-    final props = widget.element['props'] as Map<String, dynamic>?;
-    if (props == null) return '';
-
-    final visible = props['visible'] as Map<String, dynamic>?;
-    if (visible == null) return '';
-
-    FormBuilderState? formState;
-    if (widget.formKey?.currentState != null) {
-      formState = widget.formKey!.currentState;
-    } else {
-      try {
-        formState = FormBuilder.of(context);
-      } catch (e) {
-        return '';
-      }
-    }
-
-    if (formState == null) return '';
-
-    final formValues = formState.value;
-    final flattenedValues = _flattenMap(formValues);
-
-    // Собираем значения всех полей, от которых зависит видимость
-    final keys = <String>[];
-    for (var fieldPath in visible.keys) {
-      final value = _getFieldValue(flattenedValues, fieldPath);
-      keys.add('$fieldPath:$value');
-    }
-
-    return keys.join('|');
-  }
-
-  /// Проверяет видимость элемента на основе условий
+  /// Проверяет видимость элемента на основе условий из props.visible
   bool _checkVisibility(BuildContext context) {
     final props = widget.element['props'] as Map<String, dynamic>?;
     if (props == null) return true;
@@ -789,51 +713,65 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     final visible = props['visible'] as Map<String, dynamic>?;
     if (visible == null) return true;
 
-    // Получаем текущие значения формы
-    FormBuilderState? formState;
-    if (widget.formKey?.currentState != null) {
-      formState = widget.formKey!.currentState;
-    } else {
-      try {
-        formState = FormBuilder.of(context);
-      } catch (e) {
-        // FormBuilder не найден в контексте
-        return true;
-      }
-    }
+    final elementName = widget.element['name'] as String? ?? '';
 
-    if (formState == null) return true;
-
-    final formValues = formState.value;
-    final flattenedValues = _flattenMap(formValues);
+    print('───────────────────────────────────────────');
+    print('🔍 VISIBILITY CHECK: $elementName');
+    print('  Условия видимости: $visible');
 
     // Проверяем все условия видимости
     for (var entry in visible.entries) {
-      final fieldPath = entry.key;
-      final expectedValue = entry.value;
+      final fieldPath = entry.key; // например "category" или "periodicity"
+      final expectedValue = entry.value; // например "LABOR_FUND" или "CONSTANT"
 
-      // Получаем значение поля из формы
-      final actualValue = _getFieldValue(flattenedValues, fieldPath);
+      // Ищем значение в localFieldValues (приоритет) и в FormBuilder
+      dynamic actualValue;
 
-      // Проверяем условие
-      if (expectedValue is String && actualValue is String) {
-        // Регулярное выражение
-        try {
-          final regex = RegExp(expectedValue);
-          if (!regex.hasMatch(actualValue)) {
-            return false;
-          }
-        } catch (e) {
-          // Если не регулярное выражение, сравниваем как строки
-          if (actualValue != expectedValue) {
-            return false;
+      // Сначала проверяем локальное хранилище (самые актуальные данные)
+      final fullFieldPath = '${widget.blockName}.$fieldPath';
+      if (widget.localFieldValues.containsKey(fullFieldPath)) {
+        actualValue = widget.localFieldValues[fullFieldPath];
+        print('  📦 Из localFieldValues[$fullFieldPath]: $actualValue');
+      } else {
+        // Если нет в локальном хранилище, пробуем FormBuilder
+        FormBuilderState? formState;
+        if (widget.formKey?.currentState != null) {
+          formState = widget.formKey!.currentState;
+        } else {
+          try {
+            formState = FormBuilder.of(context);
+          } catch (e) {
+            print('  ⚠️ FormBuilder не найден в контексте');
           }
         }
-      } else if (actualValue != expectedValue) {
+
+        if (formState != null) {
+          final formValues = formState.value;
+          print('  📋 FormBuilder values: $formValues');
+
+          final flattenedValues = _flattenMap(formValues);
+          print('  📋 Flattened values: $flattenedValues');
+
+          actualValue = _getFieldValue(flattenedValues, fieldPath);
+          print('  📋 Из FormBuilder[$fieldPath]: $actualValue');
+        }
+      }
+
+      // Сравниваем значения как строки для надежности
+      final expectedStr = expectedValue?.toString();
+      final actualStr = actualValue?.toString();
+
+      print('  🔄 Сравнение: "$actualStr" == "$expectedStr" ?');
+
+      if (actualStr != expectedStr) {
+        print('  ❌ НЕ СОВПАДАЕТ → поле СКРЫТО');
+        print('───────────────────────────────────────────');
         return false;
       }
     }
 
+    print('  ✅ ВСЕ УСЛОВИЯ ВЫПОЛНЕНЫ → поле ВИДИМО');
+    print('───────────────────────────────────────────');
     return true;
   }
 
@@ -969,32 +907,9 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     List<dynamic>? options,
     String? parent,
   }) {
-    print('🔽 Создание Select поля:');
-    print('  FieldName: $_fieldName');
-    print('  Label: $label');
-    print('  InitialValue: $initialValue');
-    print('  Options count: ${options?.length ?? 0}');
-    print('  Parent: $parent');
-
-    if (options != null && options.isNotEmpty) {
-      print('  Options details:');
-      for (var i = 0; i < options.length; i++) {
-        final option = options[i];
-        if (option is Map<String, dynamic>) {
-          print(
-            '    [$i] Map: value="${option['value']}", name="${option['name']}", parentId="${option['parentId']}"',
-          );
-        } else {
-          print('    [$i] Simple: $option');
-        }
-      }
-    }
-    print('  ---');
-
     // Если есть родительское поле, создаем виджет с реактивностью
     if (parent != null) {
       final parentFieldName = '${widget.blockName}.$parent';
-      print('  Используется ReactiveSelectField (есть parent)');
       return _ReactiveSelectField(
         fieldName: _fieldName,
         parentFieldName: parentFieldName,
@@ -1006,11 +921,11 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
         blockName: widget.blockName,
         formKey: widget.formKey,
         filterOptions: _filterOptions,
+        onFieldChanged: widget.onFieldChanged,
       );
     }
 
     // Если нет родительского поля, используем обычный FormBuilderDropdown
-    print('  Используется обычный FormBuilderDropdown');
     final theme = context.appTheme;
     return FormBuilderDropdown<String>(
       name: _fieldName,
@@ -1022,18 +937,13 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
       dropdownColor: theme.backgroundSurface,
       borderRadius: BorderRadius.circular(theme.borderRadius),
       selectedItemBuilder: (BuildContext context) {
-        print('📋 selectedItemBuilder для $_fieldName:');
         return (options ?? []).map<Widget>((option) {
           if (option is Map<String, dynamic>) {
             final name = option['name']?.toString();
             final value = option['value']?.toString();
             final displayText = name ?? value ?? '';
-            print(
-              '  selectedItemBuilder: name="$name", value="$value", displayText="$displayText"',
-            );
             return Text(displayText);
           } else {
-            print('  selectedItemBuilder: simple option="$option"');
             return Text(option.toString());
           }
         }).toList();
@@ -1052,9 +962,6 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
                   final value = option['value']?.toString();
                   final name = option['name']?.toString();
                   if (value == null) {
-                    print(
-                      '  ⚠️ DropdownItem: value is null для option: $option',
-                    );
                     return const DropdownMenuItem<String>(
                       value: null,
                       enabled: false,
@@ -1062,16 +969,12 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
                     );
                   }
                   final displayText = name ?? value;
-                  print(
-                    '  ✅ DropdownItem: value="$value", name="$name", displayText="$displayText"',
-                  );
                   return createStyledDropdownItem<String>(
                     context: context,
                     value: value,
                     child: Text(displayText),
                   );
                 } else {
-                  print('  ✅ DropdownItem: simple value="$option"');
                   return createStyledDropdownItem<String>(
                     context: context,
                     value: option.toString(),
@@ -1079,6 +982,15 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
                   );
                 }
               }).toList(),
+      onChanged: (value) {
+        print('═══════════════════════════════════════════');
+        print('📝 SELECT onChanged TRIGGERED');
+        print('  Field: $_fieldName');
+        print('  Value: $value');
+        print('═══════════════════════════════════════════');
+        // Уведомляем родителя об изменении для перестройки формы
+        widget.onFieldChanged?.call(_fieldName, value);
+      },
       validator:
           isRequired
               ? FormBuilderValidators.required(
@@ -1185,6 +1097,7 @@ class _ReactiveSelectField extends StatefulWidget {
   final GlobalKey<FormBuilderState>? formKey;
   final List<dynamic> Function(BuildContext, List<dynamic>?, String?)
   filterOptions;
+  final OnFieldChanged? onFieldChanged;
 
   const _ReactiveSelectField({
     required this.fieldName,
@@ -1197,6 +1110,7 @@ class _ReactiveSelectField extends StatefulWidget {
     required this.blockName,
     this.formKey,
     required this.filterOptions,
+    this.onFieldChanged,
   });
 
   @override
@@ -1297,6 +1211,13 @@ class _ReactiveSelectFieldState extends State<_ReactiveSelectField> {
                   }).toList(),
           onChanged: (value) {
             field.didChange(value);
+            print('═══════════════════════════════════════════');
+            print('📝 REACTIVE SELECT onChanged TRIGGERED');
+            print('  Field: ${widget.fieldName}');
+            print('  Value: $value');
+            print('═══════════════════════════════════════════');
+            // Уведомляем родителя об изменении для перестройки формы
+            widget.onFieldChanged?.call(widget.fieldName, value);
           },
           validator:
               widget.isRequired
