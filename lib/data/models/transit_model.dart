@@ -28,12 +28,23 @@ class TransitModel extends Transit {
       }
     }
 
+    // Парсим amount: может быть как строкой, так и числом
+    double amount;
+    final amountValue = json['amount'];
+    if (amountValue is num) {
+      amount = amountValue.toDouble();
+    } else if (amountValue is String) {
+      amount = double.parse(amountValue);
+    } else {
+      throw FormatException('Поле amount должно быть числом или строкой, получено: $amountValue (${amountValue.runtimeType})');
+    }
+
     return TransitModel(
       id: json['id'] as String?,
       businessId: json['businessId'] as String,
       fromAccountId: json['fromAccountId'] as String,
       toAccountId: json['toAccountId'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      amount: amount,
       article: TransitArticle.values.firstWhere(
         (e) => e.name == json['article'],
         orElse: () => TransitArticle.BETWEEN_BANKS,

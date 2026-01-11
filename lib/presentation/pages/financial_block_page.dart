@@ -10,6 +10,7 @@ import '../../domain/usecases/get_financial_form.dart';
 import '../../domain/usecases/create_expense.dart';
 import '../../domain/usecases/create_account.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/form_cache_storage.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/project_provider.dart';
@@ -750,11 +751,23 @@ class _CreateFinancialRequestDialogState
   bool _isLoadingForm = true;
   bool _isSubmitting = false;
   String? _error;
+  Map<String, dynamic>? _cachedFormData;
 
   @override
   void initState() {
     super.initState();
+    _loadCachedData();
     _loadForm();
+  }
+
+  /// Загрузить данные из кэша
+  Future<void> _loadCachedData() async {
+    final cacheData = await FormCacheStorage.instance.loadFormData(_getCacheKey());
+    if (cacheData != null && cacheData.isNotEmpty) {
+      setState(() {
+        _cachedFormData = cacheData;
+      });
+    }
   }
 
   Future<void> _loadForm() async {
@@ -791,6 +804,35 @@ class _CreateFinancialRequestDialogState
     );
   }
 
+  /// Получить ключ кэша для текущего типа формы
+  String _getCacheKey() {
+    return widget.formType == FinancialFormType.cashless
+        ? 'Financial Expense Bank'
+        : 'Financial Expense Cash';
+  }
+
+  /// Сохранить данные формы в кэш
+  Future<void> _saveFormToCache() async {
+    if (_formKey.currentState == null) return;
+    
+    _formKey.currentState!.save();
+    final formValues = _formKey.currentState!.value;
+    
+    // Преобразуем значения формы для сохранения
+    final cacheData = <String, dynamic>{};
+    formValues.forEach((key, value) {
+      if (value is DateTime) {
+        // Сохраняем DateTime как строку
+        cacheData[key] = value.toIso8601String();
+      } else {
+        cacheData[key] = value;
+      }
+    });
+    
+    await FormCacheStorage.instance.saveFormData(_getCacheKey(), cacheData);
+  }
+
+
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
       return failure.message;
@@ -804,6 +846,9 @@ class _CreateFinancialRequestDialogState
     if (_template == null || _formKey.currentState == null) return;
 
     _formKey.currentState!.save();
+    
+    // Сохраняем в кэш перед отправкой
+    await _saveFormToCache();
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -860,13 +905,20 @@ class _CreateFinancialRequestDialogState
       businessId: widget.businessId,
       projectId: projectId,
       accountId: formData['accountId'] as String,
-      amount: (formData['amount'] as num).toDouble(),
+      amount: formData['amount'] is String
+          ? double.parse(formData['amount'] as String)
+          : (formData['amount'] as num).toDouble(),
       currency: formData['currency'] as String? ?? 'KZT',
       category: ExpenseCategory.values.firstWhere(
         (e) => e.name == formData['category'],
         orElse: () => ExpenseCategory.COMMON,
       ),
-      articleId: formData['articleId'] as String?,
+      article: formData['article'] != null
+          ? ExpenseArticle.values.firstWhere(
+              (e) => e.name == formData['article'],
+              orElse: () => ExpenseArticle.OTHER,
+            )
+          : null,
       periodicity: Periodicity.values.firstWhere(
         (e) => e.name == formData['periodicity'],
         orElse: () => Periodicity.VARIABLE,
@@ -899,7 +951,10 @@ class _CreateFinancialRequestDialogState
           );
         }
       },
-      (createdExpense) {
+      (createdExpense) async {
+        // Очищаем кэш при успешной отправке
+        await FormCacheStorage.instance.clearFormData(_getCacheKey());
+        
         setState(() {
           _isSubmitting = false;
         });
@@ -967,6 +1022,7 @@ class _CreateFinancialRequestDialogState
                                 DynamicBlockForm(
                                   formSchema: _template!.formSchema,
                                   formKey: _formKey,
+                                  initialValues: _cachedFormData,
                                 ),
                             ],
                           ),
@@ -975,7 +1031,13 @@ class _CreateFinancialRequestDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () async {
+            // Сохраняем данные перед закрытием
+            await _saveFormToCache();
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          },
           child: const Text('Отмена'),
         ),
         ElevatedButton(

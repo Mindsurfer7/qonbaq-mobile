@@ -19,12 +19,23 @@ class IncomeModel extends Income {
   });
 
   factory IncomeModel.fromJson(Map<String, dynamic> json) {
+    // Парсим amount: может быть как строкой, так и числом
+    double amount;
+    final amountValue = json['amount'];
+    if (amountValue is num) {
+      amount = amountValue.toDouble();
+    } else if (amountValue is String) {
+      amount = double.parse(amountValue);
+    } else {
+      throw FormatException('Поле amount должно быть числом или строкой, получено: $amountValue (${amountValue.runtimeType})');
+    }
+
     return IncomeModel(
       id: json['id'] as String?,
       businessId: json['businessId'] as String,
       projectId: json['projectId'] as String?,
       accountId: json['accountId'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      amount: amount,
       currency: json['currency'] as String,
       article: IncomeArticle.values.firstWhere(
         (e) => e.name == json['article'],

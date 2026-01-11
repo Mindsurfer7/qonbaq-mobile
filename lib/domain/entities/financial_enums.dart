@@ -26,6 +26,18 @@ enum ExpenseCategory {
   TRAVEL,
 }
 
+/// Статьи расходов
+enum ExpenseArticle {
+  PRODUCTION,
+  ADMINISTRATIVE,
+  MARKETING,
+  RENT,
+  UTILITIES,
+  TRANSPORT,
+  EQUIPMENT,
+  OTHER,
+}
+
 /// Статьи транзита
 enum TransitArticle {
   BETWEEN_BANKS,

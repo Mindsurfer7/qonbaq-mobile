@@ -10,7 +10,7 @@ class ExpenseModel extends Expense {
     required super.amount,
     required super.currency,
     required super.category,
-    super.articleId,
+    super.article,
     required super.periodicity,
     super.serviceId,
     required super.paymentMethod,
@@ -19,18 +19,34 @@ class ExpenseModel extends Expense {
   });
 
   factory ExpenseModel.fromJson(Map<String, dynamic> json) {
+    // Парсим amount: может быть как строкой, так и числом
+    double amount;
+    final amountValue = json['amount'];
+    if (amountValue is num) {
+      amount = amountValue.toDouble();
+    } else if (amountValue is String) {
+      amount = double.parse(amountValue);
+    } else {
+      throw FormatException('Поле amount должно быть числом или строкой, получено: $amountValue (${amountValue.runtimeType})');
+    }
+
     return ExpenseModel(
       id: json['id'] as String?,
       businessId: json['businessId'] as String,
       projectId: json['projectId'] as String?,
       accountId: json['accountId'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      amount: amount,
       currency: json['currency'] as String,
       category: ExpenseCategory.values.firstWhere(
         (e) => e.name == json['category'],
         orElse: () => ExpenseCategory.COMMON,
       ),
-      articleId: json['articleId'] as String?,
+      article: json['article'] != null
+          ? ExpenseArticle.values.firstWhere(
+              (e) => e.name == json['article'],
+              orElse: () => ExpenseArticle.OTHER,
+            )
+          : null,
       periodicity: Periodicity.values.firstWhere(
         (e) => e.name == json['periodicity'],
         orElse: () => Periodicity.CONSTANT,
@@ -53,7 +69,7 @@ class ExpenseModel extends Expense {
       'amount': amount,
       'currency': currency,
       'category': category.name,
-      'articleId': articleId,
+      if (article != null) 'article': article!.name,
       'periodicity': periodicity.name,
       'serviceId': serviceId,
       'paymentMethod': paymentMethod.name,

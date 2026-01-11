@@ -10,7 +10,7 @@ class Expense extends Entity {
   final double amount;
   final String currency;
   final ExpenseCategory category;
-  final String? articleId; // Ссылка на статью расходов (справочник)
+  final ExpenseArticle? article; // Статья расходов (enum)
   final Periodicity periodicity;
   final String? serviceId;
   final PaymentMethod paymentMethod;
@@ -25,7 +25,7 @@ class Expense extends Entity {
     required this.amount,
     required this.currency,
     required this.category,
-    this.articleId,
+    this.article,
     required this.periodicity,
     this.serviceId,
     required this.paymentMethod,

@@ -91,6 +91,12 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
       );
       final result = await remoteDataSource.createIncome(model);
       return Right(result);
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -106,7 +112,7 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
         amount: expense.amount,
         currency: expense.currency,
         category: expense.category,
-        articleId: expense.articleId,
+        article: expense.article,
         periodicity: expense.periodicity,
         serviceId: expense.serviceId,
         paymentMethod: expense.paymentMethod,
@@ -115,6 +121,12 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
       );
       final result = await remoteDataSource.createExpense(model);
       return Right(result);
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -135,6 +147,12 @@ class FinancialRepositoryImpl extends RepositoryImpl implements FinancialReposit
       );
       final result = await remoteDataSource.createTransit(model);
       return Right(result);
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

@@ -204,8 +204,15 @@ class _CreateFinancialRequestDialogState
   }
 
   String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.message;
+    if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    } else if (failure is ServerFailure) {
+      // Убираем префикс "Exception: " если он есть
+      final message = failure.message;
+      if (message.startsWith('Exception: ')) {
+        return message.substring(11);
+      }
+      return message;
     } else if (failure is NetworkFailure) {
       return failure.message;
     }

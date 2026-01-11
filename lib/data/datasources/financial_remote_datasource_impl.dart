@@ -162,12 +162,28 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => IncomeModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } on FormatException catch (e) {
+        throw Exception('Ошибка при обработке ответа сервера: ${e.message}');
+      }
+    } else if (response.statusCode == 400) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final apiResponse = ApiResponse.fromJson(
-        json,
-        (data) => IncomeModel.fromJson(data as Map<String, dynamic>),
+      final validationResponse = ValidationErrorResponse.fromJson(json);
+      throw ValidationException(validationResponse);
+    } else if (response.statusCode == 401) {
+      throw Exception('Не авторизован');
+    } else if (response.statusCode == 403) {
+      final errorMessage = _parseErrorMessage(
+        response.body,
+        'Нет доступа к этому бизнесу',
       );
-      return apiResponse.data;
+      throw Exception(errorMessage);
     } else {
       final errorMessage = _parseErrorMessage(
         response.body,
@@ -186,12 +202,28 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ExpenseModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } on FormatException catch (e) {
+        throw Exception('Ошибка при обработке ответа сервера: ${e.message}');
+      }
+    } else if (response.statusCode == 400) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final apiResponse = ApiResponse.fromJson(
-        json,
-        (data) => ExpenseModel.fromJson(data as Map<String, dynamic>),
+      final validationResponse = ValidationErrorResponse.fromJson(json);
+      throw ValidationException(validationResponse);
+    } else if (response.statusCode == 401) {
+      throw Exception('Не авторизован');
+    } else if (response.statusCode == 403) {
+      final errorMessage = _parseErrorMessage(
+        response.body,
+        'Нет доступа к этому бизнесу',
       );
-      return apiResponse.data;
+      throw Exception(errorMessage);
     } else {
       final errorMessage = _parseErrorMessage(
         response.body,
@@ -210,12 +242,28 @@ class FinancialRemoteDataSourceImpl extends FinancialRemoteDataSource {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => TransitModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } on FormatException catch (e) {
+        throw Exception('Ошибка при обработке ответа сервера: ${e.message}');
+      }
+    } else if (response.statusCode == 400) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final apiResponse = ApiResponse.fromJson(
-        json,
-        (data) => TransitModel.fromJson(data as Map<String, dynamic>),
+      final validationResponse = ValidationErrorResponse.fromJson(json);
+      throw ValidationException(validationResponse);
+    } else if (response.statusCode == 401) {
+      throw Exception('Не авторизован');
+    } else if (response.statusCode == 403) {
+      final errorMessage = _parseErrorMessage(
+        response.body,
+        'Нет доступа к этому бизнесу',
       );
-      return apiResponse.data;
+      throw Exception(errorMessage);
     } else {
       final errorMessage = _parseErrorMessage(
         response.body,

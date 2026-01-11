@@ -33,6 +33,11 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
   FinancialReport? _financialReport;
   bool _isLoading = false;
   String? _error;
+  
+  // Состояние видимости списков транзакций
+  bool _showIncomeTransactions = false;
+  bool _showExpenseTransactions = false;
+  bool _showTransitTransactions = false;
 
   @override
   void initState() {
@@ -120,8 +125,15 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
   }
 
   String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.message;
+    if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    } else if (failure is ServerFailure) {
+      // Убираем префикс "Exception: " если он есть
+      final message = failure.message;
+      if (message.startsWith('Exception: ')) {
+        return message.substring(11);
+      }
+      return message;
     } else if (failure is NetworkFailure) {
       return failure.message;
     }
@@ -270,35 +282,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
                               ],
                             ),
                           )
-                          : Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              children: [
-                                _buildEisenhowerQuadrant(
-                                  'Приход',
-                                  '${_formatAmount(_financialReport?.totalIncome ?? 0.0)} ₽',
-                                  Icons.trending_up,
-                                  Colors.green,
-                                ),
-                                _buildEisenhowerQuadrant(
-                                  'Расход',
-                                  '${_formatAmount(_financialReport?.totalExpense ?? 0.0)} ₽',
-                                  Icons.trending_down,
-                                  Colors.red,
-                                ),
-                                _buildEisenhowerQuadrant(
-                                  'Транзит',
-                                  '${_formatAmount(_financialReport?.transits.fold<double>(0.0, (sum, item) => sum + item.amount) ?? 0.0)} ₽',
-                                  Icons.swap_horiz,
-                                  Colors.orange,
-                                ),
-                                _buildAnalyticsQuadrant(),
-                              ],
-                            ),
-                          ),
+                          : _buildFinancialReportContent(financialProvider),
                 )
               else
                 const Expanded(
@@ -332,48 +316,125 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
     return amount.toStringAsFixed(0);
   }
 
-  /// Квадрант в стиле матрицы Эйзенхауэра
+  /// Построить контент финансового отчета с карточками и списком транзакций
+  Widget _buildFinancialReportContent(FinancialProvider financialProvider) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Карточки в сетке 2x2
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _buildEisenhowerQuadrant(
+                'Приход',
+                '${_formatAmount(_financialReport?.summary.totalIncome ?? 0.0)} ₽',
+                Icons.trending_up,
+                Colors.green,
+                _showIncomeTransactions,
+                () {
+                  setState(() {
+                    _showIncomeTransactions = !_showIncomeTransactions;
+                  });
+                },
+              ),
+              _buildEisenhowerQuadrant(
+                'Расход',
+                '${_formatAmount(_financialReport?.summary.totalExpense ?? 0.0)} ₽',
+                Icons.trending_down,
+                Colors.red,
+                _showExpenseTransactions,
+                () {
+                  setState(() {
+                    _showExpenseTransactions = !_showExpenseTransactions;
+                  });
+                },
+              ),
+              _buildEisenhowerQuadrant(
+                'Транзит',
+                '${_formatAmount((_financialReport?.summary.totalOutgoingTransits ?? 0.0) + (_financialReport?.summary.totalIncomingTransits ?? 0.0))} ₽',
+                Icons.swap_horiz,
+                Colors.orange,
+                _showTransitTransactions,
+                () {
+                  setState(() {
+                    _showTransitTransactions = !_showTransitTransactions;
+                  });
+                },
+              ),
+              _buildAnalyticsQuadrant(),
+            ],
+          ),
+          // Список транзакций
+          _buildTransactionsList(financialProvider),
+        ],
+      ),
+    );
+  }
+
+  /// Квадрант в стиле матрицы Эйзенхауэра с иконкой глаза
   Widget _buildEisenhowerQuadrant(
     String title,
     String amount,
     IconData icon,
     Color color,
+    bool isExpanded,
+    VoidCallback onToggle,
   ) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.3), width: 1),
-      ),
-      color: color.withOpacity(0.05),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: color.withOpacity(0.8),
-                fontWeight: FontWeight.w500,
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: color.withOpacity(0.3), width: 1),
+        ),
+        color: color.withOpacity(0.05),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(
+                    isExpanded ? Icons.visibility : Icons.visibility_off,
+                    color: color.withOpacity(0.6),
+                    size: 18,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                amount,
+              Icon(icon, color: color, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                title,
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+                  fontSize: 14,
+                  color: color.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  amount,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -386,7 +447,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
       return _buildEmptyAnalyticsQuadrant();
     }
 
-    final balance = report.balance;
+    final balance = report.summary.balance;
     final balanceColor = balance >= 0 ? Colors.green : Colors.red;
 
     return Card(
@@ -464,6 +525,206 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
         ),
       ),
     );
+  }
+
+  /// Получить транзакции для выбранного счета
+  AccountReportData? _getSelectedAccountData(FinancialProvider financialProvider) {
+    if (_financialReport == null || financialProvider.selectedAccount == null) {
+      return null;
+    }
+
+    final selectedAccountId = financialProvider.selectedAccount!.id;
+    final report = _financialReport!;
+
+    // Если отчет по проекту, ищем счет в projectAccounts
+    if (report.projectAccounts != null) {
+      for (final accountData in report.projectAccounts!) {
+        if (accountData.account.id == selectedAccountId) {
+          return accountData;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Построить список транзакций
+  Widget _buildTransactionsList(FinancialProvider financialProvider) {
+    final accountData = _getSelectedAccountData(financialProvider);
+    
+    if (financialProvider.selectedAccount == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32.0),
+        child: Center(
+          child: Text(
+            'Выберите счет для просмотра транзакций',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    if (accountData == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32.0),
+        child: Center(
+          child: Text(
+            'Нет данных для выбранного счета',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    // Собираем все транзакции в один список в зависимости от видимости
+    final transactions = <Widget>[];
+    
+    if (_showIncomeTransactions && accountData.incomes.isNotEmpty) {
+      transactions.add(_buildTransactionSectionTitle('Приходы', Colors.green));
+      transactions.addAll(
+        accountData.incomes.map((income) => _buildIncomeItem(income)),
+      );
+    }
+
+    if (_showExpenseTransactions && accountData.expenses.isNotEmpty) {
+      transactions.add(_buildTransactionSectionTitle('Расходы', Colors.red));
+      transactions.addAll(
+        accountData.expenses.map((expense) => _buildExpenseItem(expense)),
+      );
+    }
+
+    if (_showTransitTransactions) {
+      if (accountData.outgoingTransits.isNotEmpty) {
+        transactions.add(_buildTransactionSectionTitle('Исходящие транзиты', Colors.orange));
+        transactions.addAll(
+          accountData.outgoingTransits.map((transit) => _buildTransitItem(transit, true)),
+        );
+      }
+      if (accountData.incomingTransits.isNotEmpty) {
+        transactions.add(_buildTransactionSectionTitle('Входящие транзиты', Colors.orange));
+        transactions.addAll(
+          accountData.incomingTransits.map((transit) => _buildTransitItem(transit, false)),
+        );
+      }
+    }
+
+    if (transactions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32.0),
+        child: Center(
+          child: Text(
+            'Нажмите на карточку для просмотра транзакций',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: transactions,
+    );
+  }
+
+  /// Заголовок секции транзакций
+  Widget _buildTransactionSectionTitle(String title, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  /// Элемент списка прихода
+  Widget _buildIncomeItem(Income income) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const Icon(Icons.trending_up, color: Colors.green),
+        title: Text('${_formatAmount(income.amount)} ${income.currency}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_formatDate(income.transactionDate)),
+            if (income.comment.isNotEmpty) Text(income.comment),
+          ],
+        ),
+        trailing: Text(
+          income.article.name,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  /// Элемент списка расхода
+  Widget _buildExpenseItem(Expense expense) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const Icon(Icons.trending_down, color: Colors.red),
+        title: Text('${_formatAmount(expense.amount)} ${expense.currency}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_formatDate(expense.transactionDate)),
+            if (expense.comment.isNotEmpty) Text(expense.comment),
+          ],
+        ),
+        trailing: Text(
+          expense.article?.name ?? expense.category.name,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  /// Элемент списка транзита
+  Widget _buildTransitItem(Transit transit, bool isOutgoing) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(
+          isOutgoing ? Icons.arrow_forward : Icons.arrow_back,
+          color: Colors.orange,
+        ),
+        title: Text(_formatAmount(transit.amount)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_formatDate(transit.transactionDate)),
+            Text(_formatTransitArticle(transit.article)),
+            if (transit.comment.isNotEmpty) Text(transit.comment),
+          ],
+        ),
+        trailing: Text(
+          isOutgoing ? 'Исходящий' : 'Входящий',
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  /// Форматирование статьи транзита
+  String _formatTransitArticle(TransitArticle article) {
+    switch (article) {
+      case TransitArticle.BETWEEN_BANKS:
+        return 'Между банками';
+      case TransitArticle.BETWEEN_CASH:
+        return 'Между кассами';
+    }
+  }
+
+  /// Форматирование даты
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   }
 
   /// Показать диалог выбора типа движения средств
@@ -626,8 +887,15 @@ class _CreateFinancialMovementDialogState
   }
 
   String _getErrorMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.message;
+    if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    } else if (failure is ServerFailure) {
+      // Убираем префикс "Exception: " если он есть
+      final message = failure.message;
+      if (message.startsWith('Exception: ')) {
+        return message.substring(11);
+      }
+      return message;
     } else if (failure is NetworkFailure) {
       return failure.message;
     }
@@ -792,7 +1060,12 @@ class _CreateFinancialMovementDialogState
             (e) => e.name == formData['category'],
             orElse: () => ExpenseCategory.COMMON,
           ),
-          articleId: formData['articleId'] as String?,
+          article: formData['article'] != null
+              ? ExpenseArticle.values.firstWhere(
+                  (e) => e.name == formData['article'],
+                  orElse: () => ExpenseArticle.OTHER,
+                )
+              : null,
           periodicity: Periodicity.values.firstWhere(
             (e) => e.name == formData['periodicity'],
             orElse: () => Periodicity.CONSTANT,

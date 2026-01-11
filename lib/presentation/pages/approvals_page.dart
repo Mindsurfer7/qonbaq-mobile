@@ -4,6 +4,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/services/voice_context.dart';
+import '../../core/utils/form_cache_storage.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
@@ -987,6 +988,79 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     );
   }
 
+  /// Сохранить данные формы в кэш
+  Future<void> _saveFormToCache(String templateCode) async {
+    if (_formKey.currentState == null) return;
+    
+    _formKey.currentState!.save();
+    final formValues = _formKey.currentState!.value;
+    
+    // Преобразуем значения формы для сохранения (исключаем объекты шаблонов)
+    final cacheData = <String, dynamic>{};
+    formValues.forEach((key, value) {
+      if (value is ApprovalTemplate) {
+        // Сохраняем только код шаблона
+        cacheData[key] = value.code;
+      } else if (value is DateTime) {
+        // Сохраняем DateTime как строку
+        cacheData[key] = value.toIso8601String();
+      } else {
+        cacheData[key] = value;
+      }
+    });
+    
+    await FormCacheStorage.instance.saveFormData(templateCode, cacheData);
+  }
+
+  /// Загрузить данные формы из кэша
+  Future<void> _loadFormFromCache(String templateCode) async {
+    if (_formKey.currentState == null) return;
+    
+    final cacheData = await FormCacheStorage.instance.loadFormData(templateCode);
+    if (cacheData == null) return;
+    
+    // Восстанавливаем значения в форму
+    for (var entry in cacheData.entries) {
+      final fieldName = entry.key;
+      var value = entry.value;
+      
+      // Если это поле template, ищем шаблон по коду
+      if (fieldName == 'template' && value is String) {
+        final template = _templates.firstWhere(
+          (t) => t.code == value,
+          orElse: () => _templates.first,
+        );
+        value = template;
+      } else if (value is String && _isIso8601Date(value)) {
+        // Восстанавливаем DateTime из строки
+        value = DateTime.tryParse(value);
+      }
+      
+      final field = _formKey.currentState?.fields[fieldName];
+      if (field != null && value != null) {
+        // Для контроллеров текстовых полей обновляем контроллер
+        if (fieldName == 'title' && value is String) {
+          _titleController.text = value;
+        } else if (fieldName == 'description' && value is String) {
+          _descriptionController.text = value;
+        }
+        field.didChange(value);
+      }
+    }
+    
+    setState(() {});
+  }
+
+  /// Проверка, является ли строка датой в формате ISO8601
+  bool _isIso8601Date(String value) {
+    try {
+      DateTime.parse(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> _submit() async {
     if (_formKey.currentState == null) {
       setState(() {
@@ -997,6 +1071,11 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
     // Сохраняем значения формы перед валидацией
     _formKey.currentState!.save();
+    
+    // Сохраняем в кэш перед отправкой
+    if (_selectedTemplate != null) {
+      await _saveFormToCache(_selectedTemplate!.code);
+    }
 
     // Валидируем форму
     if (!_formKey.currentState!.validate()) {
@@ -1138,7 +1217,13 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           }
         }
       },
-      (createdApproval) {
+      (createdApproval) async {
+        // Очищаем кэш при успешной отправке
+        final templateCode = formValues['template'] as ApprovalTemplate?;
+        if (templateCode != null) {
+          await FormCacheStorage.instance.clearFormData(templateCode.code);
+        }
+
         // Оптимистично добавляем созданное согласование в список
         if (widget.onApprovalCreated != null) {
           widget.onApprovalCreated!(createdApproval);
@@ -1323,7 +1408,12 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                             ),
                           );
                         }).toList(),
-                    onChanged: (value) {
+                    onChanged: (value) async {
+                      // Сохраняем данные старого шаблона перед сменой
+                      if (_selectedTemplate != null && _formKey.currentState != null) {
+                        await _saveFormToCache(_selectedTemplate!.code);
+                      }
+                      
                       setState(() {
                         final oldTemplate = _selectedTemplate;
                         _selectedTemplate = value;
@@ -1353,6 +1443,13 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                           }
                         }
                       });
+                      
+                      // Загружаем данные из кэша для нового шаблона
+                      if (value != null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          await _loadFormFromCache(value.code);
+                        });
+                      }
                     },
                     validator: (value) {
                       if (value == null) {
