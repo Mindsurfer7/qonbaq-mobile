@@ -10,9 +10,19 @@ class ApiResponse<T> {
 
   /// Нормализует входные данные: Map → Map<String,dynamic>, List → List<dynamic>.
   /// Это позволяет избежать TypeError при кастах `as Map<String,dynamic>` на ответах 200/201.
+  /// ВАЖНО: Делает ГЛУБОКУЮ нормализацию всех вложенных Map и List.
   static dynamic _normalizeData(dynamic value) {
-    if (value is Map) return Map<String, dynamic>.from(value);
-    if (value is List) return List<dynamic>.from(value);
+    if (value is Map) {
+      return Map<String, dynamic>.fromEntries(
+        value.entries.map((e) => MapEntry(
+          e.key.toString(),
+          _normalizeData(e.value), // Рекурсивно нормализуем значения
+        )),
+      );
+    }
+    if (value is List) {
+      return value.map((e) => _normalizeData(e)).toList(); // Рекурсивно нормализуем элементы
+    }
     return value;
   }
 
