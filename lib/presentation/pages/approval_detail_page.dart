@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_decision.dart';
@@ -659,8 +658,38 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                               ],
                             ),
 
-                            // Создатель
-                            if (_approval!.creator != null) _buildCreatorRow(),
+                            // Инициатор
+                            if (_approval!.initiator != null)
+                              _buildInitiatorRow(),
+
+                            // Создатель (если отличается от инициатора)
+                            if (_approval!.creator != null &&
+                                _approval!.initiator?.id !=
+                                    _approval!.creator?.id)
+                              _buildCreatorRow(),
+
+                            // Текущий департамент
+                            if (_approval!.currentDepartment != null)
+                              _buildCurrentDepartmentRow(),
+
+                            // Текущий согласователь
+                            if (_approval!.currentApprover != null)
+                              _buildCurrentApproverRow(),
+
+                            // Сумма
+                            if (_approval!.amount != null)
+                              _buildInfoRow(
+                                'Сумма',
+                                '${_approval!.amount!.toStringAsFixed(2)} ₸',
+                                Icons.attach_money,
+                              ),
+
+                            // Payment due date
+                            _buildInfoRow(
+                              'Срок оплаты',
+                              _formatDateTime(_approval!.paymentDueDate),
+                              Icons.event,
+                            ),
 
                             // Дата создания
                             _buildInfoRow(
@@ -937,6 +966,61 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     );
   }
 
+  Widget _buildInitiatorRow() {
+    if (_approval!.initiator == null) return const SizedBox.shrink();
+
+    final initiatorName = _getUserDisplayName(_approval!.initiator!);
+    final initiatorId = _approval!.initiator!.id;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.person_outline, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Инициатор',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        initiatorName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      iconSize: 20,
+                      color: Colors.blue,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed:
+                          () =>
+                              _openChatWithCreator(initiatorId, initiatorName),
+                      tooltip: 'Открыть чат',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCreatorRow() {
     if (_approval!.creator == null) return const SizedBox.shrink();
 
@@ -979,6 +1063,95 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                       constraints: const BoxConstraints(),
                       onPressed:
                           () => _openChatWithCreator(creatorId, creatorName),
+                      tooltip: 'Открыть чат',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentDepartmentRow() {
+    if (_approval!.currentDepartment == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.business, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Текущий департамент',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _approval!.currentDepartment!.name,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentApproverRow() {
+    if (_approval!.currentApprover == null) return const SizedBox.shrink();
+
+    final approverName = _getUserDisplayName(_approval!.currentApprover!);
+    final approverId = _approval!.currentApprover!.id;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.how_to_reg, size: 20, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Текущий согласователь',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        approverName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      iconSize: 20,
+                      color: Colors.blue,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed:
+                          () => _openChatWithCreator(approverId, approverName),
                       tooltip: 'Открыть чат',
                     ),
                   ],
@@ -1062,6 +1235,23 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (decision.department != null) ...[
+              Row(
+                children: [
+                  const Icon(Icons.business, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    decision.department!.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+            ],
             if (decision.comment != null && decision.comment!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(decision.comment!),
@@ -1312,7 +1502,8 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    // При редактировании не валидируем форму - PATCH позволяет отправлять только измененные поля
+    // if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
@@ -1428,12 +1619,10 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
                 name: 'title',
                 controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Название *',
+                  labelText: 'Название',
                   border: OutlineInputBorder(),
                 ),
-                validator: FormBuilderValidators.required(
-                  errorText: 'Название обязательно',
-                ),
+                // При редактировании не валидируем обязательные поля
               ),
               const SizedBox(height: 16),
               FormBuilderTextField(
@@ -1473,6 +1662,8 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
                       formSchema: widget.approval.template!.formSchema,
                       initialValues: widget.approval.formData,
                       formKey: _formKey,
+                      isEditMode:
+                          true, // Режим редактирования - без валидации обязательных полей
                     );
                   },
                 ),

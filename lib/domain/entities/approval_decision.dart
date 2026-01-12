@@ -1,5 +1,6 @@
 import '../entities/entity.dart';
 import 'user_profile.dart';
+import 'department.dart';
 
 /// Решение по согласованию
 class ApprovalDecision extends Entity {
@@ -8,8 +9,10 @@ class ApprovalDecision extends Entity {
   final ApprovalDecisionType decision;
   final String? comment;
   final String userId;
+  final String? departmentId;
   final DateTime createdAt;
   final ProfileUser? user;
+  final DepartmentInfo? department;
 
   const ApprovalDecision({
     required this.id,
@@ -17,8 +20,10 @@ class ApprovalDecision extends Entity {
     required this.decision,
     this.comment,
     required this.userId,
+    this.departmentId,
     required this.createdAt,
     this.user,
+    this.department,
   });
 
   @override

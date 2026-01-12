@@ -1,5 +1,6 @@
 import '../../domain/entities/approval_decision.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../domain/entities/department.dart';
 import '../models/model.dart';
 
 /// Модель решения по согласованию
@@ -10,8 +11,10 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
     required super.decision,
     super.comment,
     required super.userId,
+    super.departmentId,
     required super.createdAt,
     super.user,
+    super.department,
   });
 
   factory ApprovalDecisionModel.fromJson(Map<String, dynamic> json) {
@@ -35,14 +38,27 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
       throw FormatException('Поле userId или approverId обязательно для ApprovalDecision');
     }
 
+    // Парсинг департамента
+    DepartmentInfo? department;
+    if (json['department'] != null) {
+      final departmentJson = json['department'] as Map<String, dynamic>;
+      department = DepartmentInfo(
+        id: departmentJson['id'] as String,
+        name: departmentJson['name'] as String,
+        description: departmentJson['description'] as String?,
+      );
+    }
+
     return ApprovalDecisionModel(
       id: json['id'] as String,
       approvalId: json['approvalId'] as String,
       decision: _parseDecision(json['decision'] as String),
       comment: json['comment'] as String?,
       userId: userId,
+      departmentId: json['departmentId'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       user: user,
+      department: department,
     );
   }
 
@@ -91,8 +107,10 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
       decision: decision,
       comment: comment,
       userId: userId,
+      departmentId: departmentId,
       createdAt: createdAt,
       user: user,
+      department: department,
     );
   }
 
@@ -103,8 +121,10 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
       decision: decision.decision,
       comment: decision.comment,
       userId: decision.userId,
+      departmentId: decision.departmentId,
       createdAt: decision.createdAt,
       user: decision.user,
+      department: decision.department,
     );
   }
 }

@@ -14,14 +14,18 @@ class ApiResponse<T> {
   static dynamic _normalizeData(dynamic value) {
     if (value is Map) {
       return Map<String, dynamic>.fromEntries(
-        value.entries.map((e) => MapEntry(
-          e.key.toString(),
-          _normalizeData(e.value), // Рекурсивно нормализуем значения
-        )),
+        value.entries.map(
+          (e) => MapEntry(
+            e.key.toString(),
+            _normalizeData(e.value), // Рекурсивно нормализуем значения
+          ),
+        ),
       );
     }
     if (value is List) {
-      return value.map((e) => _normalizeData(e)).toList(); // Рекурсивно нормализуем элементы
+      return value
+          .map((e) => _normalizeData(e))
+          .toList(); // Рекурсивно нормализуем элементы
     }
     return value;
   }
@@ -111,17 +115,21 @@ class ApiMeta {
     List<MissingRole>? missingRoles;
     if (json['missingRoles'] != null) {
       final rolesList = json['missingRoles'] as List<dynamic>;
-      missingRoles = rolesList
-          .map((role) => MissingRole.fromJson(role as Map<String, dynamic>))
-          .toList();
+      missingRoles =
+          rolesList
+              .map((role) => MissingRole.fromJson(role as Map<String, dynamic>))
+              .toList();
     }
 
     List<UnassignedRole>? unassignedRoles;
     if (json['unassignedRoles'] != null) {
       final rolesList = json['unassignedRoles'] as List<dynamic>;
-      unassignedRoles = rolesList
-          .map((role) => UnassignedRole.fromJson(role as Map<String, dynamic>))
-          .toList();
+      unassignedRoles =
+          rolesList
+              .map(
+                (role) => UnassignedRole.fromJson(role as Map<String, dynamic>),
+              )
+              .toList();
     }
 
     return ApiMeta(
@@ -159,10 +167,7 @@ class UnassignedRole {
   final String code;
   final String name;
 
-  UnassignedRole({
-    required this.code,
-    required this.name,
-  });
+  UnassignedRole({required this.code, required this.name});
 
   factory UnassignedRole.fromJson(Map<String, dynamic> json) {
     return UnassignedRole(
@@ -172,10 +177,7 @@ class UnassignedRole {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'code': code,
-      'name': name,
-    };
+    return {'code': code, 'name': name};
   }
 }
 
@@ -193,10 +195,13 @@ class MissingRole {
 
   factory MissingRole.fromJson(Map<String, dynamic> json) {
     final templatesList = json['affectedTemplates'] as List<dynamic>;
-    final templates = templatesList
-        .map((template) =>
-            AffectedTemplate.fromJson(template as Map<String, dynamic>))
-        .toList();
+    final templates =
+        templatesList
+            .map(
+              (template) =>
+                  AffectedTemplate.fromJson(template as Map<String, dynamic>),
+            )
+            .toList();
 
     return MissingRole(
       roleCode: json['roleCode'] as String,
@@ -209,8 +214,7 @@ class MissingRole {
     return {
       'roleCode': roleCode,
       'roleName': roleName,
-      'affectedTemplates':
-          affectedTemplates.map((t) => t.toJson()).toList(),
+      'affectedTemplates': affectedTemplates.map((t) => t.toJson()).toList(),
     };
   }
 }
@@ -221,11 +225,7 @@ class AffectedTemplate {
   final String name;
   final String code;
 
-  AffectedTemplate({
-    required this.id,
-    required this.name,
-    required this.code,
-  });
+  AffectedTemplate({required this.id, required this.name, required this.code});
 
   factory AffectedTemplate.fromJson(Map<String, dynamic> json) {
     return AffectedTemplate(
@@ -236,10 +236,6 @@ class AffectedTemplate {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'code': code,
-    };
+    return {'id': id, 'name': name, 'code': code};
   }
 }

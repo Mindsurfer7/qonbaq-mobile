@@ -6,6 +6,7 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_attachment.dart';
 import '../../domain/entities/approval_decision.dart';
+import '../../domain/entities/department.dart';
 import '../models/model.dart';
 import 'approval_template_model.dart';
 import 'approval_comment_model.dart';
@@ -25,6 +26,7 @@ class ApprovalModel extends Approval implements Model {
     super.status,
     required super.createdBy,
     required super.paymentDueDate,
+    super.amount,
     super.formData,
     required super.createdAt,
     required super.updatedAt,
@@ -32,7 +34,9 @@ class ApprovalModel extends Approval implements Model {
     super.business,
     super.template,
     super.creator,
+    super.initiator,
     super.currentApprover,
+    super.currentDepartment,
     super.decisions,
     super.comments,
     super.attachments,
@@ -58,7 +62,7 @@ class ApprovalModel extends Approval implements Model {
 
     ProfileUser? creator;
     // Поддерживаем оба варианта: creator и initiator
-    final creatorJson = json['creator'] as Map<String, dynamic>? ?? json['initiator'] as Map<String, dynamic>?;
+    final creatorJson = json['creator'] as Map<String, dynamic>?;
     if (creatorJson != null) {
       creator = ProfileUser(
         id: creatorJson['id'] as String,
@@ -67,6 +71,20 @@ class ApprovalModel extends Approval implements Model {
         lastName: creatorJson['lastName'] as String?,
         patronymic: creatorJson['patronymic'] as String?,
         phone: creatorJson['phone'] as String?,
+      );
+    }
+
+    // Инициатор (может отличаться от creator)
+    ProfileUser? initiator;
+    final initiatorJson = json['initiator'] as Map<String, dynamic>?;
+    if (initiatorJson != null) {
+      initiator = ProfileUser(
+        id: initiatorJson['id'] as String,
+        email: initiatorJson['email'] as String,
+        firstName: initiatorJson['firstName'] as String?,
+        lastName: initiatorJson['lastName'] as String?,
+        patronymic: initiatorJson['patronymic'] as String?,
+        phone: initiatorJson['phone'] as String?,
       );
     }
 
@@ -80,6 +98,18 @@ class ApprovalModel extends Approval implements Model {
         lastName: currentApproverJson['lastName'] as String?,
         patronymic: currentApproverJson['patronymic'] as String?,
         phone: currentApproverJson['phone'] as String?,
+      );
+    }
+
+    // Текущий департамент
+    DepartmentInfo? currentDepartment;
+    if (json['currentDepartment'] != null) {
+      final currentDepartmentJson = json['currentDepartment'] as Map<String, dynamic>;
+      // Для currentDepartment используем DepartmentInfo, manager не входит в DepartmentInfo
+      currentDepartment = DepartmentInfo(
+        id: currentDepartmentJson['id'] as String,
+        name: currentDepartmentJson['name'] as String,
+        description: currentDepartmentJson['description'] as String?,
       );
     }
 
@@ -190,6 +220,7 @@ class ApprovalModel extends Approval implements Model {
       paymentDueDate: json['paymentDueDate'] != null
           ? DateTime.parse(json['paymentDueDate'] as String)
           : (throw FormatException('Поле paymentDueDate обязательно для Approval')),
+      amount: json['amount'] != null ? (json['amount'] as num).toDouble() : null,
       formData: formData,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -201,7 +232,9 @@ class ApprovalModel extends Approval implements Model {
       business: business,
       template: template,
       creator: creator,
+      initiator: initiator,
       currentApprover: currentApprover,
+      currentDepartment: currentDepartment,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
@@ -325,6 +358,7 @@ class ApprovalModel extends Approval implements Model {
       status: status,
       createdBy: createdBy,
       paymentDueDate: paymentDueDate,
+      amount: amount,
       formData: formData,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -332,7 +366,9 @@ class ApprovalModel extends Approval implements Model {
       business: business,
       template: template,
       creator: creator,
+      initiator: initiator,
       currentApprover: currentApprover,
+      currentDepartment: currentDepartment,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
@@ -351,6 +387,7 @@ class ApprovalModel extends Approval implements Model {
       status: approval.status,
       createdBy: approval.createdBy,
       paymentDueDate: approval.paymentDueDate,
+      amount: approval.amount,
       formData: approval.formData,
       createdAt: approval.createdAt,
       updatedAt: approval.updatedAt,
@@ -358,7 +395,9 @@ class ApprovalModel extends Approval implements Model {
       business: approval.business,
       template: approval.template,
       creator: approval.creator,
+      initiator: approval.initiator,
       currentApprover: approval.currentApprover,
+      currentDepartment: approval.currentDepartment,
       decisions: approval.decisions,
       comments: approval.comments,
       attachments: approval.attachments,
