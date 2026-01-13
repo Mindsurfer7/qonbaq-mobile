@@ -775,10 +775,14 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
     }
   }
 
-  /// Проверяет видимость элемента на основе условий из props.visible
+  /// Проверяет видимость элемента на основе условий из props.visible и props.hiddenByRole
   bool _checkVisibility(BuildContext context) {
     final props = widget.element['props'] as Map<String, dynamic>?;
     if (props == null) return true;
+
+    // Если поле скрыто по роли, скрываем его независимо от других условий
+    final hiddenByRole = props['hiddenByRole'] == true;
+    if (hiddenByRole) return false;
 
     final visible = props['visible'] as Map<String, dynamic>?;
     if (visible == null) return true;
