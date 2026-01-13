@@ -4,6 +4,7 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_attachment.dart';
 import '../../domain/entities/approval_decision.dart';
+import '../../domain/entities/pending_confirmation.dart';
 import '../../domain/entities/templates_result.dart';
 import '../../domain/entities/approvals_result.dart';
 import '../../domain/entities/missing_role_info.dart';
@@ -323,6 +324,43 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure('Ошибка при удалении вложения: $e'));
+    }
+  }
+
+  // Подтверждения
+  @override
+  Future<Either<Failure, List<PendingConfirmation>>> getPendingConfirmations({String? businessId}) async {
+    try {
+      final confirmations = await remoteDataSource.getPendingConfirmations(businessId: businessId);
+      return Right(confirmations.map((model) => model.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении pending confirmations: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Approval>> confirmApproval(
+    String id, {
+    required bool isConfirmed,
+    double? amount,
+    String? comment,
+  }) async {
+    try {
+      final approval = await remoteDataSource.confirmApproval(
+        id,
+        isConfirmed: isConfirmed,
+        amount: amount,
+        comment: comment,
+      );
+      return Right(approval.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при подтверждении согласования: $e'));
     }
   }
 }

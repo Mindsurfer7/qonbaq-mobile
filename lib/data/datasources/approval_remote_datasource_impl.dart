@@ -9,6 +9,7 @@ import '../models/approval_template_model.dart';
 import '../models/approval_comment_model.dart';
 import '../models/approval_attachment_model.dart';
 import '../models/approval_decision_model.dart';
+import '../models/pending_confirmation_model.dart';
 import '../models/validation_error.dart';
 import '../models/api_response.dart';
 
@@ -81,7 +82,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   }
 
   @override
-  Future<ApiResponse<List<ApprovalTemplateModel>>> getTemplates({String? businessId}) async {
+  Future<ApiResponse<List<ApprovalTemplateModel>>> getTemplates({
+    String? businessId,
+  }) async {
     try {
       final queryParams = <String, String>{};
       if (businessId != null) queryParams['businessId'] = businessId;
@@ -240,12 +243,13 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         businessId: projectId ?? '',
         title: title ?? '',
         createdBy: '',
-        paymentDueDate: DateTime.now(), // Временное значение, используется только для toUpdateJson
+        paymentDueDate:
+            DateTime.now(), // Временное значение, используется только для toUpdateJson
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         formData: formData,
       );
-      
+
       final response = await apiClient.put(
         '/api/approvals/$id',
         headers: _getAuthHeaders(),
@@ -428,7 +432,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
           (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
         );
         final approval = apiResponse.data;
-        
+
         // API возвращает полный объект Approval, нужно извлечь последнее решение
         if (approval.decisions != null && approval.decisions!.isNotEmpty) {
           // Берем последнее решение (самое свежее)
@@ -446,7 +450,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         } else {
           // Если решений нет, но статус 200, значит решение принято успешно
           // Создаем фиктивное решение для обратной совместимости
-          throw Exception('Решение не найдено в ответе сервера. Статус согласования: ${approval.status}');
+          throw Exception(
+            'Решение не найдено в ответе сервера. Статус согласования: ${approval.status}',
+          );
         }
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
@@ -740,6 +746,8 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         return 'REJECTED';
       case ApprovalStatus.inExecution:
         return 'IN_EXECUTION';
+      case ApprovalStatus.awaitingConfirmation:
+        return 'AWAITING_CONFIRMATION';
       case ApprovalStatus.completed:
         return 'COMPLETED';
       case ApprovalStatus.cancelled:
@@ -755,6 +763,111 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         return 'REJECT';
       case ApprovalDecisionType.requestChanges:
         return 'REQUEST_CHANGES';
+    }
+  }
+
+  // Подтверждения
+  @override
+  Future<List<PendingConfirmationModel>> getPendingConfirmations({
+    String? businessId,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+      if (businessId != null) queryParams['businessId'] = businessId;
+
+      final queryString =
+          queryParams.isEmpty
+              ? ''
+              : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+
+      final response = await apiClient.get(
+        '/api/approvals/pending-confirmations$queryString',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(json, (data) {
+          final confirmationsList = data as List<dynamic>;
+          return confirmationsList.map((item) {
+            try {
+              return PendingConfirmationModel.fromJson(
+                item as Map<String, dynamic>,
+              );
+            } catch (e) {
+              print('❌ Ошибка парсинга PendingConfirmation: $e');
+              print('📦 Данные: $item');
+              rethrow;
+            }
+          }).toList();
+        });
+        print('✅ Получено ${apiResponse.data.length} pending confirmations');
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<ApprovalModel> confirmApproval(
+    String id, {
+    required bool isConfirmed,
+    double? amount,
+    String? comment,
+  }) async {
+    try {
+      final body = <String, dynamic>{'isConfirmed': isConfirmed};
+      if (amount != null) body['amount'] = amount;
+      if (comment != null && comment.isNotEmpty) body['comment'] = comment;
+
+      final response = await apiClient.post(
+        '/api/approvals/$id/confirm',
+        headers: _getAuthHeaders(),
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else if (response.statusCode == 404) {
+        throw Exception('Согласование не найдено');
+      } else {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
     }
   }
 }

@@ -15,6 +15,7 @@ enum ApprovalStatus {
   approved, // Утверждено
   rejected, // Отклонено
   inExecution, // В исполнении
+  awaitingConfirmation, // Ожидает подтверждения
   completed, // Завершено
   cancelled, // Отменено
 }
@@ -28,7 +29,7 @@ class Approval extends Entity {
   final String title;
   final String? description;
   final ApprovalStatus status;
-  final String createdBy; // ID создателя
+  final String createdBy; // ID инициатора
   final DateTime paymentDueDate; // Дата, к которой нужно выдать деньги
   final double? amount; // Сумма заявки
   final Map<String, dynamic>? formData; // Данные формы

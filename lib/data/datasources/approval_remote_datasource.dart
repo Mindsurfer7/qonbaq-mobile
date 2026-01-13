@@ -7,6 +7,7 @@ import '../models/approval_template_model.dart';
 import '../models/approval_comment_model.dart';
 import '../models/approval_attachment_model.dart';
 import '../models/approval_decision_model.dart';
+import '../models/pending_confirmation_model.dart';
 
 /// Удаленный источник данных для согласований (API)
 abstract class ApprovalRemoteDataSource extends DataSource {
@@ -89,5 +90,17 @@ abstract class ApprovalRemoteDataSource extends DataSource {
 
   /// Удалить вложение
   Future<void> deleteAttachment(String approvalId, String attachmentId);
+
+  // Подтверждения
+  /// Получить список согласований, требующих подтверждения
+  Future<List<PendingConfirmationModel>> getPendingConfirmations({String? businessId});
+
+  /// Подтвердить согласование
+  Future<ApprovalModel> confirmApproval(
+    String id, {
+    required bool isConfirmed,
+    double? amount,
+    String? comment,
+  });
 }
 

@@ -83,12 +83,12 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final currentUser = authProvider.user;
         final currentUserId = currentUser?.id;
-        final creatorId = approval.createdBy;
-        final isMatch = currentUserId == creatorId;
+        final initiatorId = approval.createdBy;
+        final isMatch = currentUserId == initiatorId;
 
         print('=== ЛОГИ СОГЛАСОВАНИЯ ===');
         print('ID текущего пользователя: $currentUserId');
-        print('ID создателя согласования: $creatorId');
+        print('ID инициатора согласования: $initiatorId');
         print('Совпадают ли ID: $isMatch');
         print('Название согласования: ${approval.title}');
         print('Описание согласования: ${approval.description}');
@@ -96,7 +96,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         print('Описание isEmpty: ${approval.description?.isEmpty ?? true}');
         print('Статус согласования: ${approval.status}');
         if (approval.creator != null) {
-          print('Информация о создателе:');
+          print('Информация об инициаторе:');
           print('  - ID: ${approval.creator!.id}');
           print('  - Email: ${approval.creator!.email}');
           print(
@@ -230,6 +230,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         return 'Отклонено';
       case ApprovalStatus.inExecution:
         return 'В исполнении';
+      case ApprovalStatus.awaitingConfirmation:
+        return 'Ожидает подтверждения';
       case ApprovalStatus.completed:
         return 'Завершено';
       case ApprovalStatus.cancelled:
@@ -249,6 +251,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         return Colors.red;
       case ApprovalStatus.inExecution:
         return Colors.blue;
+      case ApprovalStatus.awaitingConfirmation:
+        return Colors.red;
       case ApprovalStatus.completed:
         return Colors.teal;
       case ApprovalStatus.cancelled:
@@ -348,8 +352,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     return false;
   }
 
-  /// Проверяет, является ли текущий пользователь создателем согласования
-  bool _isCreator() {
+  /// Проверяет, является ли текущий пользователь инициатором согласования
+  bool _isInitiator() {
     if (_approval == null) return false;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.user;
@@ -361,7 +365,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   /// Проверяет, можно ли редактировать согласование
   bool _canEdit() {
     if (_approval == null) return false;
-    if (!_isCreator()) return false;
+    if (!_isInitiator()) return false;
 
     // Нельзя редактировать, если статус: APPROVED, IN_EXECUTION, COMPLETED
     if (_approval!.status == ApprovalStatus.approved ||
@@ -785,9 +789,9 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                 listen: false,
                               ),
                               showChatButton: true,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
                       ),
                     ),
                   ),
@@ -877,12 +881,12 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                 Text(
                   _approval!.currentDepartment!.name,
                   style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -939,7 +943,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                 ...executors.map((executor) {
                   final executorName = _getUserDisplayName(executor);
                   final executorId = executor.id;
-                  final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+                  final chatRepository = Provider.of<ChatRepository>(
+                    context,
+                    listen: false,
+                  );
                   final canOpenChat = chatRepository != null;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
@@ -958,10 +965,11 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             color: Colors.blue,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            onPressed: () => _openChatWithCreator(
-                              executorId,
-                              executorName,
-                            ),
+                            onPressed:
+                                () => _openChatWithCreator(
+                                  executorId,
+                                  executorName,
+                                ),
                             tooltip: 'Открыть чат',
                           ),
                       ],
@@ -1088,9 +1096,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                 color: Colors.blue,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                onPressed: () => _openChatWithCreator(
-                  decision.user!.id,
-                  _getUserDisplayName(decision.user!),
+                onPressed:
+                    () => _openChatWithCreator(
+                      decision.user!.id,
+                      _getUserDisplayName(decision.user!),
                     ),
                 tooltip: 'Открыть чат',
               ),
@@ -1099,7 +1108,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
               style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
             ),
           ],
-            ),
+        ),
       ),
     );
   }

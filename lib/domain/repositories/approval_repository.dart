@@ -4,6 +4,7 @@ import '../entities/approval_template.dart';
 import '../entities/approval_comment.dart';
 import '../entities/approval_attachment.dart';
 import '../entities/approval_decision.dart';
+import '../entities/pending_confirmation.dart';
 import '../entities/templates_result.dart';
 import '../entities/approvals_result.dart';
 import '../../core/error/failures.dart';
@@ -90,5 +91,17 @@ abstract class ApprovalRepository extends Repository {
 
   /// Удалить вложение
   Future<Either<Failure, void>> deleteAttachment(String approvalId, String attachmentId);
+
+  // Подтверждения
+  /// Получить список согласований, требующих подтверждения
+  Future<Either<Failure, List<PendingConfirmation>>> getPendingConfirmations({String? businessId});
+
+  /// Подтвердить согласование
+  Future<Either<Failure, Approval>> confirmApproval(
+    String id, {
+    required bool isConfirmed,
+    double? amount,
+    String? comment,
+  });
 }
 

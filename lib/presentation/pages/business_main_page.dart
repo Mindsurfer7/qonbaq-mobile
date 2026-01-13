@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../widgets/workday_dialog.dart';
 import '../providers/profile_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
 
 /// Главная страница бизнес-приложения
 class BusinessMainPage extends StatefulWidget {
@@ -12,29 +14,66 @@ class BusinessMainPage extends StatefulWidget {
 }
 
 class _BusinessMainPageState extends State<BusinessMainPage> {
+  String? _lastBusinessId;
+
   @override
   void initState() {
     super.initState();
     // Загружаем компании при инициализации страницы
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = Provider.of<ProfileProvider>(context, listen: false);
+      if (!mounted) return;
+      
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       // Загружаем компании, если они еще не загружены
-      if (provider.businesses == null && !provider.isLoading) {
-        await provider.loadBusinesses();
+      if (profileProvider.businesses == null && !profileProvider.isLoading) {
+        await profileProvider.loadBusinesses();
       }
 
       // Проверяем, есть ли выбранный workspace
       if (!mounted) return;
 
-      if (provider.selectedWorkspace == null) {
+      if (profileProvider.selectedWorkspace == null) {
         // Если workspace не выбран, перенаправляем на страницу выбора
         Navigator.of(context).pushReplacementNamed('/workspace-selector');
+        return;
       }
+
+      // Запускаем polling для pending confirmations
+      final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+      final businessId = profileProvider.selectedBusiness?.id;
+      _lastBusinessId = businessId;
+      debugPrint('🚀 BusinessMainPage: Запускаем polling для businessId: $businessId');
+      pendingProvider.startPolling(businessId: businessId);
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Обновляем polling при смене бизнеса
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+    final businessId = profileProvider.selectedBusiness?.id;
+    
+    // Обновляем только если businessId изменился
+    if (_lastBusinessId != businessId) {
+      debugPrint('🔄 BusinessMainPage: Обновляем polling для нового businessId: $businessId (было: $_lastBusinessId)');
+      _lastBusinessId = businessId;
+      pendingProvider.updateBusinessId(businessId);
+    }
+  }
+
+  @override
+  void dispose() {
+    // Останавливаем polling при закрытии страницы
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+    pendingProvider.stopPolling();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Consumer<ProfileProvider>(
@@ -211,6 +250,61 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
     String route,
     IconData icon,
   ) {
+    // Для иконки согласований показываем специальный виджет с индикатором
+    if (route == '/approvals') {
+      return Consumer<PendingConfirmationsProvider>(
+        builder: (context, provider, child) {
+          return InkWell(
+            onTap: () => Navigator.of(context).pushNamed(route),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(icon),
+                    if (provider.hasPending)
+                      Positioned(
+                        right: -8,
+                        top: -8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Center(
+                            child: Text(
+                              provider.count > 99 ? '99+' : '${provider.count}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Обычная иконка для остальных пунктов
     return InkWell(
       onTap: () => Navigator.of(context).pushNamed(route),
       child: Column(

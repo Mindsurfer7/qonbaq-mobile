@@ -135,7 +135,10 @@ import 'package:qonbaq/domain/usecases/get_approval_comments.dart';
 import 'package:qonbaq/domain/usecases/update_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
+import 'package:qonbaq/domain/usecases/get_pending_confirmations.dart';
+import 'package:qonbaq/domain/usecases/confirm_approval.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
+import 'package:qonbaq/presentation/providers/pending_confirmations_provider.dart';
 import 'package:qonbaq/data/datasources/financial_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/financial_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/financial_repository.dart';
@@ -381,6 +384,12 @@ class MyApp extends StatelessWidget {
     final updateApprovalComment = UpdateApprovalComment(approvalRepository);
     final deleteApprovalComment = DeleteApprovalComment(approvalRepository);
     final getApprovalTemplates = GetApprovalTemplates(approvalRepository);
+    final getPendingConfirmations = GetPendingConfirmations(approvalRepository);
+    final confirmApproval = ConfirmApproval(approvalRepository);
+    final pendingConfirmationsProvider = PendingConfirmationsProvider(
+      getPendingConfirmations: getPendingConfirmations,
+      confirmApproval: confirmApproval,
+    );
 
     // Инициализация зависимостей для финансовых форм
     final financialRemoteDataSource = FinancialRemoteDataSourceImpl(
@@ -498,6 +507,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => inboxProvider),
         ChangeNotifierProvider(create: (_) => financialProvider),
         ChangeNotifierProvider(create: (_) => rolesProvider),
+        ChangeNotifierProvider(create: (_) => pendingConfirmationsProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),

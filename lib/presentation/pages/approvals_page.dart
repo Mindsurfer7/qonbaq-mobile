@@ -15,8 +15,10 @@ import '../../domain/entities/missing_role_info.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
 import '../widgets/dynamic_block_form.dart';
 import '../widgets/voice_record_block.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -237,7 +239,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           },
         );
       } else if (actualTabIndex == 1) {
-        // Вкладка "Ожидают" - загружаем DRAFT и PENDING
+        // Вкладка "Ожидают" - загружаем DRAFT, PENDING и IN_EXECUTION
         final draftResult = await getApprovalsUseCase.call(
           GetApprovalsParams(
             businessId: selectedBusiness.id,
@@ -248,6 +250,12 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           GetApprovalsParams(
             businessId: selectedBusiness.id,
             status: ApprovalStatus.pending,
+          ),
+        );
+        final inExecutionResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.inExecution,
           ),
         );
 
@@ -262,6 +270,15 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           },
         );
         pendingResult.fold(
+          (failure) => _error = _getErrorMessage(failure),
+          (result) {
+            allPending.addAll(result.approvals);
+            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            }
+          },
+        );
+        inExecutionResult.fold(
           (failure) => _error = _getErrorMessage(failure),
           (result) {
             allPending.addAll(result.approvals);
@@ -479,6 +496,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         return 'Отклонено';
       case ApprovalStatus.inExecution:
         return 'В исполнении';
+      case ApprovalStatus.awaitingConfirmation:
+        return 'Ожидает подтверждения';
       case ApprovalStatus.completed:
         return 'Завершено';
       case ApprovalStatus.cancelled:
@@ -498,6 +517,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         return Colors.red;
       case ApprovalStatus.inExecution:
         return Colors.blue;
+      case ApprovalStatus.awaitingConfirmation:
+        return Colors.red;
       case ApprovalStatus.completed:
         return Colors.teal;
       case ApprovalStatus.cancelled:
@@ -585,25 +606,128 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     );
   }
 
-  Widget _buildApprovalsList(List<Approval> approvals) {
-    if (approvals.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Text(
-            'Нет согласований',
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-        ),
-      );
-    }
+  /// Виджет секции pending confirmations (переиспользуемый)
+  Widget _buildPendingConfirmationsSection() {
+    return Consumer<PendingConfirmationsProvider>(
+      builder: (context, provider, child) {
+        if (provider.pendingConfirmations.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.help_outline,
+                    color: Colors.red.shade700,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+          child: Text(
+                      'Требуют подтверждения (${provider.count})',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...provider.pendingConfirmations.map(
+              (pendingConfirmation) => Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                color: Colors.red.shade50,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.help_outline,
+                    color: Colors.red.shade700,
+                  ),
+                  title: Text(
+                    pendingConfirmation.approval.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (pendingConfirmation.approval.description != null &&
+                          pendingConfirmation.approval.description!.isNotEmpty)
+                        Text(
+                          pendingConfirmation.approval.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (pendingConfirmation.approval.amount != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Сумма: ${pendingConfirmation.approval.amount!.toStringAsFixed(2)} ₽',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.red.shade700,
+                  ),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => ConfirmationDialog(
+                        pendingConfirmation: pendingConfirmation,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Divider(height: 32),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildApprovalsList(List<Approval> approvals) {
     return RefreshIndicator(
       onRefresh: _loadApprovals,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.only(top: 20),
-        itemCount: approvals.length,
-        itemBuilder: (context, index) => _buildApprovalCard(approvals[index]),
+        children: [
+          // Секция pending confirmations
+          _buildPendingConfirmationsSection(),
+          // Основной список
+          if (approvals.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                'Нет согласований',
+                style: TextStyle(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ...approvals.map((approval) => _buildApprovalCard(approval)),
+        ],
       ),
     );
   }
@@ -613,8 +737,31 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     final hasPrivileges = _hasPrivilegedPermissions();
 
     if (!hasPrivileges) {
-      // Обычный пользователь - просто список
-      return _buildApprovalsList(_canApproveApprovals);
+      // Обычный пользователь - список с pending confirmations
+      return RefreshIndicator(
+        onRefresh: () => _loadApprovalsForTab(0),
+        child: ListView(
+          padding: const EdgeInsets.only(top: 20),
+          children: [
+            // Секция pending confirmations
+            _buildPendingConfirmationsSection(),
+            // Основной список согласований
+            if (_canApproveApprovals.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  'Нет согласований',
+                  style: TextStyle(color: Colors.grey.shade600),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ..._canApproveApprovals.map(
+                (approval) => _buildApprovalCard(approval),
+              ),
+          ],
+        ),
+      );
     }
 
     // Привилегированный пользователь - аккордеон
@@ -623,6 +770,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
       child: ListView(
         padding: const EdgeInsets.only(top: 20),
         children: [
+          // Секция pending confirmations
+          _buildPendingConfirmationsSection(),
           // Основной список (свои согласования)
           if (_canApproveApprovals.isNotEmpty) ...[
             Padding(
@@ -784,22 +933,22 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         _approvedApprovals.isNotEmpty ||
         _rejectedApprovals.isNotEmpty;
 
-    if (!hasAny) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Text(
-            'Нет завершенных согласований',
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-        ),
-      );
-    }
-
     return RefreshIndicator(
       onRefresh: _loadApprovals,
       child: ListView(
         children: [
+          // Секция pending confirmations
+          _buildPendingConfirmationsSection(),
+          if (!hasAny)
+            Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                'Нет завершенных согласований',
+                style: TextStyle(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
           if (_completedApprovals.isNotEmpty) ...[
             _buildSectionHeader('Завершено', _completedApprovals.length),
             ..._completedApprovals.map(_buildApprovalCard),

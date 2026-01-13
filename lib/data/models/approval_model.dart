@@ -293,6 +293,9 @@ class ApprovalModel extends Approval implements Model {
       case 'IN_EXECUTION':
       case 'INEXECUTION':
         return ApprovalStatus.inExecution;
+      case 'AWAITING_CONFIRMATION':
+      case 'AWAITINGCONFIRMATION':
+        return ApprovalStatus.awaitingConfirmation;
       case 'COMPLETED':
         return ApprovalStatus.completed;
       case 'CANCELLED':
@@ -317,6 +320,8 @@ class ApprovalModel extends Approval implements Model {
         return 'REJECTED';
       case ApprovalStatus.inExecution:
         return 'IN_EXECUTION';
+      case ApprovalStatus.awaitingConfirmation:
+        return 'AWAITING_CONFIRMATION';
       case ApprovalStatus.completed:
         return 'COMPLETED';
       case ApprovalStatus.cancelled:
