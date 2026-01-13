@@ -37,10 +37,12 @@ class ApprovalModel extends Approval implements Model {
     super.initiator,
     super.currentApprover,
     super.currentDepartment,
+    super.selectedExecutor,
     super.decisions,
     super.comments,
     super.attachments,
     super.approvers,
+    super.potentialExecutors,
   });
 
   factory ApprovalModel.fromJson(Map<String, dynamic> json) {
@@ -113,6 +115,20 @@ class ApprovalModel extends Approval implements Model {
       );
     }
 
+    // Выбранный исполнитель
+    ProfileUser? selectedExecutor;
+    if (json['selectedExecutor'] != null) {
+      final selectedExecutorJson = json['selectedExecutor'] as Map<String, dynamic>;
+      selectedExecutor = ProfileUser(
+        id: selectedExecutorJson['id'] as String,
+        email: selectedExecutorJson['email'] as String,
+        firstName: selectedExecutorJson['firstName'] as String?,
+        lastName: selectedExecutorJson['lastName'] as String?,
+        patronymic: selectedExecutorJson['patronymic'] as String?,
+        phone: selectedExecutorJson['phone'] as String?,
+      );
+    }
+
     List<ApprovalDecision>? decisions;
     if (json['decisions'] != null) {
       final decisionsList = json['decisions'] as List<dynamic>;
@@ -161,6 +177,23 @@ class ApprovalModel extends Approval implements Model {
           isRequired: a['isRequired'] as bool? ?? true,
           createdAt: DateTime.parse(a['createdAt'] as String),
           user: user,
+        );
+      }).toList();
+    }
+
+    // Потенциальные исполнители
+    List<ProfileUser>? potentialExecutors;
+    if (json['potentialExecutors'] != null) {
+      final executorsList = json['potentialExecutors'] as List<dynamic>;
+      potentialExecutors = executorsList.map((e) {
+        final executorJson = e as Map<String, dynamic>;
+        return ProfileUser(
+          id: executorJson['id'] as String,
+          email: executorJson['email'] as String,
+          firstName: executorJson['firstName'] as String?,
+          lastName: executorJson['lastName'] as String?,
+          patronymic: executorJson['patronymic'] as String?,
+          phone: executorJson['phone'] as String?,
         );
       }).toList();
     }
@@ -235,10 +268,12 @@ class ApprovalModel extends Approval implements Model {
       initiator: initiator,
       currentApprover: currentApprover,
       currentDepartment: currentDepartment,
+      selectedExecutor: selectedExecutor,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
       approvers: approvers,
+      potentialExecutors: potentialExecutors,
     );
   }
 
@@ -369,10 +404,12 @@ class ApprovalModel extends Approval implements Model {
       initiator: initiator,
       currentApprover: currentApprover,
       currentDepartment: currentDepartment,
+      selectedExecutor: selectedExecutor,
       decisions: decisions,
       comments: comments,
       attachments: attachments,
       approvers: approvers,
+      potentialExecutors: potentialExecutors,
     );
   }
 
@@ -398,10 +435,12 @@ class ApprovalModel extends Approval implements Model {
       initiator: approval.initiator,
       currentApprover: approval.currentApprover,
       currentDepartment: approval.currentDepartment,
+      selectedExecutor: approval.selectedExecutor,
       decisions: approval.decisions,
       comments: approval.comments,
       attachments: approval.attachments,
       approvers: approval.approvers,
+      potentialExecutors: approval.potentialExecutors,
     );
   }
 }

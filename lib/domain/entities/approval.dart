@@ -43,10 +43,12 @@ class Approval extends Entity {
   final ProfileUser? initiator; // Инициатор (может отличаться от creator)
   final ProfileUser? currentApprover; // Текущий одобряющий (кто должен принять решение сейчас)
   final DepartmentInfo? currentDepartment; // Текущий департамент
+  final ProfileUser? selectedExecutor; // Выбранный исполнитель
   final List<ApprovalDecision>? decisions;
   final List<ApprovalComment>? comments;
   final List<ApprovalAttachment>? attachments;
   final List<ApprovalApprover>? approvers; // Список тех, кто может одобрить
+  final List<ProfileUser>? potentialExecutors; // Потенциальные исполнители
 
   const Approval({
     required this.id,
@@ -69,10 +71,12 @@ class Approval extends Entity {
     this.initiator,
     this.currentApprover,
     this.currentDepartment,
+    this.selectedExecutor,
     this.decisions,
     this.comments,
     this.attachments,
     this.approvers,
+    this.potentialExecutors,
   });
 
   @override

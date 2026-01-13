@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/approval.dart';
-import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_decision.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/entities/user_profile.dart';
@@ -18,6 +17,9 @@ import '../providers/profile_provider.dart';
 import '../../domain/repositories/chat_repository.dart';
 import 'chat_detail_page.dart';
 import '../widgets/dynamic_block_form.dart';
+import '../widgets/comment_section.dart';
+import '../widgets/comment_item.dart';
+import 'package:dartz/dartz.dart' hide State;
 
 /// Страница детального согласования
 class ApprovalDetailPage extends StatefulWidget {
@@ -33,9 +35,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   Approval? _approval;
   bool _isLoading = true;
   String? _error;
-  final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isSendingComment = false;
   bool _isDeciding = false;
 
   @override
@@ -46,7 +46,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
 
   @override
   void dispose() {
-    _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -122,57 +121,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
       return failure.message;
     }
     return 'Произошла ошибка';
-  }
-
-  Future<void> _sendComment() async {
-    if (_commentController.text.trim().isEmpty || _approval == null) return;
-
-    setState(() {
-      _isSendingComment = true;
-    });
-
-    final createCommentUseCase = Provider.of<CreateApprovalComment>(
-      context,
-      listen: false,
-    );
-    final result = await createCommentUseCase.call(
-      CreateApprovalCommentParams(
-        approvalId: _approval!.id,
-        text: _commentController.text.trim(),
-      ),
-    );
-
-    result.fold(
-      (failure) {
-        setState(() {
-          _isSendingComment = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_getErrorMessage(failure)),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      (comment) {
-        _commentController.clear();
-        setState(() {
-          _isSendingComment = false;
-        });
-        // Перезагружаем согласование, чтобы получить обновленный список комментариев
-        _loadApproval();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Комментарий добавлен'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-    );
   }
 
   Future<void> _decideApproval(ApprovalDecisionType decision) async {
@@ -267,70 +215,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         ),
       );
     }
-  }
-
-  Future<void> _deleteComment(ApprovalComment comment) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Удалить комментарий?'),
-            content: const Text(
-              'Вы уверены, что хотите удалить этот комментарий?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Отмена'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Удалить',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-    );
-
-    if (confirm != true || _approval == null) return;
-
-    final deleteCommentUseCase = Provider.of<DeleteApprovalComment>(
-      context,
-      listen: false,
-    );
-    final result = await deleteCommentUseCase.call(
-      DeleteApprovalCommentParams(
-        approvalId: _approval!.id,
-        commentId: comment.id,
-      ),
-    );
-
-    result.fold(
-      (failure) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_getErrorMessage(failure)),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      (_) {
-        // Перезагружаем согласование
-        _loadApproval();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Комментарий удален'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-    );
   }
 
   String _getStatusText(ApprovalStatus status) {
@@ -676,6 +560,18 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             if (_approval!.currentApprover != null)
                               _buildCurrentApproverRow(),
 
+                            // Выбранный исполнитель
+                            if (_approval!.selectedExecutor != null)
+                              _buildSelectedExecutorRow(),
+
+                            // Потенциальные исполнители (показываем только если согласование еще не в исполнении)
+                            if (_approval!.potentialExecutors != null &&
+                                _approval!.potentialExecutors!.isNotEmpty &&
+                                _approval!.status !=
+                                    ApprovalStatus.inExecution &&
+                                _approval!.status != ApprovalStatus.completed)
+                              _buildPotentialExecutorsRow(),
+
                             // Сумма
                             if (_approval!.amount != null)
                               _buildInfoRow(
@@ -848,82 +744,50 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             ],
 
                             // Комментарии
-                            const Divider(),
-                            const Text(
-                              'Комментарии',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                            CommentSection(
+                              comments:
+                                  _approval!.comments != null
+                                      ? CommentItem.fromApprovalComments(
+                                        _approval!.comments!,
+                                      )
+                                      : [],
+                              onCreateComment: (text) async {
+                                final createCommentUseCase =
+                                    Provider.of<CreateApprovalComment>(
+                                      context,
+                                      listen: false,
+                                    );
+                                final result = await createCommentUseCase.call(
+                                  CreateApprovalCommentParams(
+                                    approvalId: _approval!.id,
+                                    text: text,
+                                  ),
+                                );
+                                return result.map((_) => null);
+                              },
+                              onDeleteComment: (commentId) async {
+                                final deleteCommentUseCase =
+                                    Provider.of<DeleteApprovalComment>(
+                                      context,
+                                      listen: false,
+                                    );
+                                return await deleteCommentUseCase.call(
+                                  DeleteApprovalCommentParams(
+                                    approvalId: _approval!.id,
+                                    commentId: commentId,
+                                  ),
+                                );
+                              },
+                              onRefresh: _loadApproval,
+                              chatRepository: Provider.of<ChatRepository>(
+                                context,
+                                listen: false,
                               ),
+                              showChatButton: true,
                             ),
-                            const SizedBox(height: 8),
-
-                            if (_approval!.comments == null ||
-                                _approval!.comments!.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text(
-                                  'Комментариев пока нет',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              )
-                            else
-                              ...(_approval!.comments!.map(
-                                (comment) => _buildCommentCard(comment),
-                              )),
                           ],
                         ),
                       ),
-                    ),
-                  ),
-
-                  // Поле ввода комментария
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _commentController,
-                            decoration: const InputDecoration(
-                              hintText: 'Добавить комментарий...',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
-                            maxLines: null,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => _sendComment(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon:
-                              _isSendingComment
-                                  ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : const Icon(Icons.send),
-                          onPressed: _isSendingComment ? null : _sendComment,
-                          tooltip: 'Отправить',
-                        ),
-                      ],
                     ),
                   ),
                 ],
@@ -1164,6 +1028,128 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     );
   }
 
+  Widget _buildSelectedExecutorRow() {
+    if (_approval!.selectedExecutor == null) return const SizedBox.shrink();
+
+    final executorName = _getUserDisplayName(_approval!.selectedExecutor!);
+    final executorId = _approval!.selectedExecutor!.id;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.assignment_ind, size: 20, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Исполнитель',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        executorName,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      iconSize: 20,
+                      color: Colors.blue,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed:
+                          () => _openChatWithCreator(executorId, executorName),
+                      tooltip: 'Открыть чат',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPotentialExecutorsRow() {
+    if (_approval!.potentialExecutors == null ||
+        _approval!.potentialExecutors!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final executors = _approval!.potentialExecutors!;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.person_outline, size: 20, color: Colors.blue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  executors.length == 1
+                      ? 'Потенциальный исполнитель'
+                      : 'Потенциальные исполнители',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...executors.map((executor) {
+                  final executorName = _getUserDisplayName(executor);
+                  final executorId = executor.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            executorName,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          iconSize: 20,
+                          color: Colors.blue,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed:
+                              () => _openChatWithCreator(
+                                executorId,
+                                executorName,
+                              ),
+                          tooltip: 'Открыть чат',
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openChatWithCreator(String creatorId, String creatorName) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserId = authProvider.user?.id;
@@ -1267,94 +1253,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
           statusText,
           style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCommentCard(ApprovalComment comment) {
-    final commentUser = comment.user;
-    final canOpenChat = commentUser != null;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: CircleAvatar(
-          child: Text(
-            commentUser != null
-                ? _getUserDisplayName(commentUser).substring(0, 1).toUpperCase()
-                : '?',
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                commentUser != null
-                    ? _getUserDisplayName(commentUser)
-                    : 'Пользователь',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (canOpenChat)
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline),
-                iconSize: 18,
-                color: Colors.blue,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed:
-                    () => _openChatWithCommentAuthor(
-                      commentUser.id,
-                      _getUserDisplayName(commentUser),
-                    ),
-                tooltip: 'Открыть чат',
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(comment.text),
-            const SizedBox(height: 8),
-            Text(
-              _formatDateTime(comment.createdAt),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () => _deleteComment(comment),
-          tooltip: 'Удалить',
-        ),
-      ),
-    );
-  }
-
-  void _openChatWithCommentAuthor(String userId, String userName) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final currentUserId = authProvider.user?.id;
-
-    // Не открываем чат с самим собой
-    if (currentUserId != null && currentUserId == userId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нельзя начать чат с самим собой')),
-      );
-      return;
-    }
-
-    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder:
-            (context) => ChatDetailPage(
-              interlocutorName: userName,
-              interlocutorId: userId,
-              chatRepository: chatRepository,
-            ),
       ),
     );
   }

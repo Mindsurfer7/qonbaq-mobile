@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/task.dart';
-import '../../domain/entities/task_comment.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/usecases/get_task_by_id.dart';
 import '../../domain/usecases/create_task_comment.dart';
@@ -14,6 +13,10 @@ import '../../domain/usecases/update_task.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../widgets/user_selector_widget.dart';
+import '../widgets/comment_section.dart';
+import '../widgets/comment_item.dart';
+import '../../domain/repositories/chat_repository.dart';
+import 'package:dartz/dartz.dart' hide State, Task;
 
 /// Детальная страница задачи
 class TaskDetailPage extends StatefulWidget {
@@ -33,9 +36,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   bool _isLoading = true;
   String? _error;
   bool _isEditing = false;
-  final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isSendingComment = false;
   final _formKey = GlobalKey<FormBuilderState>();
   String? _assignedToId;
   String? _assignedById;
@@ -48,7 +49,6 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
   @override
   void dispose() {
-    _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -95,110 +95,6 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     return 'Произошла ошибка';
   }
 
-  Future<void> _sendComment() async {
-    if (_commentController.text.trim().isEmpty || _task == null) return;
-
-    setState(() {
-      _isSendingComment = true;
-    });
-
-    final createCommentUseCase =
-        Provider.of<CreateTaskComment>(context, listen: false);
-    final result = await createCommentUseCase.call(
-      CreateTaskCommentParams(
-        taskId: _task!.id,
-        text: _commentController.text.trim(),
-      ),
-    );
-
-    result.fold(
-      (failure) {
-        setState(() {
-          _isSendingComment = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_getErrorMessage(failure)),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      (comment) {
-        _commentController.clear();
-        setState(() {
-          _isSendingComment = false;
-        });
-        // Перезагружаем задачу, чтобы получить обновленный список комментариев
-        _loadTask();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Комментарий добавлен'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-    );
-  }
-
-  Future<void> _deleteComment(TaskComment comment) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Удалить комментарий?'),
-        content: const Text('Вы уверены, что хотите удалить этот комментарий?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true || _task == null) return;
-
-    final deleteCommentUseCase =
-        Provider.of<DeleteTaskComment>(context, listen: false);
-    final result = await deleteCommentUseCase.call(
-      DeleteTaskCommentParams(
-        taskId: _task!.id,
-        commentId: comment.id,
-      ),
-    );
-
-    result.fold(
-      (failure) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_getErrorMessage(failure)),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      (_) {
-        // Перезагружаем задачу
-        _loadTask();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Комментарий удален'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-    );
-  }
 
   String _getStatusText(TaskStatus status) {
     switch (status) {
@@ -849,81 +745,47 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                     ),
 
                                   // Комментарии
-                                  const Divider(),
-                                  const Text(
-                                    'Комментарии',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                                  CommentSection(
+                                    comments: _task!.comments != null
+                                        ? CommentItem.fromTaskComments(_task!.comments!)
+                                        : [],
+                                    onCreateComment: (text) async {
+                                      final createCommentUseCase =
+                                          Provider.of<CreateTaskComment>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      final result = await createCommentUseCase.call(
+                                        CreateTaskCommentParams(
+                                          taskId: _task!.id,
+                                          text: text,
+                                        ),
+                                      );
+                                      return result.map((_) => null);
+                                    },
+                                    onDeleteComment: (commentId) async {
+                                      final deleteCommentUseCase =
+                                          Provider.of<DeleteTaskComment>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      return await deleteCommentUseCase.call(
+                                        DeleteTaskCommentParams(
+                                          taskId: _task!.id,
+                                          commentId: commentId,
+                                        ),
+                                      );
+                                    },
+                                    onRefresh: _loadTask,
+                                    chatRepository: Provider.of<ChatRepository>(
+                                      context,
+                                      listen: false,
                                     ),
+                                    showChatButton: true,
                                   ),
-                                  const SizedBox(height: 8),
-
-                                  if (_task!.comments == null ||
-                                      _task!.comments!.isEmpty)
-                                    const Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: Text(
-                                        'Комментариев пока нет',
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
-                                    )
-                                  else
-                                    ...(_task!.comments!.map((comment) =>
-                                        _buildCommentCard(comment))),
                                 ],
                               ),
                             ),
-                          ),
-                        ),
-
-                        // Поле ввода комментария
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).scaffoldBackgroundColor,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, -2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _commentController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Добавить комментарий...',
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  maxLines: null,
-                                  textInputAction: TextInputAction.send,
-                                  onSubmitted: (_) => _sendComment(),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: _isSendingComment
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.send),
-                                onPressed:
-                                    _isSendingComment ? null : _sendComment,
-                                tooltip: 'Отправить',
-                              ),
-                            ],
                           ),
                         ),
                       ],
@@ -967,48 +829,5 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     );
   }
 
-  Widget _buildCommentCard(TaskComment comment) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: CircleAvatar(
-          child: Text(
-            comment.user != null
-                ? _getUserDisplayName(comment.user!)
-                    .substring(0, 1)
-                    .toUpperCase()
-                : '?',
-          ),
-        ),
-        title: Text(
-          comment.user != null
-              ? _getUserDisplayName(comment.user!)
-              : 'Пользователь',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(comment.text),
-            const SizedBox(height: 8),
-            Text(
-              _formatDateTime(comment.createdAt),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () => _deleteComment(comment),
-          tooltip: 'Удалить',
-        ),
-      ),
-    );
-  }
 }
 
