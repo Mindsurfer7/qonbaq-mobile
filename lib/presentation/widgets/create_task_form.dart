@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -8,6 +9,7 @@ import '../../domain/repositories/user_repository.dart';
 import '../../data/models/validation_error.dart';
 import '../../data/models/task_model.dart';
 import '../../core/services/voice_context.dart';
+import '../providers/auth_provider.dart';
 import 'user_selector_widget.dart';
 import 'voice_record_block.dart';
 
@@ -121,6 +123,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyInitialTaskData(widget.initialTaskData!);
       });
+    } else {
+      // Если нет предзаполненных данных, устанавливаем текущего пользователя как исполнителя
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _setCurrentUserAsAssignee();
+      });
     }
     // Применяем ошибки валидации после первой отрисовки, если они есть
     if (widget.validationErrors != null &&
@@ -128,6 +135,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyValidationErrors();
       });
+    }
+  }
+
+  /// Устанавливает текущего пользователя как исполнителя
+  void _setCurrentUserAsAssignee() {
+    if (!mounted || _formKey.currentState == null) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+
+    // Устанавливаем текущего пользователя как исполнителя, если он не установлен
+    if (currentUserId != null && _assignedToId == null) {
+      setState(() {
+        _assignedToId = currentUserId;
+      });
+      _formKey.currentState?.fields['assignedTo']?.didChange(currentUserId);
     }
   }
 
@@ -149,6 +172,9 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
       _assignedToId = taskData.assignedTo;
       formState.fields['assignedTo']?.didChange(taskData.assignedTo);
+    } else {
+      // Если в предзаполненных данных нет исполнителя, устанавливаем текущего пользователя
+      _setCurrentUserAsAssignee();
     }
     if (taskData.assignedBy != null && taskData.assignedBy!.isNotEmpty) {
       _assignedById = taskData.assignedBy;
@@ -317,7 +343,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 errorText: _fieldErrors['status'],
                 errorMaxLines: 2,
               ),
-              initialValue: TaskStatus.pending,
+              initialValue: TaskStatus.inProgress,
               dropdownColor: context.appTheme.backgroundSurface,
               borderRadius: BorderRadius.circular(
                 context.appTheme.borderRadius,
@@ -490,7 +516,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         businessId: widget.businessId,
         title: formData['title'] as String,
         description: formData['description'] as String?,
-        status: formData['status'] as TaskStatus? ?? TaskStatus.pending,
+        status: formData['status'] as TaskStatus? ?? TaskStatus.inProgress,
         assignedTo: _assignedToId,
         assignedBy: _assignedById,
         assignmentDate:

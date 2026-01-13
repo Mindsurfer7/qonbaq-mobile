@@ -41,27 +41,11 @@ class CommentCard extends StatelessWidget {
                 : '?',
           ),
         ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                commentUser != null
-                    ? UserDisplayNameFormatter.getUserDisplayName(commentUser)
-                    : 'Пользователь',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (canOpenChat)
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline),
-                iconSize: 18,
-                color: Colors.blue,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () => _openChat(context, commentUser),
-                tooltip: 'Открыть чат',
-              ),
-          ],
+        title: Text(
+          commentUser != null
+              ? UserDisplayNameFormatter.getUserDisplayName(commentUser)
+              : 'Пользователь',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,10 +59,25 @@ class CommentCard extends StatelessWidget {
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: onDelete,
-          tooltip: 'Удалить',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canOpenChat)
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                iconSize: 20,
+                color: Colors.blue,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => _openChat(context, commentUser),
+                tooltip: 'Открыть чат',
+              ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: onDelete,
+              tooltip: 'Удалить',
+            ),
+          ],
         ),
       ),
     );

@@ -19,6 +19,7 @@ import 'chat_detail_page.dart';
 import '../widgets/dynamic_block_form.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/comment_item.dart';
+import '../widgets/user_info_row.dart';
 import 'package:dartz/dartz.dart' hide State;
 
 /// Страница детального согласования
@@ -784,9 +785,9 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                 listen: false,
                               ),
                               showChatButton: true,
-                            ),
-                          ],
                         ),
+                      ],
+                    ),
                       ),
                     ),
                   ),
@@ -831,111 +832,22 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   }
 
   Widget _buildInitiatorRow() {
-    if (_approval!.initiator == null) return const SizedBox.shrink();
-
-    final initiatorName = _getUserDisplayName(_approval!.initiator!);
-    final initiatorId = _approval!.initiator!.id;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.person_outline, size: 20, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Инициатор',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        initiatorName,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      iconSize: 20,
-                      color: Colors.blue,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed:
-                          () =>
-                              _openChatWithCreator(initiatorId, initiatorName),
-                      tooltip: 'Открыть чат',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+    return UserInfoRow(
+      user: _approval!.initiator,
+      label: 'Инициатор',
+      icon: Icons.person_outline,
+      chatRepository: chatRepository,
     );
   }
 
   Widget _buildCreatorRow() {
-    if (_approval!.creator == null) return const SizedBox.shrink();
-
-    final creatorName = _getUserDisplayName(_approval!.creator!);
-    final creatorId = _approval!.creator!.id;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.person, size: 20, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Создал',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        creatorName,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      iconSize: 20,
-                      color: Colors.blue,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed:
-                          () => _openChatWithCreator(creatorId, creatorName),
-                      tooltip: 'Открыть чат',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+    return UserInfoRow(
+      user: _approval!.creator,
+      label: 'Создал',
+      icon: Icons.person,
+      chatRepository: chatRepository,
     );
   }
 
@@ -965,120 +877,32 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                 Text(
                   _approval!.currentDepartment!.name,
                   style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
     );
   }
 
   Widget _buildCurrentApproverRow() {
-    if (_approval!.currentApprover == null) return const SizedBox.shrink();
-
-    final approverName = _getUserDisplayName(_approval!.currentApprover!);
-    final approverId = _approval!.currentApprover!.id;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.how_to_reg, size: 20, color: Colors.orange),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Текущий согласователь',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        approverName,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      iconSize: 20,
-                      color: Colors.blue,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed:
-                          () => _openChatWithCreator(approverId, approverName),
-                      tooltip: 'Открыть чат',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+    return UserInfoRow(
+      user: _approval!.currentApprover,
+      label: 'Текущий согласователь',
+      icon: Icons.how_to_reg,
+      chatRepository: chatRepository,
     );
   }
 
   Widget _buildSelectedExecutorRow() {
-    if (_approval!.selectedExecutor == null) return const SizedBox.shrink();
-
-    final executorName = _getUserDisplayName(_approval!.selectedExecutor!);
-    final executorId = _approval!.selectedExecutor!.id;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.assignment_ind, size: 20, color: Colors.green),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Исполнитель',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        executorName,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      iconSize: 20,
-                      color: Colors.blue,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed:
-                          () => _openChatWithCreator(executorId, executorName),
-                      tooltip: 'Открыть чат',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+    return UserInfoRow(
+      user: _approval!.selectedExecutor,
+      label: 'Исполнитель',
+      icon: Icons.assignment_ind,
+      chatRepository: chatRepository,
     );
   }
 
@@ -1115,6 +939,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                 ...executors.map((executor) {
                   final executorName = _getUserDisplayName(executor);
                   final executorId = executor.id;
+                  final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+                  final canOpenChat = chatRepository != null;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Row(
@@ -1125,19 +951,19 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline),
-                          iconSize: 20,
-                          color: Colors.blue,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed:
-                              () => _openChatWithCreator(
-                                executorId,
-                                executorName,
-                              ),
-                          tooltip: 'Открыть чат',
-                        ),
+                        if (canOpenChat)
+                          IconButton(
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            iconSize: 20,
+                            color: Colors.blue,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _openChatWithCreator(
+                              executorId,
+                              executorName,
+                            ),
+                            tooltip: 'Открыть чат',
+                          ),
                       ],
                     ),
                   );
@@ -1207,6 +1033,9 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         break;
     }
 
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+    final canOpenChat = decision.user != null && chatRepository != null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: cardColor,
@@ -1249,10 +1078,28 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
             ),
           ],
         ),
-        trailing: Text(
-          statusText,
-          style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canOpenChat)
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                iconSize: 20,
+                color: Colors.blue,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => _openChatWithCreator(
+                  decision.user!.id,
+                  _getUserDisplayName(decision.user!),
+                    ),
+                tooltip: 'Открыть чат',
+              ),
+            Text(
+              statusText,
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+            ),
+          ],
+            ),
       ),
     );
   }

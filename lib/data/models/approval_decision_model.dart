@@ -20,7 +20,9 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
   factory ApprovalDecisionModel.fromJson(Map<String, dynamic> json) {
     // Поддерживаем оба варианта: user и approver
     ProfileUser? user;
-    final userJson = json['user'] as Map<String, dynamic>? ?? json['approver'] as Map<String, dynamic>?;
+    final userJson =
+        json['user'] as Map<String, dynamic>? ??
+        json['approver'] as Map<String, dynamic>?;
     if (userJson != null) {
       user = ProfileUser(
         id: userJson['id'] as String,
@@ -35,7 +37,9 @@ class ApprovalDecisionModel extends ApprovalDecision implements Model {
     // Поддерживаем оба варианта: userId и approverId
     final userId = json['userId'] as String? ?? json['approverId'] as String?;
     if (userId == null) {
-      throw FormatException('Поле userId или approverId обязательно для ApprovalDecision');
+      throw FormatException(
+        'Поле userId или approverId обязательно для ApprovalDecision',
+      );
     }
 
     // Парсинг департамента

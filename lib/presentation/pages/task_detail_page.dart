@@ -15,6 +15,7 @@ import '../../core/error/failures.dart';
 import '../widgets/user_selector_widget.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/comment_item.dart';
+import '../widgets/user_info_row.dart';
 import '../../domain/repositories/chat_repository.dart';
 import 'package:dartz/dartz.dart' hide State, Task;
 
@@ -613,18 +614,36 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
                                   // Исполнитель
                                   if (_task!.assignee != null)
-                                    _buildInfoRow(
-                                      'Исполнитель',
-                                      _getUserDisplayName(_task!.assignee!),
-                                      Icons.person,
+                                    Builder(
+                                      builder: (context) {
+                                        final chatRepository = Provider.of<ChatRepository>(
+                                          context,
+                                          listen: false,
+                                        );
+                                        return UserInfoRow(
+                                          user: _task!.assignee,
+                                          label: 'Исполнитель',
+                                          icon: Icons.person,
+                                          chatRepository: chatRepository,
+                                        );
+                                      },
                                     ),
 
                                   // Поручитель
                                   if (_task!.assigner != null)
-                                    _buildInfoRow(
-                                      'Поручил',
-                                      _getUserDisplayName(_task!.assigner!),
-                                      Icons.person_outline,
+                                    Builder(
+                                      builder: (context) {
+                                        final chatRepository = Provider.of<ChatRepository>(
+                                          context,
+                                          listen: false,
+                                        );
+                                        return UserInfoRow(
+                                          user: _task!.assigner,
+                                          label: 'Поручил',
+                                          icon: Icons.person_outline,
+                                          chatRepository: chatRepository,
+                                        );
+                                      },
                                     ),
 
                                   // Дата назначения
@@ -782,9 +801,9 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                       listen: false,
                                     ),
                                     showChatButton: true,
-                                  ),
-                                ],
                               ),
+                            ],
+                          ),
                             ),
                           ),
                         ),

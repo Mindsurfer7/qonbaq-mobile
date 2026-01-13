@@ -4,6 +4,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/get_tasks.dart';
+import '../../domain/usecases/update_task.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
@@ -723,10 +724,36 @@ class _TasksPageState extends State<TasksPage> {
 
   /// Строит карточку задачи
   Widget _buildTaskCard(Task task) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+    final isMyTask = task.assignedTo == currentUserId;
+    final isCompleted = task.status == TaskStatus.completed;
+    final canComplete = isMyTask && 
+                        task.status != TaskStatus.completed && 
+                        task.status != TaskStatus.cancelled;
+    final showCheckbox = isMyTask && task.status != TaskStatus.cancelled;
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
-        leading: _getStatusIcon(task.status),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showCheckbox)
+              Checkbox(
+                value: isCompleted,
+                onChanged: canComplete
+                    ? (value) {
+                        if (value == true) {
+                          _completeTask(task);
+                        }
+                      }
+                    : null,
+              )
+            else
+              _getStatusIcon(task.status),
+          ],
+        ),
         title: Text(
           task.title,
           style: TextStyle(
@@ -807,6 +834,76 @@ class _TasksPageState extends State<TasksPage> {
           );
         },
       ),
+    );
+  }
+
+  /// Отмечает задачу как выполненную
+  Future<void> _completeTask(Task task) async {
+    final updateTaskUseCase = Provider.of<UpdateTask>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
+
+    // Создаем обновленную задачу со статусом completed
+    final updatedTask = Task(
+      id: task.id,
+      businessId: task.businessId,
+      title: task.title,
+      description: task.description,
+      status: TaskStatus.completed,
+      priority: task.priority,
+      assignedTo: task.assignedTo,
+      assignedBy: task.assignedBy,
+      assignmentDate: task.assignmentDate,
+      deadline: task.deadline,
+      isImportant: task.isImportant,
+      isRecurring: task.isRecurring,
+      hasControlPoint: task.hasControlPoint,
+      dontForget: task.dontForget,
+      voiceNoteUrl: task.voiceNoteUrl,
+      resultText: task.resultText,
+      createdAt: task.createdAt,
+      updatedAt: DateTime.now(),
+      observerIds: task.observerIds,
+      attachments: task.attachments,
+      indicators: task.indicators,
+      recurrence: task.recurrence,
+      business: task.business,
+      assignee: task.assignee,
+      assigner: task.assigner,
+      observers: task.observers,
+      comments: task.comments,
+    );
+
+    final result = await updateTaskUseCase.call(
+      UpdateTaskParams(id: task.id, task: updatedTask),
+    );
+
+    result.fold(
+      (failure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getErrorMessage(failure)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      (updatedTask) {
+        // Обновляем список задач после успешного обновления
+        if (selectedBusiness != null) {
+          _loadTasks(getTasksUseCase, selectedBusiness.id);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Задача отмечена как выполненная'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
     );
   }
 
