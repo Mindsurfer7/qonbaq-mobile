@@ -24,18 +24,23 @@ class FormDataViewer extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: blocks.map((blockName) {
-        final blockNameStr = blockName.toString();
-        final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
-        
-        if (block == null) return const SizedBox.shrink();
-        
-        return _buildBlock(context, blockNameStr, block);
-      }).toList(),
+      children:
+          blocks.map((blockName) {
+            final blockNameStr = blockName.toString();
+            final block = blocksInfo[blockNameStr] as Map<String, dynamic>?;
+
+            if (block == null) return const SizedBox.shrink();
+
+            return _buildBlock(context, blockNameStr, block);
+          }).toList(),
     );
   }
 
-  Widget _buildBlock(BuildContext context, String blockName, Map<String, dynamic> block) {
+  Widget _buildBlock(
+    BuildContext context,
+    String blockName,
+    Map<String, dynamic> block,
+  ) {
     final label = block['label'] as String? ?? blockName;
     final elements = block['elements'] as List<dynamic>? ?? [];
 
@@ -83,7 +88,7 @@ class FormDataViewer extends StatelessWidget {
     final fieldLabel = element['label'] as String? ?? fieldName;
     final fieldType = element['type'] as String? ?? 'text';
     final props = element['props'] as Map<String, dynamic>? ?? {};
-    
+
     // Проверяем видимость поля (условная видимость)
     final visible = props['visible'] as Map<String, dynamic>?;
     if (visible != null) {
@@ -102,10 +107,10 @@ class FormDataViewer extends StatelessWidget {
         return null; // Поле не должно быть видимым
       }
     }
-    
+
     // Получаем значение из formData
     final value = formData[fieldName];
-    
+
     // Пропускаем поля без значений (но не пропускаем false для checkbox)
     if (value == null || (value is String && value.isEmpty)) {
       return null;
@@ -178,14 +183,19 @@ class FormDataViewer extends StatelessWidget {
     }
   }
 
-  String _formatValue(dynamic value, String fieldType, Map<String, dynamic> element) {
+  String _formatValue(
+    dynamic value,
+    String fieldType,
+    Map<String, dynamic> element,
+  ) {
     if (value == null) return 'Не указано';
 
     switch (fieldType) {
       case 'date':
       case 'datetime':
         try {
-          final date = value is DateTime ? value : DateTime.parse(value.toString());
+          final date =
+              value is DateTime ? value : DateTime.parse(value.toString());
           return fieldType == 'date'
               ? DateFormat('dd.MM.yyyy').format(date)
               : DateFormat('dd.MM.yyyy HH:mm').format(date);
@@ -203,7 +213,9 @@ class FormDataViewer extends StatelessWidget {
         }
 
       case 'checkbox':
-        return value == true || value.toString().toLowerCase() == 'true' ? 'Да' : 'Нет';
+        return value == true || value.toString().toLowerCase() == 'true'
+            ? 'Да'
+            : 'Нет';
 
       case 'select':
         // Попытаемся найти читаемое название в options
@@ -237,24 +249,24 @@ class FormDataViewer extends StatelessWidget {
       'CASH': 'Наличные',
       'BANK_TRANSFER': 'Банковский перевод',
       'CARD': 'Банковская карта',
-      
+
       // Expense articles
       'PRODUCTION': 'Производство',
       'ADMINISTRATIVE': 'Административные расходы',
       'MARKETING': 'Маркетинг',
       'SALES': 'Продажи',
       'OTHER': 'Прочее',
-      
+
       // Periodicity
       'CONSTANT': 'Постоянные',
       'VARIABLE': 'Переменные',
-      
+
       // Categories
       'LABOR_FUND': 'Фонд оплаты труда',
       'TAXES': 'Налоги',
       'TRAVEL': 'Командировочные',
       'COMMON': 'Общие расходы',
-      
+
       // Category details
       'LABOR_FUND_TOTAL': 'Фонд оплаты труда',
       'SALARY': 'Оклад, заработная плата',
@@ -283,11 +295,14 @@ class FormDataViewer extends StatelessWidget {
 
     final translated = translations[value];
     if (translated != null) return translated;
-    
+
     // Если перевод не найден, форматируем: SOME_VALUE -> Some Value
-    return value.split('_').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return value
+        .split('_')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 }

@@ -126,7 +126,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     return 'Произошла ошибка';
   }
 
-  Future<void> _decideApproval(ApprovalDecisionType decision, {String? executorId}) async {
+  Future<void> _decideApproval(
+    ApprovalDecisionType decision, {
+    String? executorId,
+  }) async {
     if (_approval == null) return;
 
     final comment = await showDialog<String>(
@@ -305,9 +308,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
       final formDataAmount = _approval!.formData!['amount'];
       if (formDataAmount != null) {
         try {
-          amount = formDataAmount is num 
-              ? formDataAmount.toDouble() 
-              : double.parse(formDataAmount.toString());
+          amount =
+              formDataAmount is num
+                  ? formDataAmount.toDouble()
+                  : double.parse(formDataAmount.toString());
         } catch (e) {
           // Ignore parsing errors
         }
@@ -327,10 +331,12 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     }
 
     // Форматируем сумму с разделителем тысяч
-    final formattedAmount = amount.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]} ',
-    );
+    final formattedAmount = amount
+        .toStringAsFixed(2)
+        .replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]} ',
+        );
 
     return '$formattedAmount ${currency ?? '₸'}';
   }
@@ -651,7 +657,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                               _buildPotentialExecutorsRow(),
 
                             // Сумма и валюта (приоритет - верхний уровень, если нет - из formData)
-                            if (_approval!.amount != null || _approval!.formData?['amount'] != null)
+                            if (_approval!.amount != null ||
+                                _approval!.formData?['amount'] != null)
                               _buildInfoRow(
                                 'Сумма',
                                 _formatAmount(),
@@ -762,9 +769,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: Colors.red,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(
-                                                  vertical: 16,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
                                               ),
                                             ),
                                           ),
@@ -805,9 +813,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: Colors.green,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(
-                                                  vertical: 16,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
                                               ),
                                             ),
                                           ),
@@ -822,15 +831,19 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                             onPressed:
                                                 _isDeciding
                                                     ? null
-                                                    : () => _decideApprovalWithExecutor(),
+                                                    : () =>
+                                                        _decideApprovalWithExecutor(),
                                             icon: const Icon(Icons.person_add),
-                                            label: const Text('Согласовать с выбором исполнителя'),
+                                            label: const Text(
+                                              'Согласовать с выбором исполнителя',
+                                            ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.blue,
                                               foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(
-                                                vertical: 16,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -1073,18 +1086,18 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                           ),
                         ),
                         IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
-                            iconSize: 20,
-                            color: Colors.blue,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed:
-                                () => _openChatWithCreator(
-                                  executorId,
-                                  executorName,
-                                ),
-                            tooltip: 'Открыть чат',
-                          ),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          iconSize: 20,
+                          color: Colors.blue,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed:
+                              () => _openChatWithCreator(
+                                executorId,
+                                executorName,
+                              ),
+                          tooltip: 'Открыть чат',
+                        ),
                       ],
                     ),
                   );
@@ -1126,7 +1139,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
   Future<void> _decideApprovalWithExecutor() async {
     if (_approval == null) return;
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     if (selectedBusiness == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1142,10 +1158,11 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
 
     final executorId = await showDialog<String>(
       context: context,
-      builder: (context) => _SelectExecutorDialog(
-        businessId: selectedBusiness.id,
-        userRepository: userRepository,
-      ),
+      builder:
+          (context) => _SelectExecutorDialog(
+            businessId: selectedBusiness.id,
+            userRepository: userRepository,
+          ),
     );
 
     if (executorId == null) {
@@ -1154,7 +1171,10 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
     }
 
     // Вызываем обычный метод одобрения с executorId
-    await _decideApproval(ApprovalDecisionType.approved, executorId: executorId);
+    await _decideApproval(
+      ApprovalDecisionType.approved,
+      executorId: executorId,
+    );
   }
 
   Widget _buildDecisionCard(ApprovalDecision decision) {
@@ -1274,10 +1294,19 @@ class _DecisionDialogState extends State<_DecisionDialog> {
   final TextEditingController _commentController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _commentController.addListener(_onCommentChanged);
+  }
+
+  @override
   void dispose() {
+    _commentController.removeListener(_onCommentChanged);
     _commentController.dispose();
     super.dispose();
   }
+
+  void _onCommentChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -1386,9 +1415,10 @@ class _SelectExecutorDialogState extends State<_SelectExecutorDialog> {
           child: const Text('Отмена'),
         ),
         ElevatedButton(
-          onPressed: _selectedExecutorId == null
-              ? null
-              : () => Navigator.of(context).pop(_selectedExecutorId),
+          onPressed:
+              _selectedExecutorId == null
+                  ? null
+                  : () => Navigator.of(context).pop(_selectedExecutorId),
           child: const Text('Выбрать'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
