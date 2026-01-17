@@ -254,7 +254,11 @@ class ApprovalModel extends Approval implements Model {
       paymentDueDate: json['paymentDueDate'] != null
           ? DateTime.parse(json['paymentDueDate'] as String)
           : (throw FormatException('Поле paymentDueDate обязательно для Approval')),
-      amount: json['amount'] != null ? (json['amount'] as num).toDouble() : null,
+      amount: json['amount'] != null 
+          ? (json['amount'] is num 
+              ? (json['amount'] as num).toDouble()
+              : double.tryParse(json['amount'].toString()) ?? 0.0)
+          : null,
       currency: json['currency'] as String?,
       formData: formData,
       createdAt: json['createdAt'] != null

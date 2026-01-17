@@ -54,6 +54,9 @@ dependencies:
   flutter_form_builder: ^9.1.1
   form_builder_validators: ^11.1.2
   
+  # Интернационализация и форматирование
+  intl: ^0.19.0
+  
   # Deep links
   app_links: ^6.3.3
   

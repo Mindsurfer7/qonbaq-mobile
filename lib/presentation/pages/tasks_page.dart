@@ -22,6 +22,12 @@ enum TaskFilter {
   allTasks, // Все задачи
 }
 
+/// Тип списка задач
+enum TaskListType {
+  current, // Текущие задачи (pending, in_progress)
+  completed, // Выполненные задачи
+}
+
 /// Страница задач
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -30,11 +36,18 @@ class TasksPage extends StatefulWidget {
   State<TasksPage> createState() => _TasksPageState();
 }
 
-class _TasksPageState extends State<TasksPage> {
+class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   bool _isLoadingTasks = false;
   String? _error;
   List<Task> _tasks = [];
   TaskFilter _taskFilter = TaskFilter.myTasks; // По умолчанию "Мои задачи"
+  late TabController _tabController;
+  TaskListType _currentListType = TaskListType.current;
+
+  // Для анимации выполнения задач
+  String? _animatingTaskId;
+  AnimationController? _slideAnimationController;
+  Animation<Offset>? _slideAnimation;
 
   void _showCreateTaskDialog(
     CreateTask createTaskUseCase,
@@ -77,65 +90,66 @@ class _TasksPageState extends State<TasksPage> {
   ) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Заголовок
-              Row(
+      builder:
+          (context) => Dialog(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Запись голоса',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Заголовок
+                  Row(
+                    children: [
+                      const Text(
+                        'Запись голоса',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                  const SizedBox(height: 24),
+                  // Виджет записи голоса
+                  Expanded(
+                    child: VoiceRecordWidget(
+                      style: VoiceRecordStyle.fullscreen,
+                      context: VoiceContext.task,
+                      onResultReceived: (result) {
+                        // Результат - TaskModel для контекста task
+                        final taskData = result as TaskModel;
+                        // Закрываем диалог записи
+                        Navigator.of(context).pop();
+                        // Открываем диалог создания задачи с предзаполненными данными
+                        _showCreateTaskDialog(
+                          createTaskUseCase,
+                          businessId,
+                          userRepository,
+                          initialTaskData: taskData,
+                        );
+                      },
+                      onError: (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              // Виджет записи голоса
-              Expanded(
-                child: VoiceRecordWidget(
-                  style: VoiceRecordStyle.fullscreen,
-                  context: VoiceContext.task,
-                  onResultReceived: (result) {
-                    // Результат - TaskModel для контекста task
-                    final taskData = result as TaskModel;
-                    // Закрываем диалог записи
-                    Navigator.of(context).pop();
-                    // Открываем диалог создания задачи с предзаполненными данными
-                    _showCreateTaskDialog(
-                      createTaskUseCase,
-                      businessId,
-                      userRepository,
-                      initialTaskData: taskData,
-                    );
-                  },
-                  onError: (error) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(error),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -156,14 +170,18 @@ class _TasksPageState extends State<TasksPage> {
 
     // Получаем информацию о пользователе для определения прав
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final currentUser = authProvider.user;
     final profile = profileProvider.profile;
-    
+
     // Определяем, является ли пользователь админом или директором
-    final isAdminOrDirector = currentUser?.isAdmin == true || 
-                              profile?.orgStructure.isGeneralDirector == true;
-    
+    final isAdminOrDirector =
+        currentUser?.isAdmin == true ||
+        profile?.orgStructure.isGeneralDirector == true;
+
     // Определяем, нужно ли передавать assignedTo
     String? assignedTo;
     if (_taskFilter == TaskFilter.myTasks && isAdminOrDirector) {
@@ -177,10 +195,19 @@ class _TasksPageState extends State<TasksPage> {
     // Для обычных пользователей не передаем assignedTo
     // (бэкенд сам отфильтрует и вернет только их задачи и задачи, за которыми они наблюдают)
 
+    // Определяем фильтр по статусу в зависимости от текущего списка
+    TaskStatus? statusFilter;
+    if (_currentListType == TaskListType.completed) {
+      // Для выполненных задач - только completed
+      statusFilter = TaskStatus.completed;
+    }
+    // Для текущих задач фильтр не применяем (показываем pending и in_progress)
+
     final result = await getTasksUseCase.call(
       GetTasksParams(
         businessId: businessId,
         assignedTo: assignedTo,
+        status: statusFilter,
         limit: 50,
       ),
     );
@@ -212,6 +239,24 @@ class _TasksPageState extends State<TasksPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+
+    // Инициализация анимации
+    _slideAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(1.0, 0.0), // Движение направо
+    ).animate(
+      CurvedAnimation(
+        parent: _slideAnimationController!,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     // Загружаем задачи после инициализации виджета
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -221,14 +266,15 @@ class _TasksPageState extends State<TasksPage> {
       );
       final currentUser = authProvider.user;
       final profile = profileProvider.profile;
-      
+
       // Для директоров и админов по умолчанию показываем "Все задачи"
-      final isAdminOrDirector = currentUser?.isAdmin == true || 
-                                profile?.orgStructure.isGeneralDirector == true;
+      final isAdminOrDirector =
+          currentUser?.isAdmin == true ||
+          profile?.orgStructure.isGeneralDirector == true;
       if (isAdminOrDirector) {
         _taskFilter = TaskFilter.allTasks;
       }
-      
+
       final selectedBusiness = profileProvider.selectedBusiness;
       final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
       if (selectedBusiness != null) {
@@ -237,21 +283,56 @@ class _TasksPageState extends State<TasksPage> {
     });
   }
 
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) {
+      setState(() {
+        _currentListType =
+            _tabController.index == 0
+                ? TaskListType.current
+                : TaskListType.completed;
+      });
+      // Перезагрузить задачи при переключении
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
+      final selectedBusiness = profileProvider.selectedBusiness;
+      final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
+      if (selectedBusiness != null) {
+        _loadTasks(getTasksUseCase, selectedBusiness.id);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _slideAnimationController?.dispose();
+    super.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Проверяем, нужно ли обновить фильтр при загрузке профиля
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final currentUser = authProvider.user;
     final profile = profileProvider.profile;
     final selectedBusiness = profileProvider.selectedBusiness;
-    final isAdminOrDirector = currentUser?.isAdmin == true || 
-                             profile?.orgStructure.isGeneralDirector == true;
-    
+    final isAdminOrDirector =
+        currentUser?.isAdmin == true ||
+        profile?.orgStructure.isGeneralDirector == true;
+
     // Если профиль загрузился и пользователь директор, но фильтр еще "Мои задачи",
     // обновляем фильтр на "Все задачи" и перезагружаем задачи
-    if (isAdminOrDirector && _taskFilter == TaskFilter.myTasks && selectedBusiness != null && _tasks.isNotEmpty) {
+    if (isAdminOrDirector &&
+        _taskFilter == TaskFilter.myTasks &&
+        selectedBusiness != null &&
+        _tasks.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -279,6 +360,10 @@ class _TasksPageState extends State<TasksPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: 'Текущие'), Tab(text: 'Выполненные')],
+        ),
         actions: [
           // Фильтр задач (только для админов/директоров)
           if (_canViewAllTasks())
@@ -293,38 +378,39 @@ class _TasksPageState extends State<TasksPage> {
                   _loadTasks(getTasksUseCase, selectedBusiness.id);
                 }
               },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem<TaskFilter>(
-                  value: TaskFilter.myTasks,
-                  child: Row(
-                    children: [
-                      Icon(
-                        _taskFilter == TaskFilter.myTasks
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
-                        size: 20,
+              itemBuilder:
+                  (BuildContext context) => [
+                    PopupMenuItem<TaskFilter>(
+                      value: TaskFilter.myTasks,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _taskFilter == TaskFilter.myTasks
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Мои задачи'),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text('Мои задачи'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<TaskFilter>(
-                  value: TaskFilter.allTasks,
-                  child: Row(
-                    children: [
-                      Icon(
-                        _taskFilter == TaskFilter.allTasks
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
-                        size: 20,
+                    ),
+                    PopupMenuItem<TaskFilter>(
+                      value: TaskFilter.allTasks,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _taskFilter == TaskFilter.allTasks
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Все задачи'),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text('Все задачи'),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -346,39 +432,53 @@ class _TasksPageState extends State<TasksPage> {
       body:
           selectedBusiness == null
               ? _buildBusinessSelectionView(profileProvider)
-              : _buildTasksView(selectedBusiness, getTasksUseCase),
+              : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTasksView(
+                    selectedBusiness,
+                    getTasksUseCase,
+                    TaskListType.current,
+                  ),
+                  _buildTasksView(
+                    selectedBusiness,
+                    getTasksUseCase,
+                    TaskListType.completed,
+                  ),
+                ],
+              ),
       floatingActionButton:
           selectedBusiness != null
               ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Кнопка микрофона для голосовой записи
-                    FloatingActionButton(
-                      heroTag: "voice_record",
-                      onPressed: () {
-                        _showVoiceRecordDialog(
-                          createTaskUseCase,
-                          selectedBusiness.id,
-                          userRepository,
-                        );
-                      },
-                      child: const Icon(Icons.mic),
-                    ),
-                    const SizedBox(height: 16),
-                    // Кнопка плюсика для создания задачи
-                    FloatingActionButton(
-                      heroTag: "create_task",
-                      onPressed: () {
-                        _showCreateTaskDialog(
-                          createTaskUseCase,
-                          selectedBusiness.id,
-                          userRepository,
-                        );
-                      },
-                      child: const Icon(Icons.add),
-                    ),
-                  ],
-                )
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Кнопка микрофона для голосовой записи
+                  FloatingActionButton(
+                    heroTag: "voice_record",
+                    onPressed: () {
+                      _showVoiceRecordDialog(
+                        createTaskUseCase,
+                        selectedBusiness.id,
+                        userRepository,
+                      );
+                    },
+                    child: const Icon(Icons.mic),
+                  ),
+                  const SizedBox(height: 16),
+                  // Кнопка плюсика для создания задачи
+                  FloatingActionButton(
+                    heroTag: "create_task",
+                    onPressed: () {
+                      _showCreateTaskDialog(
+                        createTaskUseCase,
+                        selectedBusiness.id,
+                        userRepository,
+                      );
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              )
               : null,
     );
   }
@@ -428,7 +528,11 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   /// Вид со списком задач (когда бизнес выбран)
-  Widget _buildTasksView(Business selectedBusiness, GetTasks getTasksUseCase) {
+  Widget _buildTasksView(
+    Business selectedBusiness,
+    GetTasks getTasksUseCase,
+    TaskListType listType,
+  ) {
     if (_isLoadingTasks) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -461,9 +565,10 @@ class _TasksPageState extends State<TasksPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserId = authProvider.user?.id;
     final isAdminOrDirector = _canViewAllTasks();
-    
+
     // Если админ/директор выбрал "Все задачи", показываем два списка: "Мои задачи" и "Задачи сотрудников"
-    final shouldShowAllTasks = isAdminOrDirector && _taskFilter == TaskFilter.allTasks;
+    final shouldShowAllTasks =
+        isAdminOrDirector && _taskFilter == TaskFilter.allTasks;
 
     if (_tasks.isEmpty) {
       return Center(
@@ -486,17 +591,41 @@ class _TasksPageState extends State<TasksPage> {
       );
     }
 
-    // Разделяем задачи на группы
+    // Разделяем задачи на группы в зависимости от типа списка
     final List<Task> myTasks = [];
     final List<Task> employeeTasks = []; // Задачи сотрудников (для директоров)
-    final List<Task> observedTasks = []; // Задачи, за которыми наблюдаю (для обычных пользователей)
+    final List<Task> observedTasks =
+        []; // Задачи, за которыми наблюдаю (для обычных пользователей)
 
     for (final task in _tasks) {
+      // Для выполненных задач показываем все задачи со статусом completed
+      if (listType == TaskListType.completed) {
+        // Проверяем, является ли пользователь исполнителем задачи
+        final isMyTask = task.assignedTo == currentUserId;
+
+        if (isMyTask) {
+          myTasks.add(task);
+        } else if (shouldShowAllTasks) {
+          // Для директоров при "Все задачи" - все остальные выполненные задачи
+          if (task.assignedTo != null && task.assignedTo != currentUserId) {
+            employeeTasks.add(task);
+          }
+        }
+        continue;
+      }
+
+      // Для текущих задач фильтруем по статусу (только pending и in_progress)
+      if (task.status == TaskStatus.completed ||
+          task.status == TaskStatus.cancelled) {
+        continue; // Пропускаем выполненные и отмененные задачи для вкладки "Текущие"
+      }
+
       // Проверяем, является ли пользователь исполнителем задачи
       final isMyTask = task.assignedTo == currentUserId;
-      
+
       // Проверяем, является ли пользователь наблюдателем задачи
-      final isObserver = currentUserId != null &&
+      final isObserver =
+          currentUserId != null &&
           task.observerIds != null &&
           task.observerIds!.contains(currentUserId);
 
@@ -515,8 +644,11 @@ class _TasksPageState extends State<TasksPage> {
     }
 
     // Проверяем, есть ли задачи для отображения
-    final hasTasksToShow = myTasks.isNotEmpty || 
-                          (shouldShowAllTasks ? employeeTasks.isNotEmpty : observedTasks.isNotEmpty);
+    final hasTasksToShow =
+        myTasks.isNotEmpty ||
+        (shouldShowAllTasks
+            ? employeeTasks.isNotEmpty
+            : observedTasks.isNotEmpty);
 
     if (!hasTasksToShow) {
       return Center(
@@ -554,9 +686,11 @@ class _TasksPageState extends State<TasksPage> {
                 children: [
                   Icon(Icons.person, size: 20, color: Colors.blue),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Мои задачи',
-                    style: TextStyle(
+                  Text(
+                    listType == TaskListType.completed
+                        ? 'Мои выполненные'
+                        : 'Мои задачи',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -565,7 +699,7 @@ class _TasksPageState extends State<TasksPage> {
                 ],
               ),
             ),
-            ...myTasks.map((task) => _buildTaskCard(task)),
+            ...myTasks.map((task) => _buildTaskCard(task, listType)),
           ],
 
           // Для директоров при "Все задачи" - секция "Задачи сотрудников"
@@ -577,9 +711,11 @@ class _TasksPageState extends State<TasksPage> {
                 children: [
                   Icon(Icons.people, size: 20, color: Colors.green),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Задачи сотрудников',
-                    style: TextStyle(
+                  Text(
+                    listType == TaskListType.completed
+                        ? 'Выполненные сотрудниками'
+                        : 'Задачи сотрудников',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -588,7 +724,7 @@ class _TasksPageState extends State<TasksPage> {
                 ],
               ),
             ),
-            ...employeeTasks.map((task) => _buildTaskCard(task)),
+            ...employeeTasks.map((task) => _buildTaskCard(task, listType)),
           ],
 
           // Для обычных пользователей - секция "Задачи, за которыми я наблюдаю"
@@ -611,7 +747,7 @@ class _TasksPageState extends State<TasksPage> {
                 ],
               ),
             ),
-            ...observedTasks.map((task) => _buildTaskCard(task)),
+            ...observedTasks.map((task) => _buildTaskCard(task, listType)),
           ],
         ],
       ),
@@ -723,17 +859,22 @@ class _TasksPageState extends State<TasksPage> {
   }
 
   /// Строит карточку задачи
-  Widget _buildTaskCard(Task task) {
+  Widget _buildTaskCard(Task task, TaskListType listType) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserId = authProvider.user?.id;
     final isMyTask = task.assignedTo == currentUserId;
     final isCompleted = task.status == TaskStatus.completed;
-    final canComplete = isMyTask && 
-                        task.status != TaskStatus.completed && 
-                        task.status != TaskStatus.cancelled;
-    final showCheckbox = isMyTask && task.status != TaskStatus.cancelled;
-    
-    return Card(
+    final canComplete =
+        isMyTask &&
+        task.status != TaskStatus.completed &&
+        task.status != TaskStatus.cancelled &&
+        listType == TaskListType.current; // Чекбокс только для текущих задач
+    final showCheckbox =
+        isMyTask &&
+        task.status != TaskStatus.cancelled &&
+        listType == TaskListType.current;
+
+    final card = Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
         leading: Row(
@@ -742,13 +883,14 @@ class _TasksPageState extends State<TasksPage> {
             if (showCheckbox)
               Checkbox(
                 value: isCompleted,
-                onChanged: canComplete
-                    ? (value) {
-                        if (value == true) {
-                          _completeTask(task);
+                onChanged:
+                    canComplete
+                        ? (value) {
+                          if (value == true) {
+                            _completeTask(task);
+                          }
                         }
-                      }
-                    : null,
+                        : null,
               )
             else
               _getStatusIcon(task.status),
@@ -791,10 +933,7 @@ class _TasksPageState extends State<TasksPage> {
                     ),
                     child: Text(
                       _getPriorityText(task.priority!),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.white,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: Colors.white),
                     ),
                   ),
                 if (task.priority != null) const SizedBox(width: 8),
@@ -828,21 +967,36 @@ class _TasksPageState extends State<TasksPage> {
         ),
         trailing: _getStatusChip(task.status),
         onTap: () {
-          Navigator.of(context).pushNamed(
-            '/tasks/detail',
-            arguments: task.id,
-          );
+          Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
         },
       ),
     );
+
+    // Применяем анимацию если задача анимируется
+    if (_animatingTaskId == task.id && _slideAnimation != null) {
+      return SlideTransition(position: _slideAnimation!, child: card);
+    }
+
+    return card;
   }
 
-  /// Отмечает задачу как выполненную
+  /// Отмечает задачу как выполненную с анимацией
   Future<void> _completeTask(Task task) async {
     final updateTaskUseCase = Provider.of<UpdateTask>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
+
+    // Начинаем анимацию
+    setState(() {
+      _animatingTaskId = task.id;
+    });
+
+    // Запускаем анимацию ухода направо
+    await _slideAnimationController!.forward();
 
     // Создаем обновленную задачу со статусом completed
     final updatedTask = Task(
@@ -881,6 +1035,12 @@ class _TasksPageState extends State<TasksPage> {
 
     result.fold(
       (failure) {
+        // При ошибке возвращаем анимацию обратно
+        _slideAnimationController!.reverse();
+        setState(() {
+          _animatingTaskId = null;
+        });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -890,15 +1050,29 @@ class _TasksPageState extends State<TasksPage> {
           );
         }
       },
-      (updatedTask) {
+      (updatedTask) async {
+        // Успешно выполнено - завершаем анимацию и переключаемся на вкладку "Выполненные"
+        setState(() {
+          _animatingTaskId = null;
+        });
+
+        // Сбрасываем анимацию для следующего использования
+        _slideAnimationController!.reset();
+
+        // Переключаемся на вкладку "Выполненные"
+        if (_currentListType == TaskListType.current) {
+          _tabController.animateTo(1);
+        }
+
         // Обновляем список задач после успешного обновления
         if (selectedBusiness != null) {
           _loadTasks(getTasksUseCase, selectedBusiness.id);
         }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Задача отмечена как выполненная'),
+              content: Text('Задача выполнена!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -910,13 +1084,16 @@ class _TasksPageState extends State<TasksPage> {
   /// Проверяет, может ли пользователь видеть все задачи
   bool _canViewAllTasks() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final currentUser = authProvider.user;
     final profile = profileProvider.profile;
-    
+
     // Админы и директоры могут видеть все задачи
-    return currentUser?.isAdmin == true || 
-           profile?.orgStructure.isGeneralDirector == true;
+    return currentUser?.isAdmin == true ||
+        profile?.orgStructure.isGeneralDirector == true;
   }
 }
 

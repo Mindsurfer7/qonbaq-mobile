@@ -22,6 +22,7 @@ import '../widgets/comment_section.dart';
 import '../widgets/comment_item.dart';
 import '../widgets/user_info_row.dart';
 import '../widgets/user_selector_widget.dart';
+import '../widgets/form_data_viewer.dart';
 
 /// Страница детального согласования
 class ApprovalDetailPage extends StatefulWidget {
@@ -290,6 +291,48 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
       parts.add(user.patronymic!);
     }
     return parts.isEmpty ? user.email : parts.join(' ');
+  }
+
+  /// Форматирует сумму с приоритетом:
+  /// 1. Сначала проверяем верхний уровень (amount, currency)
+  /// 2. Если нет - берем из formData
+  String _formatAmount() {
+    double? amount = _approval!.amount;
+    String? currency = _approval!.currency;
+
+    // Если на верхнем уровне нет, пробуем взять из formData
+    if (amount == null && _approval!.formData != null) {
+      final formDataAmount = _approval!.formData!['amount'];
+      if (formDataAmount != null) {
+        try {
+          amount = formDataAmount is num 
+              ? formDataAmount.toDouble() 
+              : double.parse(formDataAmount.toString());
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+    }
+
+    if (currency == null && _approval!.formData != null) {
+      final formDataCurrency = _approval!.formData!['currency'];
+      if (formDataCurrency != null) {
+        currency = formDataCurrency.toString();
+      }
+    }
+
+    // Если все еще нет данных
+    if (amount == null) {
+      return 'Не указана';
+    }
+
+    // Форматируем сумму с разделителем тысяч
+    final formattedAmount = amount.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]} ',
+    );
+
+    return '$formattedAmount ${currency ?? '₸'}';
   }
 
   bool _canApprove() {
@@ -607,11 +650,11 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                 _approval!.status != ApprovalStatus.completed)
                               _buildPotentialExecutorsRow(),
 
-                            // Сумма
-                            if (_approval!.amount != null)
+                            // Сумма и валюта (приоритет - верхний уровень, если нет - из formData)
+                            if (_approval!.amount != null || _approval!.formData?['amount'] != null)
                               _buildInfoRow(
                                 'Сумма',
-                                '${_approval!.amount!.toStringAsFixed(2)} ${_approval!.currency ?? '₸'}',
+                                _formatAmount(),
                                 Icons.attach_money,
                               ),
 
@@ -628,6 +671,26 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                               _formatDateTime(_approval!.createdAt),
                               Icons.calendar_today,
                             ),
+
+                            // Детали заявки (динамические поля из formData)
+                            if (_approval!.template?.formSchema != null &&
+                                _approval!.formData != null) ...[
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Детали заявки',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              FormDataViewer(
+                                formSchema: _approval!.template!.formSchema!,
+                                formData: _approval!.formData!,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
 
                             // Решения
                             if (_approval!.decisions != null &&

@@ -36,6 +36,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _pendingApprovals = []; // Ожидают (status = PENDING)
   List<Approval> _canApproveApprovals =
       []; // Требуют решения (canApprove = true)
+  List<Approval> _myApprovals = []; // Мои согласования (createdBy = currentUser)
   List<Approval> _allCanApproveApprovals =
       []; // Все согласования в бизнесе (showAll=true)
   List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
@@ -219,6 +220,15 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         final result = await getApprovalsUseCase.call(
           GetApprovalsParams(businessId: selectedBusiness.id, canApprove: true),
         );
+        
+        // Загружаем "Мои согласования" отдельно
+        final myApprovalsResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            createdBy: currentUser.id,
+          ),
+        );
+        
         result.fold(
           (failure) {
             setState(() {
@@ -236,6 +246,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
               _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
             }
+          },
+        );
+        
+        // Обрабатываем результат загрузки "Мои согласования"
+        myApprovalsResult.fold(
+          (failure) {
+            // Игнорируем ошибки загрузки "Мои согласования", чтобы не блокировать основной список
+          },
+          (result) {
+            setState(() {
+              _myApprovals = result.approvals;
+            });
           },
         );
       } else if (actualTabIndex == 1) {
@@ -291,6 +313,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         setState(() {
           _isLoading = false;
           _pendingApprovals = allPending;
+          _myApprovals = []; // Очищаем при загрузке других вкладок
         });
       } else if (actualTabIndex == 2) {
         // Вкладка "Завершенные" - загружаем COMPLETED, APPROVED, REJECTED
@@ -350,6 +373,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _completedApprovals = completed;
           _approvedApprovals = approved;
           _rejectedApprovals = rejected;
+          _myApprovals = []; // Очищаем при загрузке других вкладок
         });
       }
     } catch (e) {
@@ -754,12 +778,22 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         children: [
           // Секция pending confirmations
           _buildPendingConfirmationsSection(),
-          // Основной список (свои согласования)
-          if (_canApproveApprovals.isNotEmpty) ...[
+          // Сообщение о количестве заявок, требующих решения
+          if (_canApproveApprovals.isEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.all(32.0),
               child: Text(
-                'Мои согласования (${_canApproveApprovals.length})',
+                '0 заявок требуют решения',
+                style: TextStyle(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          // Секция "Мои согласования" - показываем всегда, если есть согласования
+          if (_myApprovals.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Text(
+                'Мои согласования (${_myApprovals.length})',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -767,20 +801,10 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            ..._canApproveApprovals.map(
+            ..._myApprovals.map(
               (approval) => _buildApprovalCard(approval),
             ),
-          ] else
-            Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Text(
-                'Нет согласований',
-                style: TextStyle(color: Colors.grey.shade600),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
+          ],
           // Аккордеон для всех согласований
           Padding(
             padding: const EdgeInsets.only(top: 20),
