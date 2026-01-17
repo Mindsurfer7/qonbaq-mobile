@@ -32,6 +32,7 @@ class Approval extends Entity {
   final String createdBy; // ID инициатора
   final DateTime paymentDueDate; // Дата, к которой нужно выдать деньги
   final double? amount; // Сумма заявки
+  final String? currency; // Валюта заявки
   final Map<String, dynamic>? formData; // Данные формы
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -62,6 +63,7 @@ class Approval extends Entity {
     required this.createdBy,
     required this.paymentDueDate,
     this.amount,
+    this.currency,
     this.formData,
     required this.createdAt,
     required this.updatedAt,

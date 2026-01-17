@@ -9,11 +9,13 @@ class DecideApprovalParams {
   final String approvalId;
   final ApprovalDecisionType decision;
   final String? comment;
+  final String? executorId;
 
   DecideApprovalParams({
     required this.approvalId,
     required this.decision,
     this.comment,
+    this.executorId,
   });
 }
 
@@ -29,6 +31,7 @@ class DecideApproval implements UseCase<ApprovalDecision, DecideApprovalParams> 
       params.approvalId,
       params.decision,
       params.comment,
+      params.executorId,
     );
   }
 }

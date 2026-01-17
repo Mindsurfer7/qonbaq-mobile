@@ -27,6 +27,7 @@ class ApprovalModel extends Approval implements Model {
     required super.createdBy,
     required super.paymentDueDate,
     super.amount,
+    super.currency,
     super.formData,
     required super.createdAt,
     required super.updatedAt,
@@ -254,6 +255,7 @@ class ApprovalModel extends Approval implements Model {
           ? DateTime.parse(json['paymentDueDate'] as String)
           : (throw FormatException('Поле paymentDueDate обязательно для Approval')),
       amount: json['amount'] != null ? (json['amount'] as num).toDouble() : null,
+      currency: json['currency'] as String?,
       formData: formData,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -430,6 +432,7 @@ class ApprovalModel extends Approval implements Model {
       createdBy: approval.createdBy,
       paymentDueDate: approval.paymentDueDate,
       amount: approval.amount,
+      currency: approval.currency,
       formData: approval.formData,
       createdAt: approval.createdAt,
       updatedAt: approval.updatedAt,

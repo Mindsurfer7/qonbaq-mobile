@@ -617,36 +617,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.help_outline,
-                    color: Colors.red.shade700,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-          child: Text(
-                      'Требуют подтверждения (${provider.count})',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red.shade700,
-                      ),
-                    ),
-                  ),
-                ],
+            // Заголовок секции
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: Text(
+                'Требует подтверждения',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
             ...provider.pendingConfirmations.map(
               (pendingConfirmation) => Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -656,9 +638,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                     Icons.help_outline,
                     color: Colors.red.shade700,
                   ),
-                  title: Text(
-                    pendingConfirmation.approval.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  title: const Text(
+                    'Подтвердить получение средств',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

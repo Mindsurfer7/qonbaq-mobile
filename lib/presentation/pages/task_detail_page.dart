@@ -668,6 +668,15 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                           : null,
                                     ),
 
+                                  // ID согласования
+                                  if (_task!.approvalId != null &&
+                                      _task!.approvalId!.isNotEmpty)
+                                    _buildInfoRow(
+                                      'ID согласования',
+                                      _task!.approvalId!,
+                                      Icons.description,
+                                    ),
+
                                   // Наблюдатели
                                   if (_task!.observers != null &&
                                       _task!.observers!.isNotEmpty)

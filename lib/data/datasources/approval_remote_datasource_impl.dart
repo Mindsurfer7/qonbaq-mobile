@@ -412,11 +412,15 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     String id,
     ApprovalDecisionType decision,
     String? comment,
+    String? executorId,
   ) async {
     try {
       final body = <String, dynamic>{'decision': _decisionToString(decision)};
       if (comment != null && comment.isNotEmpty) {
         body['comment'] = comment;
+      }
+      if (executorId != null && executorId.isNotEmpty) {
+        body['executorId'] = executorId;
       }
 
       final response = await apiClient.post(
@@ -839,12 +843,9 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final apiResponse = ApiResponse.fromJson(
-          json,
-          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
-        );
-        return apiResponse.data;
+        // Сервер возвращает объект подтверждения (confirmation), а не полный Approval
+        // После успешного подтверждения получаем полный Approval по ID
+        return await getApprovalById(id);
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {

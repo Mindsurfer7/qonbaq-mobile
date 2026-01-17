@@ -57,6 +57,7 @@ abstract class ApprovalRepository extends Repository {
     String id,
     ApprovalDecisionType decision,
     String? comment,
+    String? executorId,
   );
 
   // Комментарии

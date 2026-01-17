@@ -56,6 +56,7 @@ abstract class ApprovalRemoteDataSource extends DataSource {
     String id,
     ApprovalDecisionType decision,
     String? comment,
+    String? executorId,
   );
 
   // Комментарии

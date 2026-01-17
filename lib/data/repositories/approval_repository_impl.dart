@@ -206,9 +206,10 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
     String id,
     ApprovalDecisionType decision,
     String? comment,
+    String? executorId,
   ) async {
     try {
-      final decisionModel = await remoteDataSource.decideApproval(id, decision, comment);
+      final decisionModel = await remoteDataSource.decideApproval(id, decision, comment, executorId);
       return Right(decisionModel.toEntity());
     } on ValidationException catch (e) {
       return Left(ValidationFailure(

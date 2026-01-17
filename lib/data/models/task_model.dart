@@ -2,8 +2,10 @@ import '../../domain/entities/task.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/task_comment.dart';
+import '../../domain/entities/approval.dart';
 import '../models/model.dart';
 import 'task_comment_model.dart';
+import 'approval_model.dart';
 
 /// Модель задачи
 class TaskModel extends Task implements Model {
@@ -30,11 +32,13 @@ class TaskModel extends Task implements Model {
     super.attachments,
     super.indicators,
     super.recurrence,
+    super.approvalId,
     super.business,
     super.assignee,
     super.assigner,
     super.observers,
     super.comments,
+    super.approval,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -80,21 +84,22 @@ class TaskModel extends Task implements Model {
     List<TaskObserver>? observers;
     if (json['observers'] != null) {
       final observersList = json['observers'] as List<dynamic>;
-      observers = observersList.map((obsJson) {
-        final userJson = obsJson['user'] as Map<String, dynamic>;
-        return TaskObserver(
-          id: obsJson['id'] as String,
-          createdAt: DateTime.parse(obsJson['createdAt'] as String),
-          user: ProfileUser(
-            id: userJson['id'] as String,
-            email: userJson['email'] as String,
-            firstName: userJson['firstName'] as String?,
-            lastName: userJson['lastName'] as String?,
-            patronymic: userJson['patronymic'] as String?,
-            phone: userJson['phone'] as String?,
-          ),
-        );
-      }).toList();
+      observers =
+          observersList.map((obsJson) {
+            final userJson = obsJson['user'] as Map<String, dynamic>;
+            return TaskObserver(
+              id: obsJson['id'] as String,
+              createdAt: DateTime.parse(obsJson['createdAt'] as String),
+              user: ProfileUser(
+                id: userJson['id'] as String,
+                email: userJson['email'] as String,
+                firstName: userJson['firstName'] as String?,
+                lastName: userJson['lastName'] as String?,
+                patronymic: userJson['patronymic'] as String?,
+                phone: userJson['phone'] as String?,
+              ),
+            );
+          }).toList();
     }
 
     // Парсинг observerIds (для обратной совместимости со списком задач)
@@ -102,48 +107,53 @@ class TaskModel extends Task implements Model {
     if (observers != null) {
       observerIds = observers.map((obs) => obs.user.id).toList();
     } else if (json['observers'] != null) {
-      observerIds = (json['observers'] as List<dynamic>)
-          .map((obs) => (obs['user']?['id'] ?? obs['userId']) as String)
-          .toList();
+      observerIds =
+          (json['observers'] as List<dynamic>)
+              .map((obs) => (obs['user']?['id'] ?? obs['userId']) as String)
+              .toList();
     }
 
     // Парсинг attachments
     List<TaskAttachment>? attachments;
     if (json['attachments'] != null) {
       final attachmentsList = json['attachments'] as List<dynamic>;
-      attachments = attachmentsList.map((att) {
-        return TaskAttachment(
-          id: att['id'] as String,
-          taskId: att['taskId'] as String,
-          fileUrl: att['fileUrl'] as String,
-          fileName: att['fileName'] as String?,
-          fileType: att['fileType'] as String?,
-          isResult: att['isResult'] as bool? ?? false,
-          createdAt: DateTime.parse(att['createdAt'] as String),
-        );
-      }).toList();
+      attachments =
+          attachmentsList.map((att) {
+            return TaskAttachment(
+              id: att['id'] as String,
+              taskId: att['taskId'] as String,
+              fileUrl: att['fileUrl'] as String,
+              fileName: att['fileName'] as String?,
+              fileType: att['fileType'] as String?,
+              isResult: att['isResult'] as bool? ?? false,
+              createdAt: DateTime.parse(att['createdAt'] as String),
+            );
+          }).toList();
     }
 
     // Парсинг indicators
     List<TaskIndicator>? indicators;
     if (json['indicators'] != null) {
       final indicatorsList = json['indicators'] as List<dynamic>;
-      indicators = indicatorsList.map((ind) {
-        return TaskIndicator(
-          id: ind['id'] as String,
-          taskId: ind['taskId'] as String,
-          name: ind['name'] as String,
-          targetValue: ind['targetValue'] != null
-              ? (ind['targetValue'] as num).toDouble()
-              : null,
-          actualValue: ind['actualValue'] != null
-              ? (ind['actualValue'] as num).toDouble()
-              : null,
-          unit: ind['unit'] as String?,
-          createdAt: DateTime.parse(ind['createdAt'] as String),
-          updatedAt: DateTime.parse(ind['updatedAt'] as String),
-        );
-      }).toList();
+      indicators =
+          indicatorsList.map((ind) {
+            return TaskIndicator(
+              id: ind['id'] as String,
+              taskId: ind['taskId'] as String,
+              name: ind['name'] as String,
+              targetValue:
+                  ind['targetValue'] != null
+                      ? (ind['targetValue'] as num).toDouble()
+                      : null,
+              actualValue:
+                  ind['actualValue'] != null
+                      ? (ind['actualValue'] as num).toDouble()
+                      : null,
+              unit: ind['unit'] as String?,
+              createdAt: DateTime.parse(ind['createdAt'] as String),
+              updatedAt: DateTime.parse(ind['updatedAt'] as String),
+            );
+          }).toList();
     }
 
     // Парсинг recurrence
@@ -159,18 +169,21 @@ class TaskModel extends Task implements Model {
             final daysStr = recJson['daysOfWeek'] as String;
             if (daysStr.isNotEmpty) {
               // Простой парсинг массива чисел из строки вида "[1,3,5]"
-              final cleaned = daysStr.replaceAll('[', '').replaceAll(']', '').trim();
+              final cleaned =
+                  daysStr.replaceAll('[', '').replaceAll(']', '').trim();
               if (cleaned.isNotEmpty) {
-                daysOfWeek = cleaned.split(',').map((d) => int.parse(d.trim())).toList();
+                daysOfWeek =
+                    cleaned.split(',').map((d) => int.parse(d.trim())).toList();
               }
             }
           } catch (e) {
             // Если не получилось распарсить, оставляем null
           }
         } else if (recJson['daysOfWeek'] is List) {
-          daysOfWeek = (recJson['daysOfWeek'] as List<dynamic>)
-              .map((d) => d as int)
-              .toList();
+          daysOfWeek =
+              (recJson['daysOfWeek'] as List<dynamic>)
+                  .map((d) => d as int)
+                  .toList();
         }
       }
 
@@ -179,9 +192,10 @@ class TaskModel extends Task implements Model {
         taskId: recJson['taskId'] as String,
         frequency: _parseRecurrenceFrequency(recJson['frequency'] as String),
         interval: recJson['interval'] as int? ?? 1,
-        endDate: recJson['endDate'] != null
-            ? DateTime.parse(recJson['endDate'] as String)
-            : null,
+        endDate:
+            recJson['endDate'] != null
+                ? DateTime.parse(recJson['endDate'] as String)
+                : null,
         daysOfWeek: daysOfWeek,
         dayOfMonth: recJson['dayOfMonth'] as int?,
         createdAt: DateTime.parse(recJson['createdAt'] as String),
@@ -193,10 +207,23 @@ class TaskModel extends Task implements Model {
     List<TaskComment>? comments;
     if (json['comments'] != null) {
       final commentsList = json['comments'] as List<dynamic>;
-      comments = commentsList
-          .map((commentJson) => TaskCommentModel.fromJson(commentJson as Map<String, dynamic>).toEntity())
-          .toList();
+      comments =
+          commentsList
+              .map(
+                (commentJson) =>
+                    TaskCommentModel.fromJson(
+                      commentJson as Map<String, dynamic>,
+                    ).toEntity(),
+              )
+              .toList();
       // Комментарии отсортированы по createdAt desc на бэкенде
+    }
+
+    // Парсинг approval (согласование)
+    Approval? approval;
+    if (json['approval'] != null) {
+      final approvalJson = json['approval'] as Map<String, dynamic>;
+      approval = ApprovalModel.fromJson(approvalJson).toEntity();
     }
 
     return TaskModel(
@@ -208,12 +235,14 @@ class TaskModel extends Task implements Model {
       priority: _parsePriority(json['priority'] as String?),
       assignedTo: json['assignedTo'] as String?,
       assignedBy: json['assignedBy'] as String?,
-      assignmentDate: json['assignmentDate'] != null
-          ? DateTime.parse(json['assignmentDate'] as String)
-          : null,
-      deadline: json['deadline'] != null
-          ? DateTime.parse(json['deadline'] as String)
-          : null,
+      assignmentDate:
+          json['assignmentDate'] != null
+              ? DateTime.parse(json['assignmentDate'] as String)
+              : null,
+      deadline:
+          json['deadline'] != null
+              ? DateTime.parse(json['deadline'] as String)
+              : null,
       isImportant: json['isImportant'] as bool? ?? false,
       isRecurring: json['isRecurring'] as bool? ?? false,
       hasControlPoint: json['hasControlPoint'] as bool? ?? false,
@@ -226,11 +255,13 @@ class TaskModel extends Task implements Model {
       attachments: attachments,
       indicators: indicators,
       recurrence: recurrence,
+      approvalId: json['approvalId'] as String?,
       business: business,
       assignee: assignee,
       assigner: assigner,
       observers: observers,
       comments: comments,
+      approval: approval,
     );
   }
 
@@ -327,7 +358,7 @@ class TaskModel extends Task implements Model {
   static String _formatDateTime(DateTime dateTime) {
     // Преобразуем в UTC, если дата не в UTC
     final utcDateTime = dateTime.isUtc ? dateTime : dateTime.toUtc();
-    
+
     final year = utcDateTime.year.toString().padLeft(4, '0');
     final month = utcDateTime.month.toString().padLeft(2, '0');
     final day = utcDateTime.day.toString().padLeft(2, '0');
@@ -335,7 +366,7 @@ class TaskModel extends Task implements Model {
     final minute = utcDateTime.minute.toString().padLeft(2, '0');
     final second = utcDateTime.second.toString().padLeft(2, '0');
     final millisecond = utcDateTime.millisecond.toString().padLeft(3, '0');
-    
+
     // Формат: 2025-12-14T12:00:00.000Z
     return '$year-$month-${day}T$hour:$minute:$second.${millisecond}Z';
   }
@@ -362,29 +393,40 @@ class TaskModel extends Task implements Model {
       if (resultText != null) 'resultText': resultText,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (approvalId != null) 'approvalId': approvalId,
       if (observerIds != null && observerIds!.isNotEmpty)
         'observerIds': observerIds,
       if (attachments != null && attachments!.isNotEmpty)
-        'attachments': attachments!.map((a) => {
-              'id': a.id,
-              'taskId': a.taskId,
-              'fileUrl': a.fileUrl,
-              if (a.fileName != null) 'fileName': a.fileName,
-              if (a.fileType != null) 'fileType': a.fileType,
-              'isResult': a.isResult,
-              'createdAt': a.createdAt.toIso8601String(),
-            }).toList(),
+        'attachments':
+            attachments!
+                .map(
+                  (a) => {
+                    'id': a.id,
+                    'taskId': a.taskId,
+                    'fileUrl': a.fileUrl,
+                    if (a.fileName != null) 'fileName': a.fileName,
+                    if (a.fileType != null) 'fileType': a.fileType,
+                    'isResult': a.isResult,
+                    'createdAt': a.createdAt.toIso8601String(),
+                  },
+                )
+                .toList(),
       if (indicators != null && indicators!.isNotEmpty)
-        'indicators': indicators!.map((i) => {
-              'id': i.id,
-              'taskId': i.taskId,
-              'name': i.name,
-              if (i.targetValue != null) 'targetValue': i.targetValue,
-              if (i.actualValue != null) 'actualValue': i.actualValue,
-              if (i.unit != null) 'unit': i.unit,
-              'createdAt': i.createdAt.toIso8601String(),
-              'updatedAt': i.updatedAt.toIso8601String(),
-            }).toList(),
+        'indicators':
+            indicators!
+                .map(
+                  (i) => {
+                    'id': i.id,
+                    'taskId': i.taskId,
+                    'name': i.name,
+                    if (i.targetValue != null) 'targetValue': i.targetValue,
+                    if (i.actualValue != null) 'actualValue': i.actualValue,
+                    if (i.unit != null) 'unit': i.unit,
+                    'createdAt': i.createdAt.toIso8601String(),
+                    'updatedAt': i.updatedAt.toIso8601String(),
+                  },
+                )
+                .toList(),
       if (recurrence != null)
         'recurrence': {
           'frequency': _recurrenceFrequencyToString(recurrence!.frequency),
@@ -408,8 +450,10 @@ class TaskModel extends Task implements Model {
         'description': description,
       if (status != TaskStatus.pending) 'status': _statusToString(status),
       if (priority != null) 'priority': _priorityToString(priority),
-      if (assignedTo != null && assignedTo!.isNotEmpty) 'assignedTo': assignedTo,
-      if (assignedBy != null && assignedBy!.isNotEmpty) 'assignedBy': assignedBy,
+      if (assignedTo != null && assignedTo!.isNotEmpty)
+        'assignedTo': assignedTo,
+      if (assignedBy != null && assignedBy!.isNotEmpty)
+        'assignedBy': assignedBy,
       if (assignmentDate != null)
         'assignmentDate': _formatDateTime(assignmentDate!),
       if (deadline != null) 'deadline': _formatDateTime(deadline!),
@@ -417,6 +461,8 @@ class TaskModel extends Task implements Model {
       if (isRecurring) 'isRecurring': isRecurring,
       if (hasControlPoint) 'hasControlPoint': hasControlPoint,
       if (dontForget) 'dontForget': dontForget,
+      if (approvalId != null && approvalId!.isNotEmpty)
+        'approvalId': approvalId,
       if (voiceNoteUrl != null && voiceNoteUrl!.isNotEmpty)
         'voiceNoteUrl': voiceNoteUrl,
       if (observerIds != null && observerIds!.isNotEmpty)
@@ -459,11 +505,13 @@ class TaskModel extends Task implements Model {
       attachments: attachments,
       indicators: indicators,
       recurrence: recurrence,
+      approvalId: approvalId,
       business: business,
       assignee: assignee,
       assigner: assigner,
       observers: observers,
       comments: comments,
+      approval: approval,
     );
   }
 
@@ -491,12 +539,13 @@ class TaskModel extends Task implements Model {
       attachments: task.attachments,
       indicators: task.indicators,
       recurrence: task.recurrence,
+      approvalId: task.approvalId,
       business: task.business,
       assignee: task.assignee,
       assigner: task.assigner,
       observers: task.observers,
       comments: task.comments,
+      approval: task.approval,
     );
   }
 }
-
