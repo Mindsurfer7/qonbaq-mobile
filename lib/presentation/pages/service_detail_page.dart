@@ -10,10 +10,7 @@ import '../../domain/repositories/time_slot_repository.dart';
 class ServiceDetailPage extends StatefulWidget {
   final Service service;
 
-  const ServiceDetailPage({
-    super.key,
-    required this.service,
-  });
+  const ServiceDetailPage({super.key, required this.service});
 
   @override
   State<ServiceDetailPage> createState() => _ServiceDetailPageState();
@@ -23,6 +20,10 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
   List<TimeSlotGroup> _timeSlotGroups = [];
   bool _isLoading = false;
   String? _error;
+
+  // Кэш для группированных данных
+  Map<DateTime, Map<String?, List<TimeSlot>>>? _groupedCache;
+  List<DateTime>? _sortedDatesCache;
 
   @override
   void initState() {
@@ -48,10 +49,17 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
     setState(() {
       _isLoading = false;
       result.fold(
-        (failure) => _error = failure.message,
+        (failure) {
+          _error = failure.message;
+          _groupedCache = null;
+          _sortedDatesCache = null;
+        },
         (groups) {
           _timeSlotGroups = groups;
           _error = null;
+          // Инвалидируем кэш при обновлении данных
+          _groupedCache = null;
+          _sortedDatesCache = null;
         },
       );
     });
@@ -129,22 +137,23 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Ошибка: $_error'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadTimeSlots,
-                        child: const Text('Повторить'),
-                      ),
-                    ],
-                  ),
-                )
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Ошибка: $_error'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadTimeSlots,
+                      child: const Text('Повторить'),
+                    ),
+                  ],
+                ),
+              )
               : _buildTimeSlotsList(),
     );
   }
@@ -159,8 +168,10 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
       );
     }
 
-    final grouped = _groupTimeSlotsByDateAndExecutor(_timeSlotGroups);
-    final sortedDates = grouped.keys.toList()..sort();
+    // Используем кэш или вычисляем заново
+    final grouped =
+        _groupedCache ??= _groupTimeSlotsByDateAndExecutor(_timeSlotGroups);
+    final sortedDates = _sortedDatesCache ??= grouped.keys.toList()..sort();
 
     if (sortedDates.isEmpty) {
       return const Center(
@@ -171,23 +182,22 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadTimeSlots,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: sortedDates.length,
-        itemBuilder: (context, dateIndex) {
-          final date = sortedDates[dateIndex];
-          final executorsMap = grouped[date]!;
-          final executors = executorsMap.keys.toList();
+    // Строим список sliver элементов для полной виртуализации
+    final slivers = <Widget>[];
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Заголовок с датой
-                Container(
+    for (final date in sortedDates) {
+      final executorsMap = grouped[date]!;
+      final executors = executorsMap.keys.toList();
+
+      // Заголовок даты
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          sliver: SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -200,50 +210,65 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
                   child: Text(
                     _formatDate(date),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                // Исполнители и тайм-слоты
-                ...executors.map((executorName) {
-                  final slots = executorsMap[executorName]!;
-                  return _buildExecutorSection(executorName, slots);
-                }),
-              ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        ),
+      );
 
-  Widget _buildExecutorSection(String? executorName, List<TimeSlot> slots) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      // Для каждого исполнителя
+      for (final executorName in executors) {
+        final slots = executorsMap[executorName]!;
+
         // Заголовок исполнителя
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            executorName ?? 'Ресурс',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+        slivers.add(
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
+            sliver: SliverToBoxAdapter(child: SizedBox.shrink()),
           ),
-        ),
-        // Тайм-слоты
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: slots.map((slot) {
-              return _buildTimeSlotChip(slot);
-            }).toList(),
+        );
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                executorName ?? 'Ресурс',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-      ],
+        );
+
+        // Тайм-слоты - виртуализированный SliverGrid
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 140,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 3,
+              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _buildTimeSlotChip(slots[index]);
+              }, childCount: slots.length),
+            ),
+          ),
+        );
+
+        // Отступ после группы тайм-слотов
+        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 16)));
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadTimeSlots,
+      child: CustomScrollView(slivers: slivers),
     );
   }
 
@@ -252,27 +277,50 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
     final statusColor = status.color;
     final statusIcon = status.icon;
     final isSelectable = status == TimeSlotStatus.available;
-    
-    return Opacity(
-      opacity: isSelectable ? 1.0 : 0.7,
-      child: FilterChip(
-        label: Text(
-          '${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}',
-        ),
-        selected: false,
-        onSelected: isSelectable ? null : null, // Пока не реализовано бронирование
-        avatar: Icon(
-          statusIcon,
-          size: 16,
-          color: statusColor,
-        ),
-        backgroundColor: statusColor.withOpacity(0.1),
-        labelStyle: TextStyle(
-          color: statusColor,
-          fontWeight: FontWeight.w500,
+
+    // Мемоизируем форматирование времени
+    final timeText =
+        '${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}';
+
+    // Используем кастомный виджет вместо FilterChip для лучшей производительности
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: isSelectable ? null : null, // Пока не реализовано бронирование
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 0), // Позволяет сжиматься
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                statusIcon,
+                size: 14,
+                color: statusColor.withOpacity(isSelectable ? 1.0 : 0.7),
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  timeText,
+                  style: TextStyle(
+                    color: statusColor.withOpacity(isSelectable ? 1.0 : 0.7),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

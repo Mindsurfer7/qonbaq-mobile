@@ -27,7 +27,7 @@ class TimeSlotModel {
   factory TimeSlotModel.fromJson(Map<String, dynamic> json) {
     final isAvailable = json['isAvailable'] as bool? ?? true;
     final statusString = json['status'] as String?;
-    
+
     // Парсим статус из JSON, если не указан - определяем по isAvailable
     TimeSlotStatus status;
     if (statusString != null) {
@@ -43,7 +43,8 @@ class TimeSlotModel {
           status = TimeSlotStatus.blocked;
           break;
         default:
-          status = isAvailable ? TimeSlotStatus.available : TimeSlotStatus.blocked;
+          status =
+              isAvailable ? TimeSlotStatus.available : TimeSlotStatus.blocked;
       }
     } else {
       // Если статус не пришел, определяем по isAvailable
@@ -132,8 +133,11 @@ class TimeSlotGroupModel {
       serviceName: json['serviceName'] as String,
       employmentId: json['employmentId'] as String?,
       executorName: json['executorName'] as String?,
-      timeSlots: (json['timeSlots'] as List<dynamic>?)
-              ?.map((item) => TimeSlotModel.fromJson(item as Map<String, dynamic>))
+      timeSlots:
+          (json['timeSlots'] as List<dynamic>?)
+              ?.map(
+                (item) => TimeSlotModel.fromJson(item as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );
