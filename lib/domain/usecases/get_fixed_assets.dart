@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../core/error/failures.dart';
 import '../../core/usecase/usecase.dart';
 import '../entities/fixed_asset.dart';
+import '../entities/paginated_result.dart';
 import '../repositories/fixed_asset_repository.dart';
 
 /// Параметры для получения списка основных средств
@@ -30,13 +31,13 @@ class GetFixedAssetsParams {
 }
 
 /// Use Case для получения списка основных средств
-class GetFixedAssets implements UseCase<List<FixedAsset>, GetFixedAssetsParams> {
+class GetFixedAssets implements UseCase<PaginatedResult<FixedAsset>, GetFixedAssetsParams> {
   final FixedAssetRepository repository;
 
   GetFixedAssets(this.repository);
 
   @override
-  Future<Either<Failure, List<FixedAsset>>> call(GetFixedAssetsParams params) async {
+  Future<Either<Failure, PaginatedResult<FixedAsset>>> call(GetFixedAssetsParams params) async {
     return await repository.getFixedAssets(
       businessId: params.businessId,
       projectId: params.projectId,

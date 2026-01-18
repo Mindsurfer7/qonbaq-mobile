@@ -1,11 +1,12 @@
 import '../datasources/datasource.dart';
 import '../../domain/entities/fixed_asset.dart';
 import '../models/fixed_asset_model.dart';
+import '../models/api_response.dart';
 
 /// Удаленный источник данных для основных средств (API)
 abstract class FixedAssetRemoteDataSource extends DataSource {
-  /// Получить список активов
-  Future<List<FixedAssetModel>> getFixedAssets({
+  /// Получить список активов (data + meta для пагинации)
+  Future<ApiResponse<List<FixedAssetModel>>> getFixedAssets({
     required String businessId,
     String? projectId,
     String? departmentId,

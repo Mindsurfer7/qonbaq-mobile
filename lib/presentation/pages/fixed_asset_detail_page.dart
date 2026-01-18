@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import '../../domain/entities/fixed_asset.dart';
 import '../../domain/usecases/get_fixed_asset_by_id.dart';
+import '../../domain/usecases/update_fixed_asset.dart';
+import '../../domain/usecases/transfer_fixed_asset.dart';
+import '../../domain/usecases/add_repair.dart';
+import '../../domain/usecases/add_inventory.dart';
+import '../../domain/usecases/add_photo.dart';
+import '../../domain/usecases/write_off_fixed_asset.dart';
+import '../../domain/usecases/archive_fixed_asset.dart';
+import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
+import '../../data/models/validation_error.dart';
+import '../providers/project_provider.dart';
+import '../providers/department_provider.dart';
+import '../widgets/user_selector_widget.dart';
+import '../widgets/create_fixed_asset_form.dart';
 
 /// Детальная страница основного средства
 class FixedAssetDetailPage extends StatefulWidget {
@@ -158,6 +173,100 @@ class _FixedAssetDetailPageState extends State<FixedAssetDetailPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Действия',
+            onSelected: (value) {
+              switch (value) {
+                case 'edit':
+                  _showEditDialog();
+                  break;
+                case 'transfer':
+                  _showTransferDialog();
+                  break;
+                case 'repair':
+                  _showAddRepairDialog();
+                  break;
+                case 'inventory':
+                  _showAddInventoryDialog();
+                  break;
+                case 'photo':
+                  _showAddPhotoDialog();
+                  break;
+                case 'writeoff':
+                  _showWriteOffDialog();
+                  break;
+                case 'archive':
+                  _showArchiveConfirm();
+                  break;
+              }
+            },
+            itemBuilder: (context) {
+              final isArchived = _asset?.archivedAt != null;
+              final isWrittenOff = _asset?.writeOff != null;
+              return [
+                if (!isArchived)
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit),
+                      title: Text('Редактировать'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'transfer',
+                  child: ListTile(
+                    leading: Icon(Icons.swap_horiz),
+                    title: Text('Передать'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'repair',
+                  child: ListTile(
+                    leading: Icon(Icons.build),
+                    title: Text('Добавить ремонт'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'inventory',
+                  child: ListTile(
+                    leading: Icon(Icons.checklist),
+                    title: Text('Добавить инвентаризацию'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'photo',
+                  child: ListTile(
+                    leading: Icon(Icons.photo_camera),
+                    title: Text('Добавить фото'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                if (!isWrittenOff)
+                  const PopupMenuItem(
+                    value: 'writeoff',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_forever, color: Colors.red),
+                      title: Text('Списать', style: TextStyle(color: Colors.red)),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                if (!isArchived)
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: ListTile(
+                      leading: Icon(Icons.archive),
+                      title: Text('Архивировать'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+              ];
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadAsset,
@@ -685,5 +794,566 @@ class _FixedAssetDetailPageState extends State<FixedAssetDetailPage> {
       case AssetType.other:
         return Colors.grey;
     }
+  }
+
+  void _showEditDialog() {
+    if (_asset == null) return;
+    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+    final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
+    projectProvider.loadProjects(_asset!.businessId);
+    departmentProvider.loadDepartments(_asset!.businessId);
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditFixedAssetDialog(
+        asset: _asset!,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showTransferDialog() {
+    if (_asset == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => _TransferAssetDialog(
+        assetId: widget.assetId,
+        businessId: _asset!.businessId,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showAddRepairDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _AddRepairDialog(
+        assetId: widget.assetId,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showAddInventoryDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _AddInventoryDialog(
+        assetId: widget.assetId,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showAddPhotoDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _AddPhotoDialog(
+        assetId: widget.assetId,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showWriteOffDialog() {
+    if (_asset == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => _WriteOffAssetDialog(
+        assetId: widget.assetId,
+        onSuccess: () {
+          Navigator.of(ctx).pop();
+          _loadAsset();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showArchiveConfirm() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Архивировать актив?'),
+        content: const Text(
+          'После архивации он будет скрыт из основного списка. '
+          'Вы сможете просматривать архивные активы, включив фильтр «Включать архивные».',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final archiveUseCase = Provider.of<ArchiveFixedAsset>(context, listen: false);
+              final result = await archiveUseCase.call(widget.assetId);
+              if (!mounted) return;
+              result.fold(
+                (f) => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(f.message), backgroundColor: Colors.red),
+                ),
+                (_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Актив архивирован'), backgroundColor: Colors.green),
+                  );
+                  Navigator.of(context).pop(); // возврат к списку
+                },
+              );
+            },
+            child: const Text('Архивировать'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Диалоги действий ---
+
+class _EditFixedAssetDialog extends StatefulWidget {
+  final FixedAsset asset;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _EditFixedAssetDialog({
+    required this.asset,
+    required this.onSuccess,
+    required this.onCancel,
+  });
+
+  @override
+  State<_EditFixedAssetDialog> createState() => _EditFixedAssetDialogState();
+}
+
+class _EditFixedAssetDialogState extends State<_EditFixedAssetDialog> {
+  String? _error;
+  List<ValidationError>? _validationErrors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: Row(
+                children: [
+                  const Text('Редактировать основное средство', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: widget.onCancel),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CreateFixedAssetForm(
+                businessId: widget.asset.businessId,
+                userRepository: Provider.of<UserRepository>(context, listen: false),
+                initialAsset: widget.asset,
+                error: _error,
+                validationErrors: _validationErrors,
+                onError: (e) => setState(() => _error = e),
+                onSubmit: (asset) async {
+                  final u = Provider.of<UpdateFixedAsset>(context, listen: false);
+                  final r = await u.call(UpdateFixedAssetParams(id: asset.id, asset: asset));
+                  if (!mounted) return;
+                  r.fold(
+                    (f) => setState(() {
+                      _error = f is ValidationFailure ? (f.serverMessage ?? f.message) : f.message;
+                      _validationErrors = f is ValidationFailure ? f.errors : null;
+                    }),
+                    (_) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Изменения сохранены'), backgroundColor: Colors.green));
+                      widget.onSuccess();
+                    },
+                  );
+                },
+                onCancel: widget.onCancel,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransferAssetDialog extends StatefulWidget {
+  final String assetId;
+  final String businessId;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _TransferAssetDialog({required this.assetId, required this.businessId, required this.onSuccess, required this.onCancel});
+
+  @override
+  State<_TransferAssetDialog> createState() => _TransferAssetDialogState();
+}
+
+class _TransferAssetDialogState extends State<_TransferAssetDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  String? _toUserId;
+  DateTime _transferDate = DateTime.now();
+  String? _reason;
+  String? _comment;
+  String? _error;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Передать актив', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                UserSelectorWidget(
+                  businessId: widget.businessId,
+                  userRepository: Provider.of<UserRepository>(context, listen: false),
+                  selectedUserId: _toUserId,
+                  onUserSelected: (v) => setState(() => _toUserId = v),
+                  label: 'Новый владелец *',
+                  required: true,
+                ),
+                const SizedBox(height: 12),
+                FormBuilderDateTimePicker(
+                  name: 'transferDate',
+                  initialValue: _transferDate,
+                  onChanged: (v) => setState(() => _transferDate = v ?? DateTime.now()),
+                  decoration: const InputDecoration(labelText: 'Дата передачи', border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today)),
+                  inputType: InputType.date,
+                ),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'reason', initialValue: _reason, decoration: const InputDecoration(labelText: 'Причина', border: OutlineInputBorder()), onChanged: (v) => _reason = v),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'comment', initialValue: _comment, decoration: const InputDecoration(labelText: 'Комментарий', border: OutlineInputBorder()), onChanged: (v) => _comment = v),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: _loading ? null : widget.onCancel, child: const Text('Отмена')),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _loading ? null : () async {
+                        if (_toUserId == null || _toUserId!.isEmpty) { setState(() => _error = 'Выберите нового владельца'); return; }
+                        setState(() { _error = null; _loading = true; });
+                        _formKey.currentState?.save();
+                        final form = _formKey.currentState;
+                        if (form != null) { _transferDate = form.value['transferDate'] as DateTime? ?? _transferDate; _reason = form.value['reason'] as String?; _comment = form.value['comment'] as String?; }
+                        final u = Provider.of<TransferFixedAsset>(context, listen: false);
+                        final r = await u.call(TransferFixedAssetParams(id: widget.assetId, toUserId: _toUserId!, transferDate: _transferDate, reason: _reason, comment: _comment));
+                        if (!mounted) return;
+                        setState(() => _loading = false);
+                        r.fold((f) => setState(() => _error = f.message), (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Актив передан'), backgroundColor: Colors.green)); widget.onSuccess(); });
+                      },
+                      child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Передать'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddRepairDialog extends StatefulWidget {
+  final String assetId;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _AddRepairDialog({required this.assetId, required this.onSuccess, required this.onCancel});
+
+  @override
+  State<_AddRepairDialog> createState() => _AddRepairDialogState();
+}
+
+class _AddRepairDialogState extends State<_AddRepairDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  String? _error;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 450),
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Добавить ремонт', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                FormBuilderDateTimePicker(name: 'repairDate', initialValue: DateTime.now(), decoration: const InputDecoration(labelText: 'Дата *', border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today)), inputType: InputType.date, validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'repairType', decoration: const InputDecoration(labelText: 'Тип ремонта *', border: OutlineInputBorder()), validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'cost', decoration: const InputDecoration(labelText: 'Стоимость (₸) *', border: OutlineInputBorder()), keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: FormBuilderValidators.compose([FormBuilderValidators.required(errorText: 'Обязательно'), FormBuilderValidators.numeric(errorText: 'Число')])),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'description', decoration: const InputDecoration(labelText: 'Описание', border: OutlineInputBorder())),
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  TextButton(onPressed: _loading ? null : widget.onCancel, child: const Text('Отмена')),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _loading ? null : () async {
+                      if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+                      final v = _formKey.currentState!.value;
+                      setState(() { _error = null; _loading = true; });
+                      final u = Provider.of<AddRepair>(context, listen: false);
+                      final cost = double.tryParse((v['cost'] ?? '').toString()) ?? 0.0;
+                      final r = await u.call(AddRepairParams(id: widget.assetId, repairDate: v['repairDate'] as DateTime? ?? DateTime.now(), repairType: v['repairType'] as String? ?? '', cost: cost, description: v['description'] as String?));
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+                      r.fold((f) => setState(() => _error = f.message), (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ремонт добавлен'), backgroundColor: Colors.green)); widget.onSuccess(); });
+                    },
+                    child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Добавить'),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddInventoryDialog extends StatefulWidget {
+  final String assetId;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _AddInventoryDialog({required this.assetId, required this.onSuccess, required this.onCancel});
+
+  @override
+  State<_AddInventoryDialog> createState() => _AddInventoryDialogState();
+}
+
+class _AddInventoryDialogState extends State<_AddInventoryDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  String? _error;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 450),
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Добавить инвентаризацию', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                FormBuilderDateTimePicker(name: 'inventoryDate', initialValue: DateTime.now(), decoration: const InputDecoration(labelText: 'Дата *', border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today)), inputType: InputType.date, validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'status', decoration: const InputDecoration(labelText: 'Статус', border: OutlineInputBorder())),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'comment', decoration: const InputDecoration(labelText: 'Комментарий', border: OutlineInputBorder())),
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  TextButton(onPressed: _loading ? null : widget.onCancel, child: const Text('Отмена')),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _loading ? null : () async {
+                      if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+                      final v = _formKey.currentState!.value;
+                      setState(() { _error = null; _loading = true; });
+                      final u = Provider.of<AddInventory>(context, listen: false);
+                      final r = await u.call(AddInventoryParams(id: widget.assetId, inventoryDate: v['inventoryDate'] as DateTime? ?? DateTime.now(), status: v['status'] as String?, comment: v['comment'] as String?));
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+                      r.fold((f) => setState(() => _error = f.message), (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Инвентаризация добавлена'), backgroundColor: Colors.green)); widget.onSuccess(); });
+                    },
+                    child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Добавить'),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddPhotoDialog extends StatefulWidget {
+  final String assetId;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _AddPhotoDialog({required this.assetId, required this.onSuccess, required this.onCancel});
+
+  @override
+  State<_AddPhotoDialog> createState() => _AddPhotoDialogState();
+}
+
+class _AddPhotoDialogState extends State<_AddPhotoDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  String? _error;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 450),
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Добавить фото', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Вставьте URL изображения (файл должен быть загружен отдельно).', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                const SizedBox(height: 12),
+                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                FormBuilderTextField(name: 'fileUrl', decoration: const InputDecoration(labelText: 'URL файла *', border: OutlineInputBorder()), validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'fileName', decoration: const InputDecoration(labelText: 'Имя файла', border: OutlineInputBorder())),
+                const SizedBox(height: 12),
+                FormBuilderCheckbox(name: 'isInventoryPhoto', initialValue: false, title: const Text('Инвентарное фото')),
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  TextButton(onPressed: _loading ? null : widget.onCancel, child: const Text('Отмена')),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _loading ? null : () async {
+                      if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+                      final v = _formKey.currentState!.value;
+                      setState(() { _error = null; _loading = true; });
+                      final u = Provider.of<AddPhoto>(context, listen: false);
+                      final r = await u.call(AddPhotoParams(id: widget.assetId, fileUrl: v['fileUrl'] as String? ?? '', fileName: v['fileName'] as String?, isInventoryPhoto: v['isInventoryPhoto'] as bool?));
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+                      r.fold((f) => setState(() => _error = f.message), (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Фото добавлено'), backgroundColor: Colors.green)); widget.onSuccess(); });
+                    },
+                    child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Добавить'),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WriteOffAssetDialog extends StatefulWidget {
+  final String assetId;
+  final VoidCallback onSuccess;
+  final VoidCallback onCancel;
+
+  const _WriteOffAssetDialog({required this.assetId, required this.onSuccess, required this.onCancel});
+
+  @override
+  State<_WriteOffAssetDialog> createState() => _WriteOffAssetDialogState();
+}
+
+class _WriteOffAssetDialogState extends State<_WriteOffAssetDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  String? _error;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 450),
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Списать актив', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                const SizedBox(height: 16),
+                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                FormBuilderDateTimePicker(name: 'writeOffDate', initialValue: DateTime.now(), decoration: const InputDecoration(labelText: 'Дата списания *', border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today)), inputType: InputType.date, validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'reason', decoration: const InputDecoration(labelText: 'Причина *', border: OutlineInputBorder()), validator: FormBuilderValidators.required(errorText: 'Обязательно')),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'writeOffAmount', decoration: const InputDecoration(labelText: 'Сумма списания (₸)', border: OutlineInputBorder()), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                const SizedBox(height: 12),
+                FormBuilderTextField(name: 'documentUrl', decoration: const InputDecoration(labelText: 'URL документа', border: OutlineInputBorder())),
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  TextButton(onPressed: _loading ? null : widget.onCancel, child: const Text('Отмена')),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: _loading ? null : () async {
+                      if (!(_formKey.currentState?.saveAndValidate() ?? false)) return;
+                      final v = _formKey.currentState!.value;
+                      setState(() { _error = null; _loading = true; });
+                      final u = Provider.of<WriteOffFixedAsset>(context, listen: false);
+                      final amount = double.tryParse((v['writeOffAmount'] ?? '').toString());
+                      final r = await u.call(WriteOffFixedAssetParams(id: widget.assetId, writeOffDate: v['writeOffDate'] as DateTime? ?? DateTime.now(), reason: v['reason'] as String? ?? '', writeOffAmount: amount, documentUrl: v['documentUrl'] as String?));
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+                      r.fold((f) => setState(() => _error = f.message), (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Актив списан'), backgroundColor: Colors.green)); widget.onSuccess(); });
+                    },
+                    child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Списать'),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

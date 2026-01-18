@@ -65,7 +65,7 @@ class FixedAssetRemoteDataSourceImpl extends FixedAssetRemoteDataSource {
   }
 
   @override
-  Future<List<FixedAssetModel>> getFixedAssets({
+  Future<ApiResponse<List<FixedAssetModel>>> getFixedAssets({
     required String businessId,
     String? projectId,
     String? departmentId,
@@ -115,7 +115,7 @@ class FixedAssetRemoteDataSourceImpl extends FixedAssetRemoteDataSource {
                 .toList();
           },
         );
-        return apiResponse.data;
+        return apiResponse;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {

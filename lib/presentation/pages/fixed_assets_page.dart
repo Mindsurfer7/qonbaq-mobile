@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/fixed_asset.dart';
+import '../../domain/entities/employee.dart';
+import '../../domain/entities/paginated_result.dart';
 import '../../domain/usecases/get_fixed_assets.dart';
 import '../../domain/usecases/create_fixed_asset.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
+import '../providers/project_provider.dart';
+import '../providers/department_provider.dart';
 import '../widgets/create_fixed_asset_form.dart';
 import '../widgets/fixed_asset_card.dart';
 import '../../core/theme/theme_extensions.dart';
@@ -19,17 +23,75 @@ class FixedAssetsPage extends StatefulWidget {
   State<FixedAssetsPage> createState() => _FixedAssetsPageState();
 }
 
+const int _pageLimit = 20;
+
 class _FixedAssetsPageState extends State<FixedAssetsPage> {
   List<FixedAsset> _assets = [];
   bool _isLoading = false;
   String? _error;
+  PaginationMeta? _meta;
+  int _page = 1;
+
+  // Фильтры
+  String? _filterProjectId;
+  String? _filterDepartmentId;
+  String? _filterCurrentOwnerId;
+  AssetCondition? _filterCondition;
+  AssetType? _filterType;
+  bool _includeArchived = false;
+
+  List<Employee> _employees = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFilterData();
       _loadAssets();
     });
+  }
+
+  void _loadFilterData() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+    if (selectedBusiness == null) return;
+    final businessId = selectedBusiness.id;
+    Provider.of<ProjectProvider>(context, listen: false).loadProjects(businessId);
+    Provider.of<DepartmentProvider>(context, listen: false).loadDepartments(businessId);
+    _loadEmployees(businessId);
+  }
+
+  Future<void> _loadEmployees(String businessId) async {
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+    final result = await userRepository.getBusinessEmployees(businessId);
+    if (!mounted) return;
+    result.fold(
+      (_) => setState(() => _employees = []),
+      (list) => setState(() => _employees = list),
+    );
+  }
+
+  void _applyFilters() {
+    setState(() => _page = 1);
+    _loadAssets();
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _filterProjectId = null;
+      _filterDepartmentId = null;
+      _filterCurrentOwnerId = null;
+      _filterCondition = null;
+      _filterType = null;
+      _includeArchived = false;
+      _page = 1;
+    });
+    _loadAssets();
+  }
+
+  void _goToPage(int page) {
+    setState(() => _page = page);
+    _loadAssets();
   }
 
   Future<void> _loadAssets() async {
@@ -37,9 +99,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     final selectedBusiness = profileProvider.selectedBusiness;
 
     if (selectedBusiness == null) {
-      setState(() {
-        _error = 'Компания не выбрана';
-      });
+      setState(() => _error = 'Компания не выбрана');
       return;
     }
 
@@ -52,7 +112,14 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     final result = await getFixedAssetsUseCase.call(
       GetFixedAssetsParams(
         businessId: selectedBusiness.id,
-        limit: 50,
+        projectId: _filterProjectId,
+        departmentId: _filterDepartmentId,
+        currentOwnerId: _filterCurrentOwnerId,
+        condition: _filterCondition,
+        type: _filterType,
+        includeArchived: _includeArchived,
+        page: _page,
+        limit: _pageLimit,
       ),
     );
 
@@ -65,14 +132,46 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           _isLoading = false;
         });
       },
-      (assets) {
+      (paginated) {
         setState(() {
-          _assets = assets;
+          _assets = paginated.items;
+          _meta = paginated.meta;
           _isLoading = false;
         });
       },
     );
   }
+
+  String _getAssetTypeName(AssetType type) {
+    switch (type) {
+      case AssetType.equipment:
+        return 'Оборудование';
+      case AssetType.furniture:
+        return 'Мебель';
+      case AssetType.officeTech:
+        return 'Орг.техника';
+      case AssetType.other:
+        return 'Прочее';
+    }
+  }
+
+  String _getAssetConditionName(AssetCondition condition) {
+    switch (condition) {
+      case AssetCondition.newUpTo3Months:
+        return 'Новое (до 3-х месяцев)';
+      case AssetCondition.good:
+        return 'Хорошее';
+      case AssetCondition.satisfactory:
+        return 'Удовлетворительное';
+      case AssetCondition.notWorking:
+        return 'Не рабочее';
+      case AssetCondition.writtenOff:
+        return 'Списано по акту';
+    }
+  }
+
+  bool get _shouldShowPagination =>
+      _meta != null && (_meta!.totalPages ?? 1) > 1;
 
   void _showCreateAssetDialog() {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
@@ -127,7 +226,22 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExpansionTile(
+            title: const Text('Фильтры'),
+            initiallyExpanded: false,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildFilterContent(),
+              ),
+            ],
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: "create_fixed_asset",
         onPressed: _showCreateAssetDialog,
@@ -167,21 +281,174 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       return const Center(child: Text('Нет основных средств'));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _assets.length,
-      itemBuilder: (context, index) {
-        final asset = _assets[index];
-        return FixedAssetCard(
-          asset: asset,
-          onTap: () {
-            Navigator.of(context).pushNamed(
-              '/business/admin/fixed_assets/detail',
-              arguments: asset.id,
-            );
-          },
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: _assets.length,
+            itemBuilder: (context, index) {
+              final asset = _assets[index];
+              return FixedAssetCard(
+                asset: asset,
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/business/admin/fixed_assets/detail',
+                    arguments: asset.id,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        if (_shouldShowPagination) _buildPaginationBar(),
+      ],
+    );
+  }
+
+  Widget _buildFilterContent() {
+    final projectProvider = Provider.of<ProjectProvider>(context);
+    final departmentProvider = Provider.of<DepartmentProvider>(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Проект
+        DropdownButtonFormField<String?>(
+          value: _filterProjectId,
+          decoration: const InputDecoration(
+            labelText: 'Проект',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Все')),
+            ...(projectProvider.projects ?? []).map(
+              (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
+            ),
+          ],
+          onChanged: (v) => setState(() => _filterProjectId = v),
+        ),
+        const SizedBox(height: 12),
+        // Департамент
+        DropdownButtonFormField<String?>(
+          value: _filterDepartmentId,
+          decoration: const InputDecoration(
+            labelText: 'Департамент',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Все')),
+            ...(departmentProvider.departments ?? []).map(
+              (d) => DropdownMenuItem(value: d.id, child: Text(d.name)),
+            ),
+          ],
+          onChanged: (v) => setState(() => _filterDepartmentId = v),
+        ),
+        const SizedBox(height: 12),
+        // Владелец
+        DropdownButtonFormField<String?>(
+          value: _filterCurrentOwnerId,
+          decoration: const InputDecoration(
+            labelText: 'Владелец',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Все')),
+            ..._employees.map(
+              (e) => DropdownMenuItem(value: e.id, child: Text(e.fullName)),
+            ),
+          ],
+          onChanged: (v) => setState(() => _filterCurrentOwnerId = v),
+        ),
+        const SizedBox(height: 12),
+        // Состояние
+        DropdownButtonFormField<AssetCondition?>(
+          value: _filterCondition,
+          decoration: const InputDecoration(
+            labelText: 'Состояние',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Все')),
+            ...AssetCondition.values.map(
+              (c) => DropdownMenuItem(
+                value: c,
+                child: Text(_getAssetConditionName(c)),
+              ),
+            ),
+          ],
+          onChanged: (v) => setState(() => _filterCondition = v),
+        ),
+        const SizedBox(height: 12),
+        // Тип
+        DropdownButtonFormField<AssetType?>(
+          value: _filterType,
+          decoration: const InputDecoration(
+            labelText: 'Тип',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Все')),
+            ...AssetType.values.map(
+              (t) => DropdownMenuItem(
+                value: t,
+                child: Text(_getAssetTypeName(t)),
+              ),
+            ),
+          ],
+          onChanged: (v) => setState(() => _filterType = v),
+        ),
+        const SizedBox(height: 12),
+        CheckboxListTile(
+          title: const Text('Включать архивные'),
+          value: _includeArchived,
+          onChanged: (v) => setState(() => _includeArchived = v ?? false),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: _resetFilters,
+              child: const Text('Сбросить'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _applyFilters,
+              child: const Text('Применить'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaginationBar() {
+    final page = _meta?.page ?? 1;
+    final totalPages = _meta?.totalPages ?? 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: page > 1 ? () => _goToPage(page - 1) : null,
+          ),
+          Text('Стр. $page из $totalPages'),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: page < totalPages ? () => _goToPage(page + 1) : null,
+          ),
+        ],
+      ),
     );
   }
 

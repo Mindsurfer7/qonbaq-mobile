@@ -11,7 +11,7 @@ import '../providers/project_provider.dart';
 import '../providers/department_provider.dart';
 import 'user_selector_widget.dart';
 
-/// Форма создания основного средства
+/// Форма создания или редактирования основного средства
 class CreateFixedAssetForm extends StatefulWidget {
   final String businessId;
   final UserRepository userRepository;
@@ -20,6 +20,8 @@ class CreateFixedAssetForm extends StatefulWidget {
   final String? error;
   final List<ValidationError>? validationErrors;
   final Function(String)? onError;
+  /// При задании — режим редактирования (владелец скрыт, кнопка «Сохранить»)
+  final FixedAsset? initialAsset;
 
   const CreateFixedAssetForm({
     super.key,
@@ -30,6 +32,7 @@ class CreateFixedAssetForm extends StatefulWidget {
     this.error,
     this.validationErrors,
     this.onError,
+    this.initialAsset,
   });
 
   @override
@@ -98,6 +101,10 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialAsset != null) {
+      _selectedProjectId = widget.initialAsset!.projectId;
+      _selectedDepartmentId = widget.initialAsset!.departmentId;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -134,14 +141,48 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
   void _handleSubmit() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-
       final now = DateTime.now();
       final creationDate = formData['creationDate'] as DateTime? ?? now;
+      final a = widget.initialAsset;
 
-      // currentOwnerId обязательный в entity, но сервер устанавливает его автоматически
-      // Устанавливаем временное значение, которое будет заменено сервером
+      if (a != null) {
+        final asset = FixedAsset(
+          id: a.id,
+          businessId: a.businessId,
+          projectId: _selectedProjectId,
+          name: formData['name'] as String,
+          model: formData['model'] as String?,
+          type: formData['type'] as AssetType,
+          inventoryNumber: formData['inventoryNumber'] as String?,
+          serialNumber: formData['serialNumber'] as String?,
+          locationCity: formData['locationCity'] as String?,
+          locationAddress: formData['locationAddress'] as String?,
+          condition: formData['condition'] as AssetCondition,
+          departmentId: _selectedDepartmentId,
+          currentOwnerId: a.currentOwnerId,
+          creationDate: creationDate,
+          createdAt: a.createdAt,
+          updatedAt: now,
+          archivedAt: a.archivedAt,
+          currentOwner: a.currentOwner,
+          department: a.department,
+          project: a.project,
+          repairsCount: a.repairsCount,
+          photosCount: a.photosCount,
+          tasksCount: a.tasksCount,
+          writeOff: a.writeOff,
+          transfers: a.transfers,
+          repairs: a.repairs,
+          photos: a.photos,
+          inventories: a.inventories,
+          repairsTotal: a.repairsTotal,
+        );
+        widget.onSubmit(asset);
+        return;
+      }
+
       final asset = FixedAsset(
-        id: '', // Будет установлен сервером
+        id: '',
         businessId: widget.businessId,
         projectId: _selectedProjectId,
         name: formData['name'] as String,
@@ -153,12 +194,11 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
         locationAddress: formData['locationAddress'] as String?,
         condition: formData['condition'] as AssetCondition,
         departmentId: _selectedDepartmentId,
-        currentOwnerId: _selectedOwnerId ?? '', // Временное значение, будет заменено сервером
+        currentOwnerId: _selectedOwnerId ?? '',
         creationDate: creationDate,
         createdAt: now,
         updatedAt: now,
       );
-
       widget.onSubmit(asset);
     }
   }
@@ -194,6 +234,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Название *
             FormBuilderTextField(
               name: 'name',
+              initialValue: widget.initialAsset?.name,
               decoration: InputDecoration(
                 labelText: 'Название *',
                 border: const OutlineInputBorder(),
@@ -215,7 +256,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 errorText: _fieldErrors['type'],
                 errorMaxLines: 2,
               ),
-              initialValue: AssetType.other,
+              initialValue: widget.initialAsset?.type ?? AssetType.other,
               dropdownColor: context.appTheme.backgroundSurface,
               borderRadius: BorderRadius.circular(
                 context.appTheme.borderRadius,
@@ -249,7 +290,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 errorText: _fieldErrors['condition'],
                 errorMaxLines: 2,
               ),
-              initialValue: AssetCondition.good,
+              initialValue: widget.initialAsset?.condition ?? AssetCondition.good,
               dropdownColor: context.appTheme.backgroundSurface,
               borderRadius: BorderRadius.circular(
                 context.appTheme.borderRadius,
@@ -277,6 +318,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Модель
             FormBuilderTextField(
               name: 'model',
+              initialValue: widget.initialAsset?.model,
               decoration: InputDecoration(
                 labelText: 'Модель',
                 border: const OutlineInputBorder(),
@@ -289,6 +331,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Инвентарный номер
             FormBuilderTextField(
               name: 'inventoryNumber',
+              initialValue: widget.initialAsset?.inventoryNumber,
               decoration: InputDecoration(
                 labelText: 'Инвентарный номер',
                 border: const OutlineInputBorder(),
@@ -301,6 +344,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Серийный номер
             FormBuilderTextField(
               name: 'serialNumber',
+              initialValue: widget.initialAsset?.serialNumber,
               decoration: InputDecoration(
                 labelText: 'Серийный номер',
                 border: const OutlineInputBorder(),
@@ -313,6 +357,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Город
             FormBuilderTextField(
               name: 'locationCity',
+              initialValue: widget.initialAsset?.locationCity,
               decoration: InputDecoration(
                 labelText: 'Город',
                 border: const OutlineInputBorder(),
@@ -325,6 +370,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             // Адрес
             FormBuilderTextField(
               name: 'locationAddress',
+              initialValue: widget.initialAsset?.locationAddress,
               decoration: InputDecoration(
                 labelText: 'Адрес',
                 border: const OutlineInputBorder(),
@@ -422,20 +468,21 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
             ),
             const SizedBox(height: 16),
 
-            // Владелец
-            UserSelectorWidget(
-              businessId: widget.businessId,
-              userRepository: widget.userRepository,
-              selectedUserId: _selectedOwnerId,
-              onUserSelected: (userId) {
-                setState(() {
-                  _selectedOwnerId = userId;
-                });
-              },
-              label: 'Владелец',
-              required: false,
-            ),
-            const SizedBox(height: 16),
+            // Владелец (только при создании; при редактировании — через «Передать»)
+            if (widget.initialAsset == null)
+              UserSelectorWidget(
+                businessId: widget.businessId,
+                userRepository: widget.userRepository,
+                selectedUserId: _selectedOwnerId,
+                onUserSelected: (userId) {
+                  setState(() {
+                    _selectedOwnerId = userId;
+                  });
+                },
+                label: 'Владелец',
+                required: false,
+              ),
+            if (widget.initialAsset == null) const SizedBox(height: 16),
 
             // Дата создания
             FormBuilderDateTimePicker(
@@ -447,7 +494,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 errorText: _fieldErrors['creationDate'],
                 errorMaxLines: 2,
               ),
-              initialValue: DateTime.now(),
+              initialValue: widget.initialAsset?.creationDate ?? DateTime.now(),
               inputType: InputType.date,
             ),
             const SizedBox(height: 24),
@@ -463,7 +510,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: _handleSubmit,
-                  child: const Text('Создать'),
+                  child: Text(widget.initialAsset != null ? 'Сохранить' : 'Создать'),
                 ),
               ],
             ),

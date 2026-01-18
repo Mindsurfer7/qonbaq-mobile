@@ -1,13 +1,14 @@
 import 'package:dartz/dartz.dart';
 import '../entities/fixed_asset.dart';
+import '../entities/paginated_result.dart';
 import '../../core/error/failures.dart';
 import '../repositories/repository.dart';
 
 /// Интерфейс репозитория для работы с основными средствами
 /// Реализация находится в data слое
 abstract class FixedAssetRepository extends Repository {
-  /// Получить список активов
-  Future<Either<Failure, List<FixedAsset>>> getFixedAssets({
+  /// Получить список активов (с meta для пагинации)
+  Future<Either<Failure, PaginatedResult<FixedAsset>>> getFixedAssets({
     required String businessId,
     String? projectId,
     String? departmentId,

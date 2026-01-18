@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../domain/entities/fixed_asset.dart';
+import '../../domain/entities/paginated_result.dart';
 import '../../domain/repositories/fixed_asset_repository.dart';
 import '../../core/error/failures.dart';
 import '../models/fixed_asset_model.dart';
@@ -17,7 +18,7 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
   });
 
   @override
-  Future<Either<Failure, List<FixedAsset>>> getFixedAssets({
+  Future<Either<Failure, PaginatedResult<FixedAsset>>> getFixedAssets({
     required String businessId,
     String? projectId,
     String? departmentId,
@@ -29,7 +30,7 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
     int? limit,
   }) async {
     try {
-      final assets = await remoteDataSource.getFixedAssets(
+      final response = await remoteDataSource.getFixedAssets(
         businessId: businessId,
         projectId: projectId,
         departmentId: departmentId,
@@ -40,7 +41,16 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
         page: page,
         limit: limit,
       );
-      return Right(assets.map((model) => model.toEntity()).toList());
+      final items = response.data.map((model) => model.toEntity()).toList();
+      final meta = response.meta != null
+          ? PaginationMeta(
+              total: response.meta!.total,
+              page: response.meta!.page,
+              limit: response.meta!.limit,
+              totalPages: response.meta!.totalPages,
+            )
+          : null;
+      return Right(PaginatedResult(items: items, meta: meta));
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении списка активов: $e'));
     }
