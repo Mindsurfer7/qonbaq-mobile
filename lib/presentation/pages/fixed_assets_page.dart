@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/fixed_asset.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/entities/paginated_result.dart';
+import '../../domain/entities/approval.dart';
+import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_fixed_assets.dart';
 import '../../domain/usecases/create_fixed_asset.dart';
+import '../../domain/usecases/create_approval.dart';
+import '../../domain/usecases/get_approval_template_by_code.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
 import '../providers/project_provider.dart';
 import '../providers/department_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/create_fixed_asset_form.dart';
 import '../widgets/fixed_asset_card.dart';
+import '../widgets/dynamic_block_form.dart';
 import '../../core/theme/theme_extensions.dart';
 
 /// Страница основных средств
@@ -194,6 +201,31 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     );
   }
 
+  void _showTransferDialog() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final createApprovalUseCase = Provider.of<CreateApproval>(context, listen: false);
+    final getApprovalTemplateByCode = Provider.of<GetApprovalTemplateByCode>(context, listen: false);
+
+    if (selectedBusiness == null) return;
+    final currentUserId = authProvider.user?.id;
+    if (currentUserId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => _TransferFixedAssetDialog(
+        businessId: selectedBusiness.id,
+        currentUserId: currentUserId,
+        createApprovalUseCase: createApprovalUseCase,
+        getApprovalTemplateByCode: getApprovalTemplateByCode,
+        onSuccess: () {
+          _loadAssets();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -242,12 +274,27 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           Expanded(child: _buildBody()),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: "create_fixed_asset",
-        onPressed: _showCreateAssetDialog,
-        backgroundColor: context.appTheme.accentPrimary,
-        foregroundColor: Colors.black,
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: "transfer_fixed_asset",
+            onPressed: _showTransferDialog,
+            backgroundColor: context.appTheme.accentPrimary,
+            foregroundColor: Colors.black,
+            mini: true,
+            child: const Icon(Icons.swap_horiz),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton(
+            heroTag: "create_fixed_asset",
+            onPressed: _showCreateAssetDialog,
+            backgroundColor: context.appTheme.accentPrimary,
+            foregroundColor: Colors.black,
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
@@ -575,6 +622,319 @@ class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Диалог создания согласования перемещения основного средства
+class _TransferFixedAssetDialog extends StatefulWidget {
+  final String businessId;
+  final String currentUserId;
+  final CreateApproval createApprovalUseCase;
+  final GetApprovalTemplateByCode getApprovalTemplateByCode;
+  final VoidCallback onSuccess;
+
+  const _TransferFixedAssetDialog({
+    required this.businessId,
+    required this.currentUserId,
+    required this.createApprovalUseCase,
+    required this.getApprovalTemplateByCode,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_TransferFixedAssetDialog> createState() => _TransferFixedAssetDialogState();
+}
+
+class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  ApprovalTemplate? _template;
+  bool _isLoadingTemplate = true;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplate();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTemplate() async {
+    setState(() {
+      _isLoadingTemplate = true;
+      _error = null;
+    });
+
+    final result = await widget.getApprovalTemplateByCode.call('FIXED_ASSET_TRANSFER');
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoadingTemplate = false;
+          _error = _getErrorMessage(failure);
+        });
+      },
+      (template) {
+        setState(() {
+          _isLoadingTemplate = false;
+          _template = template;
+          // Автоматически заполняем title из шаблона
+          _titleController.text = template.name;
+        });
+      },
+    );
+  }
+
+  String _getErrorMessage(Failure failure) {
+    if (failure is ServerFailure) {
+      return failure.message;
+    } else if (failure is NetworkFailure) {
+      return failure.message;
+    } else if (failure is ValidationFailure) {
+      return failure.serverMessage ?? failure.message;
+    }
+    return 'Произошла ошибка';
+  }
+
+  Future<void> _submit() async {
+    if (_formKey.currentState == null) {
+      setState(() {
+        _error = 'Ошибка формы';
+      });
+      return;
+    }
+
+    if (_template == null) {
+      setState(() {
+        _error = 'Шаблон не загружен';
+      });
+      return;
+    }
+
+    // Сохраняем значения формы перед валидацией
+    _formKey.currentState!.save();
+
+    // Валидируем форму
+    if (!_formKey.currentState!.validate()) {
+      final fields = _formKey.currentState!.fields;
+      String? firstError;
+      for (var entry in fields.entries) {
+        final field = entry.value;
+        if (field.hasError) {
+          firstError = field.errorText;
+          break;
+        }
+      }
+      setState(() {
+        _error = firstError ?? 'Пожалуйста, заполните все обязательные поля';
+      });
+      return;
+    }
+
+    final formValues = _formKey.currentState!.value;
+
+    // Получаем title и description из формы
+    final title = (_titleController.text.trim().isEmpty) ? null : _titleController.text.trim();
+    final description = (_descriptionController.text.trim().isEmpty) ? null : _descriptionController.text.trim();
+
+    // Получаем данные из динамической формы (исключаем системные поля)
+    final dynamicFormData = <String, dynamic>{};
+    formValues.forEach((key, value) {
+      // Получаем имя поля без префикса блока
+      final fieldName = key.contains('.') ? key.split('.').last : key;
+      // Исключаем системные поля формы
+      if (fieldName != 'title' &&
+          fieldName != 'description' &&
+          fieldName != 'paymentDueDate' &&
+          fieldName != 'requestDate' &&
+          fieldName != 'processName' &&
+          value != null) {
+        // Преобразуем DateTime в ISO строку для отправки на сервер
+        if (value is DateTime) {
+          dynamicFormData[fieldName] = value.toIso8601String();
+        } else if (value is ApprovalTemplate) {
+          // Пропускаем объекты шаблонов
+        } else {
+          dynamicFormData[fieldName] = value;
+        }
+      }
+    });
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final approval = Approval(
+      id: '',
+      businessId: widget.businessId,
+      templateCode: 'FIXED_ASSET_TRANSFER',
+      title: title ?? _template!.name,
+      description: description,
+      status: ApprovalStatus.pending,
+      createdBy: widget.currentUserId,
+      paymentDueDate: DateTime.now(),
+      formData: dynamicFormData.isEmpty ? null : dynamicFormData,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final result = await widget.createApprovalUseCase.call(
+      CreateApprovalParams(approval: approval),
+    );
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoading = false;
+          _error = _getErrorMessage(failure);
+        });
+
+        // Если это ошибка валидации, применяем ошибки к полям формы
+        if (failure is ValidationFailure && _formKey.currentState != null) {
+          for (var error in failure.errors) {
+            final fieldName = error.field;
+            final field = _formKey.currentState?.fields[fieldName];
+            if (field != null) {
+              field.invalidate(error.message);
+              field.validate();
+            }
+          }
+        }
+      },
+      (createdApproval) {
+        // Закрываем диалог
+        Navigator.of(context).pop();
+
+        // Вызываем onSuccess для обновления списка
+        widget.onSuccess();
+
+        // Показываем уведомление об успехе
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Согласование перемещения успешно создано'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Перемещение основных средств'),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: FormBuilder(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_isLoadingTemplate)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_error != null && _template == null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  )
+                else if (_template != null) ...[
+                  FormBuilderTextField(
+                    name: 'title',
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Название',
+                      border: OutlineInputBorder(),
+                      helperText: 'Оставьте пустым, чтобы использовать название из шаблона',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FormBuilderTextField(
+                    name: 'description',
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Описание',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 4,
+                  ),
+                  // Динамическая форма на основе formSchema
+                  if (_template!.formSchema != null) ...[
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    DynamicBlockForm(
+                      key: ValueKey(_template!.code),
+                      formSchema: _template!.formSchema,
+                      formKey: _formKey,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
+                if (_error != null && _template != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Отмена'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading || _template == null ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Создать'),
+        ),
+      ],
     );
   }
 }

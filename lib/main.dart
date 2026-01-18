@@ -135,6 +135,7 @@ import 'package:qonbaq/domain/usecases/get_approval_comments.dart';
 import 'package:qonbaq/domain/usecases/update_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/delete_approval_comment.dart';
 import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
+import 'package:qonbaq/domain/usecases/get_approval_template_by_code.dart';
 import 'package:qonbaq/domain/usecases/get_pending_confirmations.dart';
 import 'package:qonbaq/domain/usecases/confirm_approval.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
@@ -387,6 +388,9 @@ class MyApp extends StatelessWidget {
     final updateApprovalComment = UpdateApprovalComment(approvalRepository);
     final deleteApprovalComment = DeleteApprovalComment(approvalRepository);
     final getApprovalTemplates = GetApprovalTemplates(approvalRepository);
+    final getApprovalTemplateByCode = GetApprovalTemplateByCode(
+      approvalRepository,
+    );
     final getPendingConfirmations = GetPendingConfirmations(approvalRepository);
     final confirmApproval = ConfirmApproval(approvalRepository);
     final pendingConfirmationsProvider = PendingConfirmationsProvider(
@@ -543,6 +547,9 @@ class MyApp extends StatelessWidget {
         Provider<UpdateApprovalComment>(create: (_) => updateApprovalComment),
         Provider<DeleteApprovalComment>(create: (_) => deleteApprovalComment),
         Provider<GetApprovalTemplates>(create: (_) => getApprovalTemplates),
+        Provider<GetApprovalTemplateByCode>(
+          create: (_) => getApprovalTemplateByCode,
+        ),
         Provider<GetFinancialForm>(create: (_) => getFinancialForm),
         Provider<CreateIncome>(create: (_) => createIncome),
         Provider<CreateExpense>(create: (_) => createExpense),
