@@ -88,7 +88,21 @@ class PendingConfirmationsProvider with ChangeNotifier {
 
     return result.fold(
       (failure) {
-        _error = _getErrorMessage(failure);
+        // Если ошибка указывает, что подтверждение выполнено успешно
+        // (например, если getApprovalById упал после успешного подтверждения),
+        // считаем это успехом
+        final errorMessage = _getErrorMessage(failure);
+        if (errorMessage.contains('Подтверждение выполнено успешно')) {
+          // Удаляем подтвержденное согласование из списка
+          _pendingConfirmations.removeWhere(
+            (pc) => pc.approval.id == approvalId,
+          );
+          _error = null;
+          notifyListeners();
+          return true;
+        }
+        
+        _error = errorMessage;
         notifyListeners();
         return false;
       },

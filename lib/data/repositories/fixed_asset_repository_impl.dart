@@ -10,12 +10,11 @@ import '../repositories/repository_impl.dart';
 
 /// Реализация репозитория основных средств
 /// Использует Remote DataSource
-class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepository {
+class FixedAssetRepositoryImpl extends RepositoryImpl
+    implements FixedAssetRepository {
   final FixedAssetRemoteDataSource remoteDataSource;
 
-  FixedAssetRepositoryImpl({
-    required this.remoteDataSource,
-  });
+  FixedAssetRepositoryImpl({required this.remoteDataSource});
 
   @override
   Future<Either<Failure, PaginatedResult<FixedAsset>>> getFixedAssets({
@@ -42,14 +41,15 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
         limit: limit,
       );
       final items = response.data.map((model) => model.toEntity()).toList();
-      final meta = response.meta != null
-          ? PaginationMeta(
-              total: response.meta!.total,
-              page: response.meta!.page,
-              limit: response.meta!.limit,
-              totalPages: response.meta!.totalPages,
-            )
-          : null;
+      final meta =
+          response.meta != null
+              ? PaginationMeta(
+                total: response.meta!.total,
+                page: response.meta!.page,
+                limit: response.meta!.limit,
+                totalPages: response.meta!.totalPages,
+              )
+              : null;
       return Right(PaginatedResult(items: items, meta: meta));
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении списка активов: $e'));
@@ -73,28 +73,38 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       final createdAsset = await remoteDataSource.createFixedAsset(assetModel);
       return Right(createdAsset.toEntity());
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при создании актива: $e'));
     }
   }
 
   @override
-  Future<Either<Failure, FixedAsset>> updateFixedAsset(String id, FixedAsset asset) async {
+  Future<Either<Failure, FixedAsset>> updateFixedAsset(
+    String id,
+    FixedAsset asset,
+  ) async {
     try {
       final assetModel = FixedAssetModel.fromEntity(asset);
-      final updatedAsset = await remoteDataSource.updateFixedAsset(id, assetModel);
+      final updatedAsset = await remoteDataSource.updateFixedAsset(
+        id,
+        assetModel,
+      );
       return Right(updatedAsset.toEntity());
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при обновлении актива: $e'));
     }
@@ -118,11 +128,13 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       );
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при передаче актива: $e'));
     }
@@ -146,11 +158,13 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       );
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при добавлении ремонта: $e'));
     }
@@ -172,11 +186,13 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       );
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при добавлении инвентаризации: $e'));
     }
@@ -202,11 +218,13 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       );
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при добавлении фото: $e'));
     }
@@ -230,11 +248,13 @@ class FixedAssetRepositoryImpl extends RepositoryImpl implements FixedAssetRepos
       );
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        e.validationResponse.message ?? e.validationResponse.error,
-        e.validationResponse.details,
-        serverMessage: e.validationResponse.message,
-      ));
+      return Left(
+        ValidationFailure(
+          e.validationResponse.message ?? e.validationResponse.error,
+          e.validationResponse.details,
+          serverMessage: e.validationResponse.message,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Ошибка при списании актива: $e'));
     }

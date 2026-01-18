@@ -10,6 +10,7 @@ import '../../domain/repositories/user_repository.dart';
 import '../providers/profile_provider.dart';
 import 'create_service_dialog.dart';
 import 'edit_service_dialog.dart';
+import 'assign_employee_to_service_dialog.dart';
 
 /// Админ-панель для управления услугами
 class ServicesAdminPage extends StatefulWidget {
@@ -201,6 +202,41 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
           _loadData(showLoading: false);
         },
       );
+    }
+  }
+
+  Future<void> _assignEmployee(Service service) async {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) return;
+
+    // Загружаем сотрудников только при открытии диалога
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+    final employeesResult = await userRepository.getBusinessEmployees(
+      selectedBusiness.id,
+    );
+
+    if (!mounted) return;
+
+    final employees = employeesResult.fold(
+      (failure) => <Employee>[],
+      (employees) => employees,
+    );
+
+    // Кэшируем сотрудников для ProfileProvider
+    profileProvider.cacheEmployees(selectedBusiness.id, employees);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AssignEmployeeToServiceDialog(service: service),
+    );
+
+    if (result == true && mounted) {
+      await _loadData(showLoading: false);
     }
   }
 
@@ -426,16 +462,40 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
               padding: const EdgeInsets.all(16),
               child: Text(service.description!),
             ),
-          if (service.users != null && service.users!.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Участники услуги',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Назначенные сотрудники',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                if (service.type == ServiceType.personBased)
+                  TextButton.icon(
+                    onPressed: () => _assignEmployee(service),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Назначить'),
+                  ),
+              ],
             ),
+          ),
+          if (service.assignments != null &&
+              service.assignments!.isNotEmpty) ...[
+            ...service.assignments!.map((assignment) {
+              return ListTile(
+                leading: const Icon(Icons.person),
+                title: Text(assignment.employee?.fullName ?? 'Неизвестно'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _deleteAssignment(assignment),
+                ),
+              );
+            }),
+          ] else if (service.users != null && service.users!.isNotEmpty) ...[
+            // Показываем users если нет assignments (для обратной совместимости)
             ...service.users!.map((user) {
               final fullName = [
                 if (user.lastName != null) user.lastName,
@@ -447,28 +507,14 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
                 dense: true,
               );
             }),
-          ],
-          if (service.assignments != null &&
-              service.assignments!.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ] else ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                'Назначения',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                'Нет назначенных сотрудников',
+                style: TextStyle(color: Colors.grey),
               ),
             ),
-            ...service.assignments!.map((assignment) {
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(assignment.employee?.fullName ?? 'Неизвестно'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _deleteAssignment(assignment),
-                ),
-              );
-            }),
           ],
         ],
       ),

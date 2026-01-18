@@ -248,26 +248,28 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
   }
 
   Widget _buildTimeSlotChip(TimeSlot slot) {
-    final isAvailable = slot.isAvailable;
+    final status = slot.status;
+    final statusColor = status.color;
+    final statusIcon = status.icon;
+    final isSelectable = status == TimeSlotStatus.available;
     
     return Opacity(
-      opacity: isAvailable ? 1.0 : 0.5,
+      opacity: isSelectable ? 1.0 : 0.7,
       child: FilterChip(
         label: Text(
           '${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}',
         ),
         selected: false,
-        onSelected: null, // Пока не реализовано бронирование
+        onSelected: isSelectable ? null : null, // Пока не реализовано бронирование
         avatar: Icon(
-          isAvailable ? Icons.check_circle : Icons.cancel,
+          statusIcon,
           size: 16,
-          color: isAvailable ? Colors.green : Colors.grey,
+          color: statusColor,
         ),
-        backgroundColor: isAvailable
-            ? Colors.green.withOpacity(0.1)
-            : Colors.grey.withOpacity(0.1),
+        backgroundColor: statusColor.withOpacity(0.1),
         labelStyle: TextStyle(
-          color: isAvailable ? Colors.green.shade700 : Colors.grey.shade700,
+          color: statusColor,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

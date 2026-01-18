@@ -5,12 +5,7 @@ class PaginationMeta {
   final int? limit;
   final int? totalPages;
 
-  const PaginationMeta({
-    this.total,
-    this.page,
-    this.limit,
-    this.totalPages,
-  });
+  const PaginationMeta({this.total, this.page, this.limit, this.totalPages});
 }
 
 /// Результат с пагинацией

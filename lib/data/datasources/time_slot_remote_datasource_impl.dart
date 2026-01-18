@@ -32,8 +32,8 @@ class TimeSlotRemoteDataSourceImpl extends TimeSlotRemoteDataSource {
         return 'AVAILABLE';
       case TimeSlotStatus.booked:
         return 'BOOKED';
-      case TimeSlotStatus.unavailable:
-        return 'UNAVAILABLE';
+      case TimeSlotStatus.blocked:
+        return 'BLOCKED';
     }
   }
 

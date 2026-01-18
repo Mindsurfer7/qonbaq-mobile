@@ -8,6 +8,7 @@ class TimeSlotModel {
   final DateTime startTime;
   final DateTime endTime;
   final bool isAvailable;
+  final TimeSlotStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,18 +19,45 @@ class TimeSlotModel {
     required this.startTime,
     required this.endTime,
     required this.isAvailable,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory TimeSlotModel.fromJson(Map<String, dynamic> json) {
+    final isAvailable = json['isAvailable'] as bool? ?? true;
+    final statusString = json['status'] as String?;
+    
+    // Парсим статус из JSON, если не указан - определяем по isAvailable
+    TimeSlotStatus status;
+    if (statusString != null) {
+      switch (statusString.toUpperCase()) {
+        case 'AVAILABLE':
+          status = TimeSlotStatus.available;
+          break;
+        case 'BOOKED':
+          status = TimeSlotStatus.booked;
+          break;
+        case 'BLOCKED':
+        case 'UNAVAILABLE': // Поддержка старого формата
+          status = TimeSlotStatus.blocked;
+          break;
+        default:
+          status = isAvailable ? TimeSlotStatus.available : TimeSlotStatus.blocked;
+      }
+    } else {
+      // Если статус не пришел, определяем по isAvailable
+      status = isAvailable ? TimeSlotStatus.available : TimeSlotStatus.blocked;
+    }
+
     return TimeSlotModel(
       id: json['id'] as String,
       serviceId: json['serviceId'] as String,
       employmentId: json['employmentId'] as String?,
       startTime: DateTime.parse(json['startTime'] as String),
       endTime: DateTime.parse(json['endTime'] as String),
-      isAvailable: json['isAvailable'] as bool? ?? true,
+      isAvailable: isAvailable,
+      status: status,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -43,6 +71,7 @@ class TimeSlotModel {
       startTime: startTime,
       endTime: endTime,
       isAvailable: isAvailable,
+      status: status,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -56,6 +85,7 @@ class TimeSlotModel {
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
       isAvailable: timeSlot.isAvailable,
+      status: timeSlot.status,
       createdAt: timeSlot.createdAt,
       updatedAt: timeSlot.updatedAt,
     );

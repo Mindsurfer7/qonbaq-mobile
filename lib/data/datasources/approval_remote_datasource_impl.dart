@@ -843,9 +843,60 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Сервер возвращает объект подтверждения (confirmation), а не полный Approval
-        // После успешного подтверждения получаем полный Approval по ID
-        return await getApprovalById(id);
+        // При успешном подтверждении сервер возвращает статус 200/201
+        // Может вернуть пустой массив {"data": []} или объект
+        // В любом случае статус 200/201 означает успешное подтверждение
+
+        // Проверяем ответ на наличие объекта или пустого массива
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final data = json['data'];
+
+          // Если data - это объект, парсим его как ApprovalModel
+          if (data is Map) {
+            final apiResponse = ApiResponse.fromJson(
+              json,
+              (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+            );
+            return apiResponse.data;
+          }
+
+          // Если data - это пустой массив, значит подтверждение выполнено успешно
+          // но сервер не возвращает объект. В этом случае получаем Approval по ID.
+          // Если getApprovalById упадет, это не критично - подтверждение уже выполнено успешно
+          if (data is List && data.isEmpty) {
+            try {
+              return await getApprovalById(id);
+            } catch (e) {
+              // Если не удалось получить Approval, но подтверждение было успешным (200/201),
+              // это не критично - операция подтверждения уже выполнена.
+              // Пробрасываем ошибку, чтобы обработчик мог использовать исходный Approval.
+              // Ошибка будет обработана в repository/provider.
+              throw Exception(
+                'Подтверждение выполнено успешно, но не удалось получить обновленные данные: $e',
+              );
+            }
+          }
+        } catch (e) {
+          // Если парсинг ответа подтверждения не удался,
+          // все равно пытаемся получить Approval по ID
+          // так как статус 200/201 означает успех операции
+          if (e.toString().contains('Подтверждение выполнено успешно')) {
+            // Пробрасываем специальную ошибку о том, что подтверждение успешно
+            rethrow;
+          }
+        }
+
+        // В любом случае пытаемся получить обновленный Approval
+        try {
+          return await getApprovalById(id);
+        } catch (e) {
+          // Если не удалось получить Approval, но подтверждение было успешным (200/201),
+          // это не критично - операция подтверждения уже выполнена.
+          throw Exception(
+            'Подтверждение выполнено успешно, но не удалось получить обновленные данные: $e',
+          );
+        }
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {

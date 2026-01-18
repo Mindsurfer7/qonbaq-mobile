@@ -20,6 +20,7 @@ class CreateFixedAssetForm extends StatefulWidget {
   final String? error;
   final List<ValidationError>? validationErrors;
   final Function(String)? onError;
+
   /// При задании — режим редактирования (владелец скрыт, кнопка «Сохранить»)
   final FixedAsset? initialAsset;
 
@@ -78,8 +79,7 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
     if (_formKey.currentState != null) {
       for (final entry in errors.entries) {
         _formKey.currentState?.fields[entry.key]?.didChange(null);
-        _formKey.currentState?.fields[entry.key]
-            ?.invalidate(entry.value);
+        _formKey.currentState?.fields[entry.key]?.invalidate(entry.value);
       }
     }
   }
@@ -266,15 +266,16 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                   return Text(_getAssetTypeName(type));
                 }).toList();
               },
-              items: AssetType.values
-                  .map(
-                    (type) => createStyledDropdownItem<AssetType>(
-                      context: context,
-                      value: type,
-                      child: Text(_getAssetTypeName(type)),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  AssetType.values
+                      .map(
+                        (type) => createStyledDropdownItem<AssetType>(
+                          context: context,
+                          value: type,
+                          child: Text(_getAssetTypeName(type)),
+                        ),
+                      )
+                      .toList(),
               validator: FormBuilderValidators.required(
                 errorText: 'Тип обязателен',
               ),
@@ -290,25 +291,29 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 errorText: _fieldErrors['condition'],
                 errorMaxLines: 2,
               ),
-              initialValue: widget.initialAsset?.condition ?? AssetCondition.good,
+              initialValue:
+                  widget.initialAsset?.condition ?? AssetCondition.good,
               dropdownColor: context.appTheme.backgroundSurface,
               borderRadius: BorderRadius.circular(
                 context.appTheme.borderRadius,
               ),
               selectedItemBuilder: (BuildContext context) {
-                return AssetCondition.values.map<Widget>((AssetCondition condition) {
+                return AssetCondition.values.map<Widget>((
+                  AssetCondition condition,
+                ) {
                   return Text(_getAssetConditionName(condition));
                 }).toList();
               },
-              items: AssetCondition.values
-                  .map(
-                    (condition) => createStyledDropdownItem<AssetCondition>(
-                      context: context,
-                      value: condition,
-                      child: Text(_getAssetConditionName(condition)),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  AssetCondition.values
+                      .map(
+                        (condition) => createStyledDropdownItem<AssetCondition>(
+                          context: context,
+                          value: condition,
+                          child: Text(_getAssetConditionName(condition)),
+                        ),
+                      )
+                      .toList(),
               validator: FormBuilderValidators.required(
                 errorText: 'Состояние обязательно',
               ),
@@ -397,8 +402,9 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
               selectedItemBuilder: (BuildContext context) {
                 return [
                   const Text('Не выбран'),
-                  ...(projectProvider.projects ?? [])
-                      .map((project) => Text(project.name)),
+                  ...(projectProvider.projects ?? []).map(
+                    (project) => Text(project.name),
+                  ),
                 ];
               },
               items: [
@@ -407,14 +413,13 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                   value: null,
                   child: const Text('Не выбран'),
                 ),
-                ...(projectProvider.projects ?? [])
-                    .map(
-                      (project) => createStyledDropdownItem<String?>(
-                        context: context,
-                        value: project.id,
-                        child: Text(project.name),
-                      ),
-                    ),
+                ...(projectProvider.projects ?? []).map(
+                  (project) => createStyledDropdownItem<String?>(
+                    context: context,
+                    value: project.id,
+                    child: Text(project.name),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -441,8 +446,9 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
               selectedItemBuilder: (BuildContext context) {
                 return [
                   const Text('Не выбрано'),
-                  ...(departmentProvider.departments ?? [])
-                      .map((department) => Text(department.name)),
+                  ...(departmentProvider.departments ?? []).map(
+                    (department) => Text(department.name),
+                  ),
                 ];
               },
               items: [
@@ -451,14 +457,13 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                   value: null,
                   child: const Text('Не выбрано'),
                 ),
-                ...(departmentProvider.departments ?? [])
-                    .map(
-                      (department) => createStyledDropdownItem<String?>(
-                        context: context,
-                        value: department.id,
-                        child: Text(department.name),
-                      ),
-                    ),
+                ...(departmentProvider.departments ?? []).map(
+                  (department) => createStyledDropdownItem<String?>(
+                    context: context,
+                    value: department.id,
+                    child: Text(department.name),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -510,7 +515,9 @@ class _CreateFixedAssetFormState extends State<CreateFixedAssetForm> {
                 const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: _handleSubmit,
-                  child: Text(widget.initialAsset != null ? 'Сохранить' : 'Создать'),
+                  child: Text(
+                    widget.initialAsset != null ? 'Сохранить' : 'Создать',
+                  ),
                 ),
               ],
             ),

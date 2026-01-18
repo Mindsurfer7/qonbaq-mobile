@@ -27,7 +27,10 @@ abstract class FixedAssetRepository extends Repository {
   Future<Either<Failure, FixedAsset>> createFixedAsset(FixedAsset asset);
 
   /// Обновить актив
-  Future<Either<Failure, FixedAsset>> updateFixedAsset(String id, FixedAsset asset);
+  Future<Either<Failure, FixedAsset>> updateFixedAsset(
+    String id,
+    FixedAsset asset,
+  );
 
   /// Передать актив (владелец)
   Future<Either<Failure, void>> transferFixedAsset(

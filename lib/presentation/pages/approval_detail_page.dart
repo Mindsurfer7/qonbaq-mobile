@@ -580,6 +580,139 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             ),
                             const SizedBox(height: 16),
 
+                            // Кнопки действий (если можно одобрить)
+                            if (_approval!.status ==
+                                ApprovalStatus.pending) ...[
+                              _canApprove() && !_hasAlreadyDecided()
+                                  ? Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed:
+                                                  _isDeciding
+                                                      ? null
+                                                      : () => _decideApproval(
+                                                        ApprovalDecisionType
+                                                            .rejected,
+                                                      ),
+                                              icon: const Icon(Icons.close),
+                                              label: const Text('Отклонить'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // Кнопка "На доработку" скрыта
+                                          // Expanded(
+                                          //   child: ElevatedButton.icon(
+                                          //     onPressed:
+                                          //         _isDeciding
+                                          //             ? null
+                                          //             : () => _decideApproval(
+                                          //               ApprovalDecisionType
+                                          //                   .requestChanges,
+                                          //             ),
+                                          //     icon: const Icon(Icons.edit),
+                                          //     label: const Text('На доработку'),
+                                          //     style: ElevatedButton.styleFrom(
+                                          //       backgroundColor: Colors.orange,
+                                          //       foregroundColor: Colors.white,
+                                          //       padding: const EdgeInsets.symmetric(
+                                          //         vertical: 16,
+                                          //       ),
+                                          //     ),
+                                          //   ),
+                                          // ),
+                                          // const SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed:
+                                                  _isDeciding
+                                                      ? null
+                                                      : () => _decideApproval(
+                                                        ApprovalDecisionType
+                                                            .approved,
+                                                      ),
+                                              icon: const Icon(Icons.check),
+                                              label: const Text('Одобрить'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      // Кнопка для гендиректора - согласовать с выбором исполнителя
+                                      if (_isGeneralDirector()) ...[
+                                        const SizedBox(height: 8),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed:
+                                                _isDeciding
+                                                    ? null
+                                                    : () =>
+                                                        _decideApprovalWithExecutor(),
+                                            icon: const Icon(Icons.person_add),
+                                            label: const Text(
+                                              'Согласовать с выбором исполнителя',
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  )
+                                  : Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _hasAlreadyDecided()
+                                              ? 'Вы уже приняли решение по этому согласованию'
+                                              : 'У вас нет прав для принятия решения',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              const SizedBox(height: 16),
+                            ],
+
                             // ID согласования
                             _buildInfoRow(
                               'ID согласования',
@@ -744,141 +877,6 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                                   const SizedBox(height: 16),
                                 ],
                               ),
-
-                            // Кнопки действий (если можно одобрить)
-                            if (_approval!.status ==
-                                ApprovalStatus.pending) ...[
-                              const Divider(),
-                              const SizedBox(height: 16),
-                              _canApprove() && !_hasAlreadyDecided()
-                                  ? Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              onPressed:
-                                                  _isDeciding
-                                                      ? null
-                                                      : () => _decideApproval(
-                                                        ApprovalDecisionType
-                                                            .rejected,
-                                                      ),
-                                              icon: const Icon(Icons.close),
-                                              label: const Text('Отклонить'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.red,
-                                                foregroundColor: Colors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 16,
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          // Кнопка "На доработку" скрыта
-                                          // Expanded(
-                                          //   child: ElevatedButton.icon(
-                                          //     onPressed:
-                                          //         _isDeciding
-                                          //             ? null
-                                          //             : () => _decideApproval(
-                                          //               ApprovalDecisionType
-                                          //                   .requestChanges,
-                                          //             ),
-                                          //     icon: const Icon(Icons.edit),
-                                          //     label: const Text('На доработку'),
-                                          //     style: ElevatedButton.styleFrom(
-                                          //       backgroundColor: Colors.orange,
-                                          //       foregroundColor: Colors.white,
-                                          //       padding: const EdgeInsets.symmetric(
-                                          //         vertical: 16,
-                                          //       ),
-                                          //     ),
-                                          //   ),
-                                          // ),
-                                          // const SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              onPressed:
-                                                  _isDeciding
-                                                      ? null
-                                                      : () => _decideApproval(
-                                                        ApprovalDecisionType
-                                                            .approved,
-                                                      ),
-                                              icon: const Icon(Icons.check),
-                                              label: const Text('Одобрить'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.green,
-                                                foregroundColor: Colors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 16,
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Кнопка для гендиректора - согласовать с выбором исполнителя
-                                      if (_isGeneralDirector()) ...[
-                                        const SizedBox(height: 8),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton.icon(
-                                            onPressed:
-                                                _isDeciding
-                                                    ? null
-                                                    : () =>
-                                                        _decideApprovalWithExecutor(),
-                                            icon: const Icon(Icons.person_add),
-                                            label: const Text(
-                                              'Согласовать с выбором исполнителя',
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.blue,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 16,
-                                                  ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  )
-                                  : Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.info_outline,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _hasAlreadyDecided()
-                                              ? 'Вы уже приняли решение по этому согласованию'
-                                              : 'У вас нет прав для принятия решения',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade700,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              const SizedBox(height: 16),
-                            ],
 
                             // Комментарии
                             CommentSection(

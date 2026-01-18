@@ -31,13 +31,16 @@ class GetFixedAssetsParams {
 }
 
 /// Use Case для получения списка основных средств
-class GetFixedAssets implements UseCase<PaginatedResult<FixedAsset>, GetFixedAssetsParams> {
+class GetFixedAssets
+    implements UseCase<PaginatedResult<FixedAsset>, GetFixedAssetsParams> {
   final FixedAssetRepository repository;
 
   GetFixedAssets(this.repository);
 
   @override
-  Future<Either<Failure, PaginatedResult<FixedAsset>>> call(GetFixedAssetsParams params) async {
+  Future<Either<Failure, PaginatedResult<FixedAsset>>> call(
+    GetFixedAssetsParams params,
+  ) async {
     return await repository.getFixedAssets(
       businessId: params.businessId,
       projectId: params.projectId,

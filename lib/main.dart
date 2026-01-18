@@ -194,12 +194,15 @@ import 'package:qonbaq/domain/usecases/add_inventory.dart';
 import 'package:qonbaq/domain/usecases/add_photo.dart';
 import 'package:qonbaq/domain/usecases/write_off_fixed_asset.dart';
 import 'package:qonbaq/domain/usecases/archive_fixed_asset.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Инициализируем данные локали для форматирования дат
+  await initializeDateFormatting('ru', null);
   // Загружаем .env файл перед запуском приложения
   await dotenv.load(fileName: '.env');
   // Загружаем конфигурацию маршрутов
@@ -416,7 +419,9 @@ class MyApp extends StatelessWidget {
     );
 
     // Инициализация зависимостей для Inbox Items
-    final inboxRemoteDataSource = InboxRemoteDataSourceImpl(apiClient: apiClient);
+    final inboxRemoteDataSource = InboxRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final InboxRepository inboxRepository = InboxRepositoryImpl(
       remoteDataSource: inboxRemoteDataSource,
     );
@@ -442,19 +447,25 @@ class MyApp extends StatelessWidget {
     );
 
     // Инициализация зависимостей для услуг
-    final serviceRemoteDataSource = ServiceRemoteDataSourceImpl(apiClient: apiClient);
+    final serviceRemoteDataSource = ServiceRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final ServiceRepository serviceRepository = ServiceRepositoryImpl(
       remoteDataSource: serviceRemoteDataSource,
     );
 
     // Инициализация зависимостей для ресурсов
-    final resourceRemoteDataSource = ResourceRemoteDataSourceImpl(apiClient: apiClient);
+    final resourceRemoteDataSource = ResourceRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final ResourceRepository resourceRepository = ResourceRepositoryImpl(
       remoteDataSource: resourceRemoteDataSource,
     );
 
     // Инициализация зависимостей для тайм-слотов
-    final timeSlotRemoteDataSource = TimeSlotRemoteDataSourceImpl(apiClient: apiClient);
+    final timeSlotRemoteDataSource = TimeSlotRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
     final TimeSlotRepository timeSlotRepository = TimeSlotRepositoryImpl(
       remoteDataSource: timeSlotRemoteDataSource,
     );
@@ -564,136 +575,141 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: themeProvider.currentTheme.themeData,
             initialRoute: '/',
-        routes: {
-          // Стартовая страница
-          '/': (context) => const StartPage(),
-          // Выбор workspace (семья или бизнес)
-          '/workspace-selector': (context) => const WorkspaceSelectorPage(),
-          // Регистрация с invite кодом (обрабатывает /register?invite=...)
-          '/register': (context) => const RegisterPage(),
-          // Авторизация
-          '/auth': (context) {
-            final inviteCode = DeepLinkService.instance.pendingInviteCode;
-            return AuthPage(inviteCode: inviteCode);
-          },
-          '/home': (context) => const HomePage(),
-          // Главная бизнес-страница
-          '/business': (context) => const BusinessMainPage(),
-          // Операционный блок
-          '/business/operational': (context) => const OperationalBlockPage(),
-          '/business/operational/crm': (context) => const CrmPage(),
-          '/business/operational/crm/sales_funnel':
-              (context) => const SalesFunnelPage(),
-          '/business/operational/crm/clients_list':
-              (context) => const ClientsListPage(),
-          '/business/operational/crm/clients_list/client_card':
-              (context) => const ClientCardPage(),
-          '/business/operational/crm/clients_list/client_card/client_requisites':
-              (context) => const ClientRequisitesPage(),
-          '/business/operational/crm/clients_list/client_card/client_deal':
-              (context) => const ClientDealPage(),
-          '/business/operational/crm/tasks_crm':
-              (context) => const TasksCrmPage(),
-          '/business/operational/tasks':
-              (context) => const OperationalTasksPage(),
-          '/business/operational/tasks/task_card':
-              (context) => const TaskCardPage(),
-          '/business/operational/tasks/task_card/control_points':
-              (context) => const ControlPointsPage(),
-          '/business/operational/business_processes':
-              (context) => const BusinessProcessesPage(),
-          '/business/operational/construction':
-              (context) => const ConstructionPage(),
-          '/business/operational/construction/production':
-              (context) => const ProductionPage(),
-          '/business/operational/construction/material_resources':
-              (context) => const MaterialResourcesPage(),
-          '/business/operational/construction/human_resources':
-              (context) => const HumanResourcesPage(),
-          '/business/operational/monitor_panel':
-              (context) => const MonitorPanelPage(),
-          '/business/operational/services-admin':
-              (context) => const ServicesAdminPage(),
-          '/business/operational/services-admin/service-detail': (context) {
-            final service = ModalRoute.of(context)!.settings.arguments as Service;
-            return ServiceDetailPage(service: service);
-          },
-          // Финансовый блок
-          '/business/financial': (context) => const FinancialBlockPage(),
-          '/business/financial/payment_requests':
-              (context) => const PaymentRequestsPage(),
-          '/business/financial/income_expense':
-              (context) => const IncomeExpensePage(),
-          // Административно-хозяйственный блок
-          '/business/admin': (context) => const AdminBlockPage(),
-          '/business/admin/document_management':
-              (context) => const DocumentManagementPage(),
-          '/business/admin/document_management/employee_card':
-              (context) => const EmployeeCardPage(),
-          '/business/admin/imprest': (context) => const ImprestPage(),
-          '/business/admin/imprest/assets_card':
-              (context) => const AssetsCardPage(),
-          '/business/admin/fixed_assets':
-              (context) => const FixedAssetsPage(),
-          '/business/admin/fixed_assets/detail': (context) {
-            final assetId =
-                ModalRoute.of(context)!.settings.arguments as String?;
-            if (assetId == null) {
-              return const Scaffold(
-                body: Center(child: Text('ID основного средства не указан')),
-              );
-            }
-            return FixedAssetDetailPage(assetId: assetId);
-          },
-          '/business/admin/hr_documents': (context) => const HrDocumentsPage(),
-          '/business/admin/staff_schedule':
-              (context) => const StaffSchedulePage(),
-          '/business/admin/timesheet': (context) => const TimesheetPage(),
-          // Аналитический блок
-          '/business/analytics': (context) => const AnalyticsBlockPage(),
-          // Общие разделы
-          '/start_work_day': (context) => const StartWorkDayPage(),
-          '/chats_email': (context) => const ChatsEmailPage(),
-          '/calendar': (context) => const CalendarPage(),
-          '/profile_settings': (context) => const ProfileSettingsPage(),
-          '/organizational_structure':
-              (context) => const OrganizationalStructurePage(),
-          '/department_detail': (context) {
-            final departmentId =
-                ModalRoute.of(context)!.settings.arguments as String?;
-            if (departmentId == null) {
-              return const Scaffold(
-                body: Center(child: Text('ID подразделения не указан')),
-              );
-            }
-            return DepartmentDetailPage(departmentId: departmentId);
-          },
-          '/tasks': (context) => const TasksPage(),
-          '/tasks/detail': (context) {
-            final taskId =
-                ModalRoute.of(context)!.settings.arguments as String?;
-            if (taskId == null) {
-              return const Scaffold(
-                body: Center(child: Text('ID задачи не указан')),
-              );
-            }
-            return TaskDetailPage(taskId: taskId);
-          },
-          '/approvals': (context) => const ApprovalsPage(),
-          '/roles-assignment': (context) => const RolesAssignmentPage(),
-          '/approvals/detail': (context) {
-            final approvalId =
-                ModalRoute.of(context)!.settings.arguments as String?;
-            if (approvalId == null) {
-              return const Scaffold(
-                body: Center(child: Text('ID согласования не указан')),
-              );
-            }
-            return ApprovalDetailPage(approvalId: approvalId);
-          },
-          '/remember': (context) => const RememberPage(),
-          '/favorites': (context) => const FavoritesPage(),
-        },
+            routes: {
+              // Стартовая страница
+              '/': (context) => const StartPage(),
+              // Выбор workspace (семья или бизнес)
+              '/workspace-selector': (context) => const WorkspaceSelectorPage(),
+              // Регистрация с invite кодом (обрабатывает /register?invite=...)
+              '/register': (context) => const RegisterPage(),
+              // Авторизация
+              '/auth': (context) {
+                final inviteCode = DeepLinkService.instance.pendingInviteCode;
+                return AuthPage(inviteCode: inviteCode);
+              },
+              '/home': (context) => const HomePage(),
+              // Главная бизнес-страница
+              '/business': (context) => const BusinessMainPage(),
+              // Операционный блок
+              '/business/operational':
+                  (context) => const OperationalBlockPage(),
+              '/business/operational/crm': (context) => const CrmPage(),
+              '/business/operational/crm/sales_funnel':
+                  (context) => const SalesFunnelPage(),
+              '/business/operational/crm/clients_list':
+                  (context) => const ClientsListPage(),
+              '/business/operational/crm/clients_list/client_card':
+                  (context) => const ClientCardPage(),
+              '/business/operational/crm/clients_list/client_card/client_requisites':
+                  (context) => const ClientRequisitesPage(),
+              '/business/operational/crm/clients_list/client_card/client_deal':
+                  (context) => const ClientDealPage(),
+              '/business/operational/crm/tasks_crm':
+                  (context) => const TasksCrmPage(),
+              '/business/operational/tasks':
+                  (context) => const OperationalTasksPage(),
+              '/business/operational/tasks/task_card':
+                  (context) => const TaskCardPage(),
+              '/business/operational/tasks/task_card/control_points':
+                  (context) => const ControlPointsPage(),
+              '/business/operational/business_processes':
+                  (context) => const BusinessProcessesPage(),
+              '/business/operational/construction':
+                  (context) => const ConstructionPage(),
+              '/business/operational/construction/production':
+                  (context) => const ProductionPage(),
+              '/business/operational/construction/material_resources':
+                  (context) => const MaterialResourcesPage(),
+              '/business/operational/construction/human_resources':
+                  (context) => const HumanResourcesPage(),
+              '/business/operational/monitor_panel':
+                  (context) => const MonitorPanelPage(),
+              '/business/operational/services-admin':
+                  (context) => const ServicesAdminPage(),
+              '/business/operational/services-admin/service-detail': (context) {
+                final service =
+                    ModalRoute.of(context)!.settings.arguments as Service;
+                return ServiceDetailPage(service: service);
+              },
+              // Финансовый блок
+              '/business/financial': (context) => const FinancialBlockPage(),
+              '/business/financial/payment_requests':
+                  (context) => const PaymentRequestsPage(),
+              '/business/financial/income_expense':
+                  (context) => const IncomeExpensePage(),
+              // Административно-хозяйственный блок
+              '/business/admin': (context) => const AdminBlockPage(),
+              '/business/admin/document_management':
+                  (context) => const DocumentManagementPage(),
+              '/business/admin/document_management/employee_card':
+                  (context) => const EmployeeCardPage(),
+              '/business/admin/imprest': (context) => const ImprestPage(),
+              '/business/admin/imprest/assets_card':
+                  (context) => const AssetsCardPage(),
+              '/business/admin/fixed_assets':
+                  (context) => const FixedAssetsPage(),
+              '/business/admin/fixed_assets/detail': (context) {
+                final assetId =
+                    ModalRoute.of(context)!.settings.arguments as String?;
+                if (assetId == null) {
+                  return const Scaffold(
+                    body: Center(
+                      child: Text('ID основного средства не указан'),
+                    ),
+                  );
+                }
+                return FixedAssetDetailPage(assetId: assetId);
+              },
+              '/business/admin/hr_documents':
+                  (context) => const HrDocumentsPage(),
+              '/business/admin/staff_schedule':
+                  (context) => const StaffSchedulePage(),
+              '/business/admin/timesheet': (context) => const TimesheetPage(),
+              // Аналитический блок
+              '/business/analytics': (context) => const AnalyticsBlockPage(),
+              // Общие разделы
+              '/start_work_day': (context) => const StartWorkDayPage(),
+              '/chats_email': (context) => const ChatsEmailPage(),
+              '/calendar': (context) => const CalendarPage(),
+              '/profile_settings': (context) => const ProfileSettingsPage(),
+              '/organizational_structure':
+                  (context) => const OrganizationalStructurePage(),
+              '/department_detail': (context) {
+                final departmentId =
+                    ModalRoute.of(context)!.settings.arguments as String?;
+                if (departmentId == null) {
+                  return const Scaffold(
+                    body: Center(child: Text('ID подразделения не указан')),
+                  );
+                }
+                return DepartmentDetailPage(departmentId: departmentId);
+              },
+              '/tasks': (context) => const TasksPage(),
+              '/tasks/detail': (context) {
+                final taskId =
+                    ModalRoute.of(context)!.settings.arguments as String?;
+                if (taskId == null) {
+                  return const Scaffold(
+                    body: Center(child: Text('ID задачи не указан')),
+                  );
+                }
+                return TaskDetailPage(taskId: taskId);
+              },
+              '/approvals': (context) => const ApprovalsPage(),
+              '/roles-assignment': (context) => const RolesAssignmentPage(),
+              '/approvals/detail': (context) {
+                final approvalId =
+                    ModalRoute.of(context)!.settings.arguments as String?;
+                if (approvalId == null) {
+                  return const Scaffold(
+                    body: Center(child: Text('ID согласования не указан')),
+                  );
+                }
+                return ApprovalDetailPage(approvalId: approvalId);
+              },
+              '/remember': (context) => const RememberPage(),
+              '/favorites': (context) => const FavoritesPage(),
+            },
           );
         },
       ),
