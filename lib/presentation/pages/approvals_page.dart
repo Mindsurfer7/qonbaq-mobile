@@ -5,6 +5,7 @@ import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/services/voice_context.dart';
 import '../../core/utils/form_cache_storage.dart';
+import '../../core/utils/unassigned_roles_popup_storage.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
@@ -36,7 +37,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _pendingApprovals = []; // Ожидают (status = PENDING)
   List<Approval> _canApproveApprovals =
       []; // Требуют решения (canApprove = true)
-  List<Approval> _myApprovals = []; // Мои согласования (createdBy = currentUser)
+  List<Approval> _myApprovals =
+      []; // Мои согласования (createdBy = currentUser)
   List<Approval> _allCanApproveApprovals =
       []; // Все согласования в бизнесе (showAll=true)
   List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
@@ -157,10 +159,14 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _isLoadingAllApprovals = false;
           _allCanApproveApprovals = result.approvals;
         });
-        
+
         // Показываем поп-ап о неназначенных ролях, если они есть
-        if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-          _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+        if (result.unassignedRoles != null &&
+            result.unassignedRoles!.isNotEmpty) {
+          _showUnassignedRolesPopup(
+            result.unassignedRoles!,
+            result.message ?? '',
+          );
         }
       },
     );
@@ -220,7 +226,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         final result = await getApprovalsUseCase.call(
           GetApprovalsParams(businessId: selectedBusiness.id, canApprove: true),
         );
-        
+
         // Загружаем "Мои согласования" отдельно
         final myApprovalsResult = await getApprovalsUseCase.call(
           GetApprovalsParams(
@@ -228,7 +234,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             createdBy: currentUser.id,
           ),
         );
-        
+
         result.fold(
           (failure) {
             setState(() {
@@ -241,14 +247,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
               _isLoading = false;
               _canApproveApprovals = result.approvals;
             });
-            
+
             // Показываем поп-ап о неназначенных ролях, если они есть
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            if (result.unassignedRoles != null &&
+                result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(
+                result.unassignedRoles!,
+                result.message ?? '',
+              );
             }
           },
         );
-        
+
         // Обрабатываем результат загрузки "Мои согласования"
         myApprovalsResult.fold(
           (failure) {
@@ -282,30 +292,40 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         );
 
         List<Approval> allPending = [];
-        draftResult.fold(
-          (failure) => _error = _getErrorMessage(failure),
-          (result) {
-            allPending.addAll(result.approvals);
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
-            }
-          },
-        );
-        pendingResult.fold(
-          (failure) => _error = _getErrorMessage(failure),
-          (result) {
-            allPending.addAll(result.approvals);
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
-            }
-          },
-        );
+        draftResult.fold((failure) => _error = _getErrorMessage(failure), (
+          result,
+        ) {
+          allPending.addAll(result.approvals);
+          if (result.unassignedRoles != null &&
+              result.unassignedRoles!.isNotEmpty) {
+            _showUnassignedRolesPopup(
+              result.unassignedRoles!,
+              result.message ?? '',
+            );
+          }
+        });
+        pendingResult.fold((failure) => _error = _getErrorMessage(failure), (
+          result,
+        ) {
+          allPending.addAll(result.approvals);
+          if (result.unassignedRoles != null &&
+              result.unassignedRoles!.isNotEmpty) {
+            _showUnassignedRolesPopup(
+              result.unassignedRoles!,
+              result.message ?? '',
+            );
+          }
+        });
         inExecutionResult.fold(
           (failure) => _error = _getErrorMessage(failure),
           (result) {
             allPending.addAll(result.approvals);
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
+            if (result.unassignedRoles != null &&
+                result.unassignedRoles!.isNotEmpty) {
+              _showUnassignedRolesPopup(
+                result.unassignedRoles!,
+                result.message ?? '',
+              );
             }
           },
         );
@@ -340,33 +360,42 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         List<Approval> approved = [];
         List<Approval> rejected = [];
 
-        completedResult.fold(
-          (failure) => _error = _getErrorMessage(failure),
-          (result) {
-            completed = result.approvals;
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
-            }
-          },
-        );
-        approvedResult.fold(
-          (failure) => _error = _getErrorMessage(failure),
-          (result) {
-            approved = result.approvals;
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
-            }
-          },
-        );
-        rejectedResult.fold(
-          (failure) => _error = _getErrorMessage(failure),
-          (result) {
-            rejected = result.approvals;
-            if (result.unassignedRoles != null && result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(result.unassignedRoles!, result.message ?? '');
-            }
-          },
-        );
+        completedResult.fold((failure) => _error = _getErrorMessage(failure), (
+          result,
+        ) {
+          completed = result.approvals;
+          if (result.unassignedRoles != null &&
+              result.unassignedRoles!.isNotEmpty) {
+            _showUnassignedRolesPopup(
+              result.unassignedRoles!,
+              result.message ?? '',
+            );
+          }
+        });
+        approvedResult.fold((failure) => _error = _getErrorMessage(failure), (
+          result,
+        ) {
+          approved = result.approvals;
+          if (result.unassignedRoles != null &&
+              result.unassignedRoles!.isNotEmpty) {
+            _showUnassignedRolesPopup(
+              result.unassignedRoles!,
+              result.message ?? '',
+            );
+          }
+        });
+        rejectedResult.fold((failure) => _error = _getErrorMessage(failure), (
+          result,
+        ) {
+          rejected = result.approvals;
+          if (result.unassignedRoles != null &&
+              result.unassignedRoles!.isNotEmpty) {
+            _showUnassignedRolesPopup(
+              result.unassignedRoles!,
+              result.message ?? '',
+            );
+          }
+        });
 
         setState(() {
           _isLoading = false;
@@ -399,67 +428,84 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     return 'Произошла ошибка';
   }
 
-  void _showUnassignedRolesPopup(List<UnassignedRoleInfo> roles, String message) {
+  void _showUnassignedRolesPopup(
+    List<UnassignedRoleInfo> roles,
+    String message,
+  ) async {
     // Используем флаг, чтобы не показывать несколько диалогов одновременно
     if (!mounted) return;
-    
+
+    // Проверяем, нужно ли скрывать поп-ап
+    final shouldHide = await UnassignedRolesPopupStorage.shouldHidePopup();
+    if (shouldHide) {
+      return;
+    }
+
+    // Увеличиваем счетчик и проверяем, нужно ли показывать поп-ап
+    final shouldShow = await UnassignedRolesPopupStorage.incrementShowCount();
+    if (!shouldShow) {
+      return;
+    }
+
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text('Неназначенные роли'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(child: Text('Неназначенные роли')),
+              ],
             ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              ...roles.map((role) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person_off, size: 20, color: Colors.orange),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            role.name,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(message, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(height: 16),
+                  ...roles.map(
+                    (role) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person_off,
+                            size: 20,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              role.name,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Закрыть'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  Navigator.of(context).pushNamed('/roles-assignment');
+                },
+                child: const Text('Назначить роли'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Закрыть'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.of(context).pushNamed('/roles-assignment');
-            },
-            child: const Text('Назначить роли'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -490,8 +536,15 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             businessId: selectedBusiness.id,
             currentUserId: currentUser.id,
             onSuccess: () {
-              // Обновляем список согласований после успешного создания
-              _loadApprovals();
+              // Переключаемся на таб "Ожидают" после успешного создания
+              // Если есть права: таб "Ожидают" имеет индекс 1
+              // Если нет прав: таб "Ожидают" имеет индекс 0
+              final pendingTabIndex = _canApproveInCurrentBusiness ? 1 : 0;
+              if (_tabController.index != pendingTabIndex) {
+                _tabController.animateTo(pendingTabIndex);
+              }
+              // Загружаем данные для таба "Ожидают" после успешного создания
+              _loadApprovalsForTab(pendingTabIndex);
             },
             onApprovalCreated: (approval) {
               // Оптимистично добавляем созданное согласование в список
@@ -658,10 +711,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 color: Colors.red.shade50,
                 child: ListTile(
-                  leading: Icon(
-                    Icons.help_outline,
-                    color: Colors.red.shade700,
-                  ),
+                  leading: Icon(Icons.help_outline, color: Colors.red.shade700),
                   title: const Text(
                     'Подтвердить получение средств',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -696,9 +746,10 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                   onTap: () {
                     showDialog(
                       context: context,
-                      builder: (context) => ConfirmationDialog(
-                        pendingConfirmation: pendingConfirmation,
-                      ),
+                      builder:
+                          (context) => ConfirmationDialog(
+                            pendingConfirmation: pendingConfirmation,
+                          ),
                     );
                   },
                 ),
@@ -801,9 +852,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 ),
               ),
             ),
-            ..._myApprovals.map(
-              (approval) => _buildApprovalCard(approval),
-            ),
+            ..._myApprovals.map((approval) => _buildApprovalCard(approval)),
           ],
           // Аккордеон для всех согласований
           Padding(
@@ -954,8 +1003,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 textAlign: TextAlign.center,
               ),
             )
-          else
-          if (_completedApprovals.isNotEmpty) ...[
+          else if (_completedApprovals.isNotEmpty) ...[
             _buildSectionHeader('Завершено', _completedApprovals.length),
             ..._completedApprovals.map(_buildApprovalCard),
           ],
@@ -1134,7 +1182,9 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
           _templates = result.templates.where((t) => t.isActive).toList();
         });
         // Показываем предупреждение о недостающих ролях, если они есть
-        if (result.totalMissing != null && result.totalMissing! > 0 && result.missingRoles != null) {
+        if (result.totalMissing != null &&
+            result.totalMissing! > 0 &&
+            result.missingRoles != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showMissingRolesDialog(result.missingRoles!);
           });
@@ -1146,10 +1196,10 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   /// Сохранить данные формы в кэш
   Future<void> _saveFormToCache(String templateCode) async {
     if (_formKey.currentState == null) return;
-    
+
     _formKey.currentState!.save();
     final formValues = _formKey.currentState!.value;
-    
+
     // Преобразуем значения формы для сохранения (исключаем объекты шаблонов)
     final cacheData = <String, dynamic>{};
     formValues.forEach((key, value) {
@@ -1163,22 +1213,24 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
         cacheData[key] = value;
       }
     });
-    
+
     await FormCacheStorage.instance.saveFormData(templateCode, cacheData);
   }
 
   /// Загрузить данные формы из кэша
   Future<void> _loadFormFromCache(String templateCode) async {
     if (_formKey.currentState == null) return;
-    
-    final cacheData = await FormCacheStorage.instance.loadFormData(templateCode);
+
+    final cacheData = await FormCacheStorage.instance.loadFormData(
+      templateCode,
+    );
     if (cacheData == null) return;
-    
+
     // Восстанавливаем значения в форму
     for (var entry in cacheData.entries) {
       final fieldName = entry.key;
       var value = entry.value;
-      
+
       // Если это поле template, ищем шаблон по коду
       if (fieldName == 'template' && value is String) {
         final template = _templates.firstWhere(
@@ -1190,7 +1242,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
         // Восстанавливаем DateTime из строки
         value = DateTime.tryParse(value);
       }
-      
+
       final field = _formKey.currentState?.fields[fieldName];
       if (field != null && value != null) {
         // Для контроллеров текстовых полей обновляем контроллер
@@ -1202,7 +1254,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
         field.didChange(value);
       }
     }
-    
+
     setState(() {});
   }
 
@@ -1226,7 +1278,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
     // Сохраняем значения формы перед валидацией
     _formKey.currentState!.save();
-    
+
     // Сохраняем в кэш перед отправкой
     if (_selectedTemplate != null) {
       await _saveFormToCache(_selectedTemplate!.code);
@@ -1415,41 +1467,45 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   void _showMissingRolesDialog(List<MissingRoleInfo> missingRoles) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text('Отсутствуют назначенные роли'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(child: Text('Отсутствуют назначенные роли')),
+              ],
             ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Для работы согласований необходимо назначить сотрудников на следующие роли:',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              ...missingRoles.map((role) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          role.roleName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Для работы согласований необходимо назначить сотрудников на следующие роли:',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  ...missingRoles.map(
+                    (role) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            role.roleName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...role.affectedTemplates.map((template) => Padding(
-                              padding: const EdgeInsets.only(left: 16, bottom: 4),
+                          const SizedBox(height: 8),
+                          ...role.affectedTemplates.map(
+                            (template) => Padding(
+                              padding: const EdgeInsets.only(
+                                left: 16,
+                                bottom: 4,
+                              ),
                               child: Row(
                                 children: [
                                   const Icon(Icons.description, size: 16),
@@ -1462,27 +1518,29 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                                   ),
                                 ],
                               ),
-                            )),
-                      ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Закрыть'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  Navigator.of(context).pushNamed('/roles-assignment');
+                },
+                child: const Text('Перейти к распределению ролей'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Закрыть'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.of(context).pushNamed('/roles-assignment');
-            },
-            child: const Text('Перейти к распределению ролей'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1565,10 +1623,11 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                         }).toList(),
                     onChanged: (value) async {
                       // Сохраняем данные старого шаблона перед сменой
-                      if (_selectedTemplate != null && _formKey.currentState != null) {
+                      if (_selectedTemplate != null &&
+                          _formKey.currentState != null) {
                         await _saveFormToCache(_selectedTemplate!.code);
                       }
-                      
+
                       setState(() {
                         final oldTemplate = _selectedTemplate;
                         _selectedTemplate = value;
@@ -1598,7 +1657,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                           }
                         }
                       });
-                      
+
                       // Загружаем данные из кэша для нового шаблона
                       if (value != null) {
                         WidgetsBinding.instance.addPostFrameCallback((_) async {
