@@ -157,10 +157,21 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   }
 
   @override
-  Future<ApprovalTemplateModel> getTemplateByCode(String code) async {
+  Future<ApprovalTemplateModel> getTemplateByCode(
+    String code, {
+    String? businessId,
+  }) async {
     try {
+      final queryParams = <String, String>{};
+      if (businessId != null) queryParams['businessId'] = businessId;
+
+      final queryString =
+          queryParams.isEmpty
+              ? ''
+              : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+
       final response = await apiClient.get(
-        '/api/approvals/templates/code/$code',
+        '/api/approvals/templates/code/$code$queryString',
         headers: _getAuthHeaders(),
       );
 

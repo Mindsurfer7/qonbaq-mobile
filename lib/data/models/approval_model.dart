@@ -7,11 +7,13 @@ import '../../domain/entities/approval_comment.dart';
 import '../../domain/entities/approval_attachment.dart';
 import '../../domain/entities/approval_decision.dart';
 import '../../domain/entities/department.dart';
+import '../../domain/entities/task.dart';
 import '../models/model.dart';
 import 'approval_template_model.dart';
 import 'approval_comment_model.dart';
 import 'approval_attachment_model.dart';
 import 'approval_decision_model.dart';
+import 'task_model.dart';
 import 'dart:convert';
 
 /// Модель согласования
@@ -44,6 +46,7 @@ class ApprovalModel extends Approval implements Model {
     super.attachments,
     super.approvers,
     super.potentialExecutors,
+    super.executionTasks,
   });
 
   factory ApprovalModel.fromJson(Map<String, dynamic> json) {
@@ -199,6 +202,15 @@ class ApprovalModel extends Approval implements Model {
       }).toList();
     }
 
+    // Задачи, связанные с согласованием
+    List<Task>? executionTasks;
+    if (json['executionTasks'] != null) {
+      final tasksList = json['executionTasks'] as List<dynamic>;
+      executionTasks = tasksList.map((t) {
+        return TaskModel.fromJson(t as Map<String, dynamic>).toEntity();
+      }).toList();
+    }
+
     // Парсинг типа процесса
     ApprovalProcessType? processType;
     if (json['processType'] != null) {
@@ -280,6 +292,7 @@ class ApprovalModel extends Approval implements Model {
       attachments: attachments,
       approvers: approvers,
       potentialExecutors: potentialExecutors,
+      executionTasks: executionTasks,
     );
   }
 
@@ -421,6 +434,7 @@ class ApprovalModel extends Approval implements Model {
       attachments: attachments,
       approvers: approvers,
       potentialExecutors: potentialExecutors,
+      executionTasks: executionTasks,
     );
   }
 
@@ -453,6 +467,7 @@ class ApprovalModel extends Approval implements Model {
       attachments: approval.attachments,
       approvers: approval.approvers,
       potentialExecutors: approval.potentialExecutors,
+      executionTasks: approval.executionTasks,
     );
   }
 }

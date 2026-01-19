@@ -166,6 +166,69 @@ class _OrganizationalStructurePageState
                 color: Colors.grey.shade300,
                 margin: const EdgeInsets.symmetric(vertical: 8),
               ),
+              // Секция распределения ролей
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pushNamed('/roles-assignment');
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).primaryColor.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.assignment_ind,
+                          color: Theme.of(context).primaryColor,
+                          size: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Распределение ролей',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Назначение ролей сотрудникам',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          color: Theme.of(context).primaryColor,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Разделитель
+              Container(
+                height: 1,
+                color: Colors.grey.shade300,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+              ),
               // Заголовок графа
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),

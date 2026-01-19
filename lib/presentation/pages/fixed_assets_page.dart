@@ -59,12 +59,21 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
   }
 
   void _loadFilterData() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     if (selectedBusiness == null) return;
     final businessId = selectedBusiness.id;
-    Provider.of<ProjectProvider>(context, listen: false).loadProjects(businessId);
-    Provider.of<DepartmentProvider>(context, listen: false).loadDepartments(businessId);
+    Provider.of<ProjectProvider>(
+      context,
+      listen: false,
+    ).loadProjects(businessId);
+    Provider.of<DepartmentProvider>(
+      context,
+      listen: false,
+    ).loadDepartments(businessId);
     _loadEmployees(businessId);
   }
 
@@ -102,7 +111,10 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
   }
 
   Future<void> _loadAssets() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
 
     if (selectedBusiness == null) {
@@ -115,7 +127,10 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       _error = null;
     });
 
-    final getFixedAssetsUseCase = Provider.of<GetFixedAssets>(context, listen: false);
+    final getFixedAssetsUseCase = Provider.of<GetFixedAssets>(
+      context,
+      listen: false,
+    );
     final result = await getFixedAssetsUseCase.call(
       GetFixedAssetsParams(
         businessId: selectedBusiness.id,
@@ -133,9 +148,10 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     result.fold(
       (failure) {
         setState(() {
-          _error = failure.message.isNotEmpty
-              ? failure.message
-              : 'Ошибка при загрузке основных средств';
+          _error =
+              failure.message.isNotEmpty
+                  ? failure.message
+                  : 'Ошибка при загрузке основных средств';
           _isLoading = false;
         });
       },
@@ -181,32 +197,48 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       _meta != null && (_meta!.totalPages ?? 1) > 1;
 
   void _showCreateAssetDialog() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
-    final createFixedAssetUseCase = Provider.of<CreateFixedAsset>(context, listen: false);
+    final createFixedAssetUseCase = Provider.of<CreateFixedAsset>(
+      context,
+      listen: false,
+    );
     final userRepository = Provider.of<UserRepository>(context, listen: false);
 
     if (selectedBusiness == null) return;
 
     showDialog(
       context: context,
-      builder: (context) => _CreateFixedAssetDialog(
-        businessId: selectedBusiness.id,
-        userRepository: userRepository,
-        createFixedAssetUseCase: createFixedAssetUseCase,
-        onSuccess: () {
-          _loadAssets();
-        },
-      ),
+      builder:
+          (context) => _CreateFixedAssetDialog(
+            businessId: selectedBusiness.id,
+            userRepository: userRepository,
+            createFixedAssetUseCase: createFixedAssetUseCase,
+            onSuccess: () {
+              _loadAssets();
+            },
+          ),
     );
   }
 
   void _showTransferDialog() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final createApprovalUseCase = Provider.of<CreateApproval>(context, listen: false);
-    final getApprovalTemplateByCode = Provider.of<GetApprovalTemplateByCode>(context, listen: false);
+    final createApprovalUseCase = Provider.of<CreateApproval>(
+      context,
+      listen: false,
+    );
+    final getApprovalTemplateByCode = Provider.of<GetApprovalTemplateByCode>(
+      context,
+      listen: false,
+    );
 
     if (selectedBusiness == null) return;
     final currentUserId = authProvider.user?.id;
@@ -214,15 +246,16 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
 
     showDialog(
       context: context,
-      builder: (context) => _TransferFixedAssetDialog(
-        businessId: selectedBusiness.id,
-        currentUserId: currentUserId,
-        createApprovalUseCase: createApprovalUseCase,
-        getApprovalTemplateByCode: getApprovalTemplateByCode,
-        onSuccess: () {
-          _loadAssets();
-        },
-      ),
+      builder:
+          (context) => _TransferFixedAssetDialog(
+            businessId: selectedBusiness.id,
+            currentUserId: currentUserId,
+            createApprovalUseCase: createApprovalUseCase,
+            getApprovalTemplateByCode: getApprovalTemplateByCode,
+            onSuccess: () {
+              _loadAssets();
+            },
+          ),
     );
   }
 
@@ -252,10 +285,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadAssets,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAssets),
         ],
       ),
       body: Column(
@@ -438,10 +468,8 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           items: [
             const DropdownMenuItem(value: null, child: Text('Все')),
             ...AssetType.values.map(
-              (t) => DropdownMenuItem(
-                value: t,
-                child: Text(_getAssetTypeName(t)),
-              ),
+              (t) =>
+                  DropdownMenuItem(value: t, child: Text(_getAssetTypeName(t))),
             ),
           ],
           onChanged: (v) => setState(() => _filterType = v),
@@ -458,10 +486,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            TextButton(
-              onPressed: _resetFilters,
-              child: const Text('Сбросить'),
-            ),
+            TextButton(onPressed: _resetFilters, child: const Text('Сбросить')),
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: _applyFilters,
@@ -498,7 +523,6 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       ),
     );
   }
-
 }
 
 /// Диалог создания основного средства
@@ -516,7 +540,8 @@ class _CreateFixedAssetDialog extends StatefulWidget {
   });
 
   @override
-  State<_CreateFixedAssetDialog> createState() => _CreateFixedAssetDialogState();
+  State<_CreateFixedAssetDialog> createState() =>
+      _CreateFixedAssetDialogState();
 }
 
 class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
@@ -643,7 +668,8 @@ class _TransferFixedAssetDialog extends StatefulWidget {
   });
 
   @override
-  State<_TransferFixedAssetDialog> createState() => _TransferFixedAssetDialogState();
+  State<_TransferFixedAssetDialog> createState() =>
+      _TransferFixedAssetDialogState();
 }
 
 class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
@@ -674,7 +700,12 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
       _error = null;
     });
 
-    final result = await widget.getApprovalTemplateByCode.call('FIXED_ASSET_TRANSFER');
+    final result = await widget.getApprovalTemplateByCode.call(
+      GetApprovalTemplateByCodeParams(
+        code: 'FIXED_ASSET_TRANSFER',
+        businessId: widget.businessId,
+      ),
+    );
 
     result.fold(
       (failure) {
@@ -743,8 +774,14 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
     final formValues = _formKey.currentState!.value;
 
     // Получаем title и description из формы
-    final title = (_titleController.text.trim().isEmpty) ? null : _titleController.text.trim();
-    final description = (_descriptionController.text.trim().isEmpty) ? null : _descriptionController.text.trim();
+    final title =
+        (_titleController.text.trim().isEmpty)
+            ? null
+            : _titleController.text.trim();
+    final description =
+        (_descriptionController.text.trim().isEmpty)
+            ? null
+            : _descriptionController.text.trim();
 
     // Получаем данные из динамической формы (исключаем системные поля)
     final dynamicFormData = <String, dynamic>{};
@@ -873,7 +910,8 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
                     decoration: const InputDecoration(
                       labelText: 'Название',
                       border: OutlineInputBorder(),
-                      helperText: 'Оставьте пустым, чтобы использовать название из шаблона',
+                      helperText:
+                          'Оставьте пустым, чтобы использовать название из шаблона',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -926,13 +964,14 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
         ),
         ElevatedButton(
           onPressed: _isLoading || _template == null ? null : _submit,
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Создать'),
+          child:
+              _isLoading
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Создать'),
         ),
       ],
     );

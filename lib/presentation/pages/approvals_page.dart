@@ -133,11 +133,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
       listen: false,
     );
     final result = await getApprovalsUseCase.call(
-      GetApprovalsParams(
-        businessId: selectedBusiness.id,
-        canApprove: true,
-        showAll: true,
-      ),
+      GetApprovalsParams(businessId: selectedBusiness.id, showAll: true),
     );
 
     result.fold(
@@ -829,7 +825,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         children: [
           // Секция pending confirmations
           _buildPendingConfirmationsSection(),
-          // Сообщение о количестве заявок, требующих решения
+          // Список согласований, требующих решения
           if (_canApproveApprovals.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32.0),
@@ -838,13 +834,12 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 style: TextStyle(color: Colors.grey.shade600),
                 textAlign: TextAlign.center,
               ),
-            ),
-          // Секция "Мои согласования" - показываем всегда, если есть согласования
-          if (_myApprovals.isNotEmpty) ...[
+            )
+          else ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: Text(
-                'Мои согласования (${_myApprovals.length})',
+                'Требуют решения (${_canApproveApprovals.length})',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -852,9 +847,38 @@ class _ApprovalsPageState extends State<ApprovalsPage>
                 ),
               ),
             ),
-            ..._myApprovals.map((approval) => _buildApprovalCard(approval)),
+            ..._canApproveApprovals.map(
+              (approval) => _buildApprovalCard(approval),
+            ),
           ],
-          // Аккордеон для всех согласований
+          // Аккордеон "Мои согласования"
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: ExpansionTile(
+              title: Text(
+                'Мои согласования (${_myApprovals.length})',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              leading: const Icon(Icons.person),
+              initiallyExpanded: false,
+              children: [
+                if (_myApprovals.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Нет согласований',
+                      style: TextStyle(color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ..._myApprovals.map(
+                    (approval) => _buildApprovalCard(approval),
+                  ),
+              ],
+            ),
+          ),
+          // Аккордеон для всех согласований в бизнесе
           Padding(
             padding: const EdgeInsets.only(top: 20),
             child: ExpansionTile(

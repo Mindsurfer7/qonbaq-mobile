@@ -87,9 +87,15 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
   }
 
   @override
-  Future<Either<Failure, ApprovalTemplate>> getTemplateByCode(String code) async {
+  Future<Either<Failure, ApprovalTemplate>> getTemplateByCode(
+    String code, {
+    String? businessId,
+  }) async {
     try {
-      final template = await remoteDataSource.getTemplateByCode(code);
+      final template = await remoteDataSource.getTemplateByCode(
+        code,
+        businessId: businessId,
+      );
       return Right(template.toEntity());
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении шаблона: $e'));

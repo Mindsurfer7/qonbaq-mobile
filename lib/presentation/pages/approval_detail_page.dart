@@ -781,6 +781,11 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                             if (_approval!.selectedExecutor != null)
                               _buildSelectedExecutorRow(),
 
+                            // Задачи, связанные с согласованием
+                            if (_approval!.executionTasks != null &&
+                                _approval!.executionTasks!.isNotEmpty)
+                              _buildExecutionTasksRow(),
+
                             // Потенциальные исполнители (показываем только если согласование еще не в исполнении)
                             if (_approval!.potentialExecutors != null &&
                                 _approval!.potentialExecutors!.isNotEmpty &&
@@ -1037,6 +1042,125 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
       label: 'Исполнитель',
       icon: Icons.assignment_ind,
       chatRepository: chatRepository,
+    );
+  }
+
+  Widget _buildExecutionTasksRow() {
+    if (_approval!.executionTasks == null ||
+        _approval!.executionTasks!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final tasks = _approval!.executionTasks!;
+    final firstTask = tasks[0];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.assignment, size: 20, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Назначенная задача',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Ссылка на детали задачи
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed('/tasks/detail', arguments: firstTask.id);
+                      },
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              firstTask.title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Исполнитель задачи
+          if (firstTask.assignee != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.person, size: 20, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Исполнитель задачи',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _getUserDisplayName(firstTask.assignee!),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            iconSize: 20,
+                            color: Colors.blue,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed:
+                                () => _openChatWithCreator(
+                                  firstTask.assignee!.id,
+                                  _getUserDisplayName(firstTask.assignee!),
+                                ),
+                            tooltip: 'Открыть чат',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

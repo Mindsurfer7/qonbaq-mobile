@@ -7,6 +7,7 @@ import 'approval_attachment.dart';
 import 'approval_decision.dart';
 import 'approval_process_type.dart';
 import 'department.dart';
+import 'task.dart';
 
 /// Статус согласования
 enum ApprovalStatus {
@@ -51,6 +52,7 @@ class Approval extends Entity {
   final List<ApprovalAttachment>? attachments;
   final List<ApprovalApprover>? approvers; // Список тех, кто может одобрить
   final List<ProfileUser>? potentialExecutors; // Потенциальные исполнители
+  final List<Task>? executionTasks; // Задачи, связанные с согласованием
 
   const Approval({
     required this.id,
@@ -80,6 +82,7 @@ class Approval extends Entity {
     this.attachments,
     this.approvers,
     this.potentialExecutors,
+    this.executionTasks,
   });
 
   @override

@@ -22,7 +22,10 @@ abstract class ApprovalRemoteDataSource extends DataSource {
   Future<ApprovalTemplateModel> getTemplateById(String templateId);
 
   /// Получить шаблон по коду
-  Future<ApprovalTemplateModel> getTemplateByCode(String code);
+  Future<ApprovalTemplateModel> getTemplateByCode(
+    String code, {
+    String? businessId,
+  });
 
   // Согласования
   /// Создать согласование

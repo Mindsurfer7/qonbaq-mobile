@@ -23,7 +23,10 @@ abstract class ApprovalRepository extends Repository {
   Future<Either<Failure, ApprovalTemplate>> getTemplateById(String templateId);
 
   /// Получить шаблон по коду
-  Future<Either<Failure, ApprovalTemplate>> getTemplateByCode(String code);
+  Future<Either<Failure, ApprovalTemplate>> getTemplateByCode(
+    String code, {
+    String? businessId,
+  });
 
   // Согласования
   /// Создать согласование
