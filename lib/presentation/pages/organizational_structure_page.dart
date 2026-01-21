@@ -82,178 +82,180 @@ class _OrganizationalStructurePageState
             }
           });
 
-          return Column(
-            children: [
-              // Виджет выбора компании
-              const BusinessSelectorWidget(compact: true),
-              // Секция проектов
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Проекты',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    FloatingActionButton.small(
-                      onPressed: () => _showCreateProjectDialog(
-                        context,
-                        selectedBusiness.id,
-                        projectProvider,
-                      ),
-                      child: const Icon(Icons.add),
-                      tooltip: 'Создать проект',
-                      heroTag: 'create_project',
-                    ),
-                  ],
-                ),
-              ),
-              // Список проектов
-              Expanded(
-                flex: 1,
-                child: _buildProjectsList(
-                  projectProvider,
-                  selectedBusiness.id,
-                ),
-              ),
-              // Разделитель
-              Container(
-                height: 1,
-                color: Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              // Секция подразделений
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Подразделения',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    FloatingActionButton.small(
-                      onPressed: () => _showCreateDepartmentDialog(
-                        context,
-                        selectedBusiness.id,
-                        departmentProvider,
-                      ),
-                      child: const Icon(Icons.add),
-                      tooltip: 'Создать подразделение',
-                      heroTag: 'create_department',
-                    ),
-                  ],
-                ),
-              ),
-              // Список департаментов
-              Expanded(
-                flex: 1,
-                child: _buildDepartmentsList(
-                  departmentProvider,
-                  selectedBusiness.id,
-                ),
-              ),
-              // Разделитель
-              Container(
-                height: 1,
-                color: Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              // Секция распределения ролей
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).pushNamed('/roles-assignment');
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
+          return RefreshIndicator(
+            onRefresh: () async {
+              await projectProvider.loadProjects(selectedBusiness.id);
+              await departmentProvider.loadDepartments(selectedBusiness.id);
+              await departmentProvider.loadDepartmentsTree(selectedBusiness.id);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Виджет выбора компании
+                  const BusinessSelectorWidget(compact: true),
+                  // Секция проектов
+                  Padding(
                     padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      ),
-                    ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(
-                          Icons.assignment_ind,
-                          color: Theme.of(context).primaryColor,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Распределение ролей',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Назначение ролей сотрудникам',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+                        const Text(
+                          'Проекты',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: Theme.of(context).primaryColor,
-                          size: 20,
+                        FloatingActionButton.small(
+                          onPressed: () => _showCreateProjectDialog(
+                            context,
+                            selectedBusiness.id,
+                            projectProvider,
+                          ),
+                          child: const Icon(Icons.add),
+                          tooltip: 'Создать проект',
+                          heroTag: 'create_project',
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              // Разделитель
-              Container(
-                height: 1,
-                color: Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              // Заголовок графа
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    const Text(
+                  // Список проектов (без внутреннего скролла — скроллится вся страница)
+                  _buildProjectsList(
+                    projectProvider,
+                    selectedBusiness.id,
+                  ),
+                  // Разделитель
+                  Container(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  // Секция подразделений
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Подразделения',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        FloatingActionButton.small(
+                          onPressed: () => _showCreateDepartmentDialog(
+                            context,
+                            selectedBusiness.id,
+                            departmentProvider,
+                          ),
+                          child: const Icon(Icons.add),
+                          tooltip: 'Создать подразделение',
+                          heroTag: 'create_department',
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Список департаментов (без внутреннего скролла — скроллится вся страница)
+                  _buildDepartmentsList(
+                    departmentProvider,
+                    selectedBusiness.id,
+                  ),
+                  // Разделитель
+                  Container(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  // Секция распределения ролей
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/roles-assignment');
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .primaryColor
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.assignment_ind,
+                              color: Theme.of(context).primaryColor,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Распределение ролей',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Назначение ролей сотрудникам',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              color: Theme.of(context).primaryColor,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Разделитель
+                  Container(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  // Заголовок графа
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
                       'Граф организационной структуры',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Граф подразделений (без ограничений по высоте)
+                  _buildDepartmentsTree(
+                    departmentProvider,
+                    selectedBusiness.id,
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 8),
-              // Граф подразделений (снизу)
-              Expanded(
-                flex: 1,
-                child: _buildDepartmentsTree(
-                  departmentProvider,
-                  selectedBusiness.id,
-                ),
-              ),
-            ],
+            ),
           );
         },
       ),
@@ -265,72 +267,74 @@ class _OrganizationalStructurePageState
     String businessId,
   ) {
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (provider.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              provider.error!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.loadDepartments(businessId),
-              child: const Text('Повторить'),
-            ),
-          ],
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                provider.error!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => provider.loadDepartments(businessId),
+                child: const Text('Повторить'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (provider.departments == null || provider.departments!.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.business,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Нет подразделений',
-              style: TextStyle(
-                fontSize: 18,
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.business,
+                size: 64,
                 color: Colors.grey,
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Создайте первое подразделение',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
+              SizedBox(height: 16),
+              Text(
+                'Нет подразделений',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 8),
+              Text(
+                'Создайте первое подразделение',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await provider.loadDepartments(businessId);
-        await provider.loadDepartmentsTree(businessId);
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: provider.departments!.length,
-        itemBuilder: (context, index) {
-          final department = provider.departments![index];
-          return _buildDepartmentCard(department, provider, businessId);
-        },
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          for (final department in provider.departments!)
+            _buildDepartmentCard(department, provider, businessId),
+        ],
       ),
     );
   }
@@ -428,36 +432,41 @@ class _OrganizationalStructurePageState
     String businessId,
   ) {
     if (provider.isLoading && provider.departmentsTree == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (provider.error != null && provider.departmentsTree == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              provider.error!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                provider.loadDepartmentsTree(businessId);
-              },
-              child: const Text('Повторить'),
-            ),
-          ],
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                provider.error!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  provider.loadDepartmentsTree(businessId);
+                },
+                child: const Text('Повторить'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     final tree = provider.departmentsTree ?? [];
     if (tree.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(
           child: Text(
             'Нет подразделений для отображения',
             style: TextStyle(color: Colors.grey),
@@ -502,71 +511,74 @@ class _OrganizationalStructurePageState
     String businessId,
   ) {
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (provider.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              provider.error!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.loadProjects(businessId),
-              child: const Text('Повторить'),
-            ),
-          ],
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                provider.error!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => provider.loadProjects(businessId),
+                child: const Text('Повторить'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (provider.projects == null || provider.projects!.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.folder,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Нет проектов',
-              style: TextStyle(
-                fontSize: 18,
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.folder,
+                size: 64,
                 color: Colors.grey,
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Создайте первый проект',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
+              SizedBox(height: 16),
+              Text(
+                'Нет проектов',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 8),
+              Text(
+                'Создайте первый проект',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await provider.loadProjects(businessId);
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: provider.projects!.length,
-        itemBuilder: (context, index) {
-          final project = provider.projects![index];
-          return _buildProjectCard(project, provider, businessId);
-        },
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          for (final project in provider.projects!)
+            _buildProjectCard(project, provider, businessId),
+        ],
       ),
     );
   }

@@ -17,9 +17,11 @@ import '../providers/profile_provider.dart';
 import '../providers/project_provider.dart';
 import '../providers/department_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
 import '../widgets/create_fixed_asset_form.dart';
 import '../widgets/fixed_asset_card.dart';
 import '../widgets/dynamic_block_form.dart';
+import '../widgets/pending_confirmations_section.dart';
 import '../../core/theme/theme_extensions.dart';
 
 /// Страница основных средств
@@ -31,6 +33,7 @@ class FixedAssetsPage extends StatefulWidget {
 }
 
 const int _pageLimit = 20;
+const String _fixedAssetTransferTemplateCode = 'FIXED_ASSET_TRANSFER';
 
 class _FixedAssetsPageState extends State<FixedAssetsPage> {
   List<FixedAsset> _assets = [];
@@ -75,6 +78,37 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       listen: false,
     ).loadDepartments(businessId);
     _loadEmployees(businessId);
+    Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    ).loadPendingConfirmations(businessId: businessId);
+  }
+
+  Future<void> _refreshAll() async {
+    await _loadAssets();
+    if (!mounted) return;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final selectedBusiness = profileProvider.selectedBusiness;
+    if (selectedBusiness == null) return;
+    await Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    ).loadPendingConfirmations(businessId: selectedBusiness.id);
+  }
+
+  Widget _buildFixedAssetsPendingConfirmationsSection() {
+    return PendingConfirmationsSection(
+      headerText: 'Требует подтверждения (ОС)',
+      headerPadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      showDivider: true,
+      filter: (pc) {
+        final code = pc.approval.template?.code ?? pc.approval.templateCode;
+        if (code == null || code.trim().isEmpty) return false;
+        final normalized = code.toUpperCase().replaceAll('-', '_');
+        return normalized == _fixedAssetTransferTemplateCode;
+      },
+      onConfirmed: _refreshAll,
+    );
   }
 
   Future<void> _loadEmployees(String businessId) async {
@@ -354,29 +388,39 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       );
     }
 
-    if (_assets.isEmpty) {
-      return const Center(child: Text('Нет основных средств'));
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: _assets.length,
-            itemBuilder: (context, index) {
-              final asset = _assets[index];
-              return FixedAssetCard(
-                asset: asset,
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/business/admin/fixed_assets/detail',
-                    arguments: asset.id,
-                  );
-                },
-              );
-            },
+          child: RefreshIndicator(
+            onRefresh: _refreshAll,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                _buildFixedAssetsPendingConfirmationsSection(),
+                if (_assets.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      'Нет основных средств',
+                      style: TextStyle(color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ..._assets.map(
+                    (asset) => FixedAssetCard(
+                      asset: asset,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(
+                          '/business/admin/fixed_assets/detail',
+                          arguments: asset.id,
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
         if (_shouldShowPagination) _buildPaginationBar(),
@@ -702,7 +746,7 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
 
     final result = await widget.getApprovalTemplateByCode.call(
       GetApprovalTemplateByCodeParams(
-        code: 'FIXED_ASSET_TRANSFER',
+        code: _fixedAssetTransferTemplateCode,
         businessId: widget.businessId,
       ),
     );
@@ -814,7 +858,7 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
     final approval = Approval(
       id: '',
       businessId: widget.businessId,
-      templateCode: 'FIXED_ASSET_TRANSFER',
+      templateCode: _fixedAssetTransferTemplateCode,
       title: title ?? _template!.name,
       description: description,
       status: ApprovalStatus.pending,

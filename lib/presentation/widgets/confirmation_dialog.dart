@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/pending_confirmation.dart';
 import '../providers/pending_confirmations_provider.dart';
+import '../../core/theme/theme_extensions.dart';
 
 /// Диалог для подтверждения согласования
 class ConfirmationDialog extends StatefulWidget {
   final PendingConfirmation pendingConfirmation;
+  final bool showAmountField;
+  final String title;
+  final VoidCallback? onSuccess;
 
   const ConfirmationDialog({
     super.key,
     required this.pendingConfirmation,
+    this.showAmountField = true,
+    this.title = 'Подтверждение получения средств',
+    this.onSuccess,
   });
 
   @override
@@ -26,8 +33,10 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
   void initState() {
     super.initState();
     // Устанавливаем сумму по умолчанию, если она есть
-    if (widget.pendingConfirmation.approval.amount != null) {
-      _amountController.text = widget.pendingConfirmation.approval.amount!.toStringAsFixed(2);
+    if (widget.showAmountField &&
+        widget.pendingConfirmation.approval.amount != null) {
+      _amountController.text =
+          widget.pendingConfirmation.approval.amount!.toStringAsFixed(2);
     }
   }
 
@@ -47,10 +56,10 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
     });
 
     double? amount;
-    if (_amountController.text.trim().isNotEmpty) {
+    if (widget.showAmountField && _amountController.text.trim().isNotEmpty) {
       try {
         amount = double.parse(_amountController.text.trim());
-      } catch (e) {
+      } catch (_) {
         setState(() {
           _error = 'Неверный формат суммы';
           _isLoading = false;
@@ -79,6 +88,10 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
           backgroundColor: isConfirmed ? Colors.green : Colors.orange,
         ),
       );
+      // Вызываем callback для обновления списка
+      if (widget.onSuccess != null) {
+        widget.onSuccess!();
+      }
     } else {
       setState(() {
         _error = provider.error ?? 'Произошла ошибка';
@@ -90,6 +103,7 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
   @override
   Widget build(BuildContext context) {
     final approval = widget.pendingConfirmation.approval;
+    final theme = context.appTheme;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -105,15 +119,24 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.help_outline,
-                    color: Colors.red,
-                    size: 28,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: theme.statusWarning.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(theme.borderRadius),
+                    ),
+                    child: Icon(
+                      Icons.pending_actions,
+                      color: theme.statusWarning,
+                      size: 26,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Подтверждение получения средств',
+                      widget.title,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -148,7 +171,7 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
                           ),
                         ),
                       ],
-                      if (approval.amount != null) ...[
+                      if (widget.showAmountField && approval.amount != null) ...[
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -169,23 +192,25 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
                           ],
                         ),
                       ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text(
-                            'Срок выплаты: ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                      if (widget.showAmountField) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text(
+                              'Срок выплаты: ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          Text(
-                            _formatDate(approval.paymentDueDate),
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
+                            Text(
+                              _formatDate(approval.paymentDueDate),
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -207,18 +232,22 @@ class _ConfirmationDialogState extends State<ConfirmationDialog> {
                 const SizedBox(height: 16),
               ],
               // Поле для суммы (если нужно указать другую)
-              TextField(
-                controller: _amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Сумма получения (опционально)',
-                  hintText: 'Оставьте пустым, если сумма совпадает',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+              if (widget.showAmountField) ...[
+                TextField(
+                  controller: _amountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Сумма получения (опционально)',
+                    hintText: 'Оставьте пустым, если сумма совпадает',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  enabled: !_isLoading,
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                enabled: !_isLoading,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               // Поле для комментария
               TextField(
                 controller: _commentController,

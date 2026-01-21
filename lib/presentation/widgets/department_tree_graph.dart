@@ -44,28 +44,26 @@ class DepartmentTreeGraph extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Бизнес вверху
-              if (businessName != null) ...[
-                _buildBusinessNode(businessName!),
-                const SizedBox(height: 24),
-                // Линия от бизнеса к подразделениям
-                Container(
-                  height: 20,
-                  width: 2,
-                  color: Colors.grey.shade400,
-                ),
-                const SizedBox(height: 4),
-              ],
-              // Дерево подразделений
-              _buildTreeWidget(tree, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Бизнес вверху
+            if (businessName != null) ...[
+              _buildBusinessNode(businessName!),
+              const SizedBox(height: 24),
+              // Линия от бизнеса к подразделениям
+              Container(
+                height: 20,
+                width: 2,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 4),
             ],
-          ),
+            // Дерево подразделений
+            _buildTreeWidget(tree, 0),
+          ],
         ),
       ),
     );

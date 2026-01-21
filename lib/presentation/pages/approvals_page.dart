@@ -16,10 +16,9 @@ import '../../domain/entities/missing_role_info.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/pending_confirmations_provider.dart';
 import '../widgets/dynamic_block_form.dart';
 import '../widgets/voice_record_block.dart';
-import '../widgets/confirmation_dialog.dart';
+import '../widgets/pending_confirmations_section.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -681,82 +680,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
   /// Виджет секции pending confirmations (переиспользуемый)
   Widget _buildPendingConfirmationsSection() {
-    return Consumer<PendingConfirmationsProvider>(
-      builder: (context, provider, child) {
-        if (provider.pendingConfirmations.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Заголовок секции
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              child: Text(
-                'Требует подтверждения',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ),
-            ...provider.pendingConfirmations.map(
-              (pendingConfirmation) => Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                color: Colors.red.shade50,
-                child: ListTile(
-                  leading: Icon(Icons.help_outline, color: Colors.red.shade700),
-                  title: const Text(
-                    'Подтвердить получение средств',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (pendingConfirmation.approval.description != null &&
-                          pendingConfirmation.approval.description!.isNotEmpty)
-                        Text(
-                          pendingConfirmation.approval.description!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      if (pendingConfirmation.approval.amount != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Сумма: ${pendingConfirmation.approval.amount!.toStringAsFixed(2)} ₽',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  trailing: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.red.shade700,
-                  ),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder:
-                          (context) => ConfirmationDialog(
-                            pendingConfirmation: pendingConfirmation,
-                          ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Divider(height: 32),
-            const SizedBox(height: 8),
-          ],
-        );
-      },
+    return PendingConfirmationsSection(
+      onConfirmed: () => _loadApprovalsForTab(_tabController.index),
     );
   }
 
