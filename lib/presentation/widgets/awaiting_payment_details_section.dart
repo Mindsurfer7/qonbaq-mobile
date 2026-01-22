@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../domain/entities/approval.dart';
 import '../../core/theme/theme_extensions.dart';
 import 'payment_details_dialog.dart';
 
 /// Секция "Требует заполнения платежных реквизитов".
 ///
-/// Отображает согласования, для которых требуется заполнение платежных реквизитов.
-/// Список согласований определяется через awaitingPaymentDetails из notifications.
+/// Отображает плашки для согласований, для которых требуется заполнение платежных реквизитов.
+/// Принимает список ID согласований из awaitingPaymentDetails.
+/// При клике на плашку открывается диалог, который сам загружает схему формы.
 class AwaitingPaymentDetailsSection extends StatelessWidget {
-  final List<Approval> approvals; // Список согласований для отображения
+  final List<String> approvalIds; // Список ID согласований для отображения
   final String headerText;
   final EdgeInsets headerPadding;
   final EdgeInsets cardMargin;
@@ -18,7 +18,7 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
 
   const AwaitingPaymentDetailsSection({
     super.key,
-    required this.approvals,
+    required this.approvalIds,
     this.headerText = 'Требует заполнения платежных реквизитов',
     this.headerPadding = const EdgeInsets.fromLTRB(16, 20, 16, 12),
     this.cardMargin = const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -32,10 +32,7 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Показываем все переданные согласования (они уже отфильтрованы по awaitingPaymentDetails)
-    final filteredApprovals = approvals;
-
-    if (filteredApprovals.isEmpty) {
+    if (approvalIds.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -67,7 +64,7 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
             ],
           ),
         ),
-        ...filteredApprovals.map((approval) {
+        ...approvalIds.map((approvalId) {
           return Card(
             margin: cardMargin,
             color: theme.statusWarning.withValues(alpha: 0.08),
@@ -104,55 +101,6 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
                   fontSize: 15,
                 ),
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 6),
-                  Text(
-                    approval.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (approval.description != null &&
-                      approval.description!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      approval.description!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: theme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                  if (approval.amount != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.statusSuccess.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Сумма: ${approval.amount!.toStringAsFixed(2)} ${approval.currency ?? '₽'}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: theme.statusSuccess,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
               trailing: Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
@@ -162,7 +110,7 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
                 showDialog(
                   context: context,
                   builder: (context) => PaymentDetailsDialog(
-                    approval: approval,
+                    approvalId: approvalId,
                     onSuccess: onPaymentDetailsFilled,
                   ),
                 );

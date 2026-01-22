@@ -13,14 +13,16 @@ import 'dynamic_block_form.dart';
 
 /// Диалог для заполнения платежных реквизитов
 class PaymentDetailsDialog extends StatefulWidget {
-  final Approval approval;
+  final String approvalId; // ID согласования
+  final Approval? approval; // Опционально для обратной совместимости
   final VoidCallback? onSuccess;
 
-  const PaymentDetailsDialog({
+  PaymentDetailsDialog({
     super.key,
-    required this.approval,
+    String? approvalId,
+    this.approval,
     this.onSuccess,
-  });
+  }) : approvalId = approvalId ?? approval?.id ?? '';
 
   @override
   State<PaymentDetailsDialog> createState() => _PaymentDetailsDialogState();
@@ -46,13 +48,13 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
   @override
   void initState() {
     super.initState();
-    // Предзаполняем поля из formData, если они уже есть
-    if (widget.approval.formData != null) {
-      _selectedPaymentMethod = widget.approval.formData!['paymentMethod']?.toString();
-      _selectedAccountId = widget.approval.formData!['accountId']?.toString();
-      _selectedFromAccountId = widget.approval.formData!['fromAccountId']?.toString();
+    // Предзаполняем поля из formData, если они уже есть (для обратной совместимости)
+    if (widget.approval?.formData != null) {
+      _selectedPaymentMethod = widget.approval!.formData!['paymentMethod']?.toString();
+      _selectedAccountId = widget.approval!.formData!['accountId']?.toString();
+      _selectedFromAccountId = widget.approval!.formData!['fromAccountId']?.toString();
       // Сохраняем formData как начальные значения для динамической формы
-      _initialValues = Map<String, dynamic>.from(widget.approval.formData!);
+      _initialValues = Map<String, dynamic>.from(widget.approval!.formData!);
     }
     _loadSchema();
     _loadAccounts();
@@ -69,7 +71,7 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
       listen: false,
     );
 
-    final result = await getSchemaUseCase.call(widget.approval.id);
+    final result = await getSchemaUseCase.call(widget.approvalId);
 
     if (!mounted) return;
 
@@ -225,7 +227,7 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
     // Структура запроса: { paymentMethod, accountId?, fromAccountId? }
     final result = await fillPaymentDetailsUseCase.call(
       FillPaymentDetailsParams(
-        approvalId: widget.approval.id,
+        approvalId: widget.approvalId,
         paymentMethod: paymentMethod,
         accountId: paymentMethod == 'CASH' ? accountId : null,
         fromAccountId: (paymentMethod == 'BANK_TRANSFER' || 
@@ -317,14 +319,16 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.approval.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.textSecondary,
+                          if (widget.approval?.title != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.approval!.title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.textSecondary,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -342,7 +346,7 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                 // Если схема загружена, используем динамическую форму
                 else if (_formSchema != null) ...[
                   DynamicBlockForm(
-                    key: ValueKey('payment-details-${widget.approval.id}'),
+                    key: ValueKey('payment-details-${widget.approvalId}'),
                     formSchema: _formSchema,
                     formKey: _formKey,
                     initialValues: _initialValues,
