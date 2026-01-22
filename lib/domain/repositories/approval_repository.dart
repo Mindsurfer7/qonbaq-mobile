@@ -107,5 +107,13 @@ abstract class ApprovalRepository extends Repository {
     double? amount,
     String? comment,
   });
+
+  /// Заполнить платежные реквизиты
+  Future<Either<Failure, Approval>> fillPaymentDetails(
+    String id, {
+    required String paymentMethod,
+    String? accountId,
+    String? fromAccountId,
+  });
 }
 

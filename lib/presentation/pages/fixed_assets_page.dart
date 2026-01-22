@@ -9,6 +9,7 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_fixed_assets.dart';
 import '../../domain/usecases/create_fixed_asset.dart';
 import '../../domain/usecases/create_approval.dart';
+import '../../domain/usecases/get_approvals.dart';
 import '../../domain/usecases/get_approval_template_by_code.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
@@ -42,6 +43,11 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
   PaginationMeta? _meta;
   int _page = 1;
 
+  // Мои ожидающие перемещения ОС (approval.status == PENDING)
+  List<Approval> _myPendingTransferApprovals = [];
+  bool _isLoadingMyPendingTransfers = false;
+  String? _myPendingTransfersError;
+
   // Фильтры
   String? _filterProjectId;
   String? _filterDepartmentId;
@@ -69,6 +75,8 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     final selectedBusiness = profileProvider.selectedBusiness;
     if (selectedBusiness == null) return;
     final businessId = selectedBusiness.id;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
     Provider.of<ProjectProvider>(
       context,
       listen: false,
@@ -82,18 +90,252 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       context,
       listen: false,
     ).loadPendingConfirmations(businessId: businessId);
+    if (currentUserId != null) {
+      _loadMyPendingTransferApprovals(
+        businessId: businessId,
+        currentUserId: currentUserId,
+      );
+    }
   }
 
   Future<void> _refreshAll() async {
     await _loadAssets();
     if (!mounted) return;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     if (selectedBusiness == null) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
     await Provider.of<PendingConfirmationsProvider>(
       context,
       listen: false,
     ).loadPendingConfirmations(businessId: selectedBusiness.id);
+    if (currentUserId != null) {
+      await _loadMyPendingTransferApprovals(
+        businessId: selectedBusiness.id,
+        currentUserId: currentUserId,
+      );
+    }
+  }
+
+  String _normalizeTemplateCode(String code) {
+    return code.toUpperCase().replaceAll('-', '_');
+  }
+
+  String _twoDigits(int v) => v < 10 ? '0$v' : '$v';
+
+  String _formatDateTime(DateTime dt) {
+    final d = dt.toLocal();
+    return '${_twoDigits(d.day)}.${_twoDigits(d.month)}.${d.year} '
+        '${_twoDigits(d.hour)}:${_twoDigits(d.minute)}';
+  }
+
+  Future<void> _loadMyPendingTransferApprovals({
+    required String businessId,
+    required String currentUserId,
+  }) async {
+    if (_isLoadingMyPendingTransfers) return;
+
+    setState(() {
+      _isLoadingMyPendingTransfers = true;
+      _myPendingTransfersError = null;
+    });
+
+    final getApprovalsUseCase = Provider.of<GetApprovals>(
+      context,
+      listen: false,
+    );
+
+    final result = await getApprovalsUseCase.call(
+      GetApprovalsParams(
+        businessId: businessId,
+        status: ApprovalStatus.pending,
+        createdBy: currentUserId,
+        limit: 100,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoadingMyPendingTransfers = false;
+          _myPendingTransferApprovals = [];
+          _myPendingTransfersError =
+              failure.message.isNotEmpty
+                  ? failure.message
+                  : 'Ошибка при загрузке ожидающих перемещений';
+        });
+      },
+      (result) {
+        final filtered =
+            result.approvals.where((approval) {
+              final code = approval.template?.code ?? approval.templateCode;
+              if (code == null || code.trim().isEmpty) return false;
+              return _normalizeTemplateCode(code) ==
+                  _fixedAssetTransferTemplateCode;
+            }).toList();
+
+        setState(() {
+          _isLoadingMyPendingTransfers = false;
+          _myPendingTransfersError = null;
+          _myPendingTransferApprovals = filtered;
+        });
+      },
+    );
+  }
+
+  Widget _buildMyPendingTransfersSection() {
+    final theme = context.appTheme;
+
+    if (_isLoadingMyPendingTransfers) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.statusWarning,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Загружаем ожидающие перемещения…',
+              style: TextStyle(color: theme.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_myPendingTransfersError != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.statusError.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(theme.borderRadius),
+            border: Border.all(
+              color: theme.statusError.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, color: theme.statusError, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _myPendingTransfersError!,
+                  style: TextStyle(color: theme.textPrimary),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  final profileProvider = Provider.of<ProfileProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final authProvider = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final businessId = profileProvider.selectedBusiness?.id;
+                  final userId = authProvider.user?.id;
+                  if (businessId == null || userId == null) return;
+                  _loadMyPendingTransferApprovals(
+                    businessId: businessId,
+                    currentUserId: userId,
+                  );
+                },
+                child: const Text('Повторить'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_myPendingTransferApprovals.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Icon(Icons.swap_horiz, color: theme.statusWarning, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Мои перемещения (ожидают)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.statusWarning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${_myPendingTransferApprovals.length}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: theme.statusWarning,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ..._myPendingTransferApprovals.map((approval) {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(theme.borderRadius),
+            ),
+            child: ListTile(
+              leading: Icon(Icons.swap_horiz, color: theme.textSecondary),
+              title: Text(
+                approval.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: theme.textPrimary,
+                ),
+              ),
+              subtitle: Text(
+                'Статус: PENDING • ${_formatDateTime(approval.createdAt)}',
+                style: TextStyle(color: theme.textSecondary),
+              ),
+              trailing: Icon(Icons.chevron_right, color: theme.textSecondary),
+              onTap: () {
+                Navigator.of(context)
+                    .pushNamed('/approvals/detail', arguments: approval.id)
+                    .then((_) => _refreshAll());
+              },
+            ),
+          );
+        }),
+        const SizedBox(height: 12),
+        const Divider(height: 24),
+      ],
+    );
   }
 
   Widget _buildFixedAssetsPendingConfirmationsSection() {
@@ -104,7 +346,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
       filter: (pc) {
         final code = pc.approval.template?.code ?? pc.approval.templateCode;
         if (code == null || code.trim().isEmpty) return false;
-        final normalized = code.toUpperCase().replaceAll('-', '_');
+        final normalized = _normalizeTemplateCode(code);
         return normalized == _fixedAssetTransferTemplateCode;
       },
       onConfirmed: _refreshAll,
@@ -398,6 +640,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 _buildFixedAssetsPendingConfirmationsSection(),
+                _buildMyPendingTransfersSection(),
                 if (_assets.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(24.0),

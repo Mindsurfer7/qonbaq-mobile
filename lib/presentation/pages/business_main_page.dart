@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../widgets/workday_dialog.dart';
 import '../providers/profile_provider.dart';
 import '../providers/pending_confirmations_provider.dart';
+import '../providers/auth_provider.dart';
 
 /// Главная страница бизнес-приложения
 class BusinessMainPage extends StatefulWidget {
@@ -24,6 +25,8 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
       if (!mounted) return;
       
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
       // Загружаем компании, если они еще не загружены
       if (profileProvider.businesses == null && !profileProvider.isLoading) {
         await profileProvider.loadBusinesses();
@@ -36,6 +39,11 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
         // Если workspace не выбран, перенаправляем на страницу выбора
         Navigator.of(context).pushReplacementNamed('/workspace-selector');
         return;
+      }
+
+      // Загружаем профиль с employment текущего пользователя
+      if (authProvider.user != null) {
+        await profileProvider.loadProfile(userId: authProvider.user!.id);
       }
 
       // Запускаем polling для pending confirmations

@@ -106,5 +106,13 @@ abstract class ApprovalRemoteDataSource extends DataSource {
     double? amount,
     String? comment,
   });
+
+  /// Заполнить платежные реквизиты
+  Future<ApprovalModel> fillPaymentDetails(
+    String id, {
+    required String paymentMethod,
+    String? accountId,
+    String? fromAccountId,
+  });
 }
 

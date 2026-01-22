@@ -6,6 +6,7 @@ class InviteModel extends Invite implements Model {
   const InviteModel({
     required super.id,
     required super.code,
+    required super.inviteType,
     super.maxUses,
     super.expiresAt,
     required super.createdAt,
@@ -16,6 +17,7 @@ class InviteModel extends Invite implements Model {
     return InviteModel(
       id: json['id'] as String,
       code: json['code'] as String,
+      inviteType: InviteType.fromString(json['inviteType'] as String? ?? 'FAMILY'),
       maxUses: json['maxUses'] as int?,
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'] as String)
@@ -29,6 +31,7 @@ class InviteModel extends Invite implements Model {
     return Invite(
       id: id,
       code: code,
+      inviteType: inviteType,
       maxUses: maxUses,
       expiresAt: expiresAt,
       createdAt: createdAt,
@@ -41,6 +44,7 @@ class InviteModel extends Invite implements Model {
     return {
       'id': id,
       'code': code,
+      'inviteType': inviteType.value,
       if (maxUses != null) 'maxUses': maxUses,
       if (expiresAt != null) 'expiresAt': expiresAt!.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
@@ -81,11 +85,92 @@ class InviteLinksModel extends InviteLinks implements Model {
   }
 }
 
-/// Модель результата создания приглашения
+/// Модель инвайта со ссылками (новый формат API)
+class InviteWithLinksModel implements Model {
+  final InviteModel invite;
+  final InviteLinksModel links;
+
+  const InviteWithLinksModel({
+    required this.invite,
+    required this.links,
+  });
+
+  /// Создание модели из JSON (новый формат: invite и links в одном объекте)
+  factory InviteWithLinksModel.fromJson(Map<String, dynamic> json) {
+    return InviteWithLinksModel(
+      invite: InviteModel.fromJson(json),
+      links: InviteLinksModel.fromJson(json['links'] as Map<String, dynamic>),
+    );
+  }
+
+  /// Преобразование модели в доменную сущность
+  InviteWithLinks toEntity() {
+    return InviteWithLinks(
+      invite: invite.toEntity(),
+      links: links.toEntity(),
+    );
+  }
+
+  /// Преобразование в CreateInviteResult для обратной совместимости
+  CreateInviteResult toCreateInviteResult({bool hasBusiness = false}) {
+    return CreateInviteResult(
+      invite: invite.toEntity(),
+      links: links.toEntity(),
+      hasBusiness: hasBusiness,
+    );
+  }
+
+  /// Преобразование модели в JSON
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      ...invite.toJson(),
+      'links': links.toJson(),
+    };
+  }
+}
+
+/// Модель списка инвайтов (новый формат API)
+class InvitesListModel implements Model {
+  final List<InviteWithLinksModel> invites;
+
+  const InvitesListModel({
+    required this.invites,
+  });
+
+  /// Создание модели из JSON
+  factory InvitesListModel.fromJson(Map<String, dynamic> json) {
+    final invitesList = json['invites'] as List<dynamic>;
+    return InvitesListModel(
+      invites: invitesList
+          .map((item) => InviteWithLinksModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// Преобразование модели в доменную сущность
+  InvitesList toEntity() {
+    return InvitesList(
+      invites: invites.map((invite) => invite.toEntity()).toList(),
+    );
+  }
+
+  /// Преобразование модели в JSON
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'invites': invites.map((invite) => invite.toJson()).toList(),
+    };
+  }
+}
+
+/// Модель результата создания приглашения (старый формат, для обратной совместимости)
 class CreateInviteResultModel extends CreateInviteResult implements Model {
   const CreateInviteResultModel({
     required super.invite,
     required super.links,
+    super.isExisting,
+    super.hasBusiness,
   });
 
   /// Создание модели из JSON
@@ -93,6 +178,8 @@ class CreateInviteResultModel extends CreateInviteResult implements Model {
     return CreateInviteResultModel(
       invite: InviteModel.fromJson(json['invite'] as Map<String, dynamic>),
       links: InviteLinksModel.fromJson(json['links'] as Map<String, dynamic>),
+      isExisting: json['isExisting'] as bool? ?? false,
+      hasBusiness: json['hasBusiness'] as bool? ?? false,
     );
   }
 
@@ -101,6 +188,8 @@ class CreateInviteResultModel extends CreateInviteResult implements Model {
     return CreateInviteResult(
       invite: (invite as InviteModel).toEntity(),
       links: (links as InviteLinksModel).toEntity(),
+      isExisting: isExisting,
+      hasBusiness: hasBusiness,
     );
   }
 

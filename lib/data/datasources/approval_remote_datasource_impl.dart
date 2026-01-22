@@ -763,6 +763,8 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         return 'IN_EXECUTION';
       case ApprovalStatus.awaitingConfirmation:
         return 'AWAITING_CONFIRMATION';
+      case ApprovalStatus.awaitingPaymentDetails:
+        return 'AWAITING_PAYMENT_DETAILS';
       case ApprovalStatus.completed:
         return 'COMPLETED';
       case ApprovalStatus.cancelled:
@@ -914,6 +916,65 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
+      } else if (response.statusCode == 404) {
+        throw Exception('Согласование не найдено');
+      } else {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<ApprovalModel> fillPaymentDetails(
+    String id, {
+    required String paymentMethod,
+    String? accountId,
+    String? fromAccountId,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'paymentMethod': paymentMethod,
+      };
+      if (accountId != null) body['accountId'] = accountId;
+      if (fromAccountId != null) body['fromAccountId'] = fromAccountId;
+
+      final response = await apiClient.patch(
+        '/api/approvals/$id/payment-details',
+        headers: _getAuthHeaders(),
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => ApprovalModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Нет прав на заполнение платежных реквизитов',
+        );
+        throw Exception(errorMessage);
       } else if (response.statusCode == 404) {
         throw Exception('Согласование не найдено');
       } else {

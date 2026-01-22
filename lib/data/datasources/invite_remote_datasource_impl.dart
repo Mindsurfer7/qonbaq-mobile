@@ -23,12 +23,16 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
   }
 
   @override
-  Future<CreateInviteResultModel> createInvite({
+  Future<InvitesListModel> createInvite({
+    String? inviteType,
     int? maxUses,
     DateTime? expiresAt,
   }) async {
     try {
       final body = <String, dynamic>{};
+      if (inviteType != null) {
+        body['inviteType'] = inviteType;
+      }
       if (maxUses != null) {
         body['maxUses'] = maxUses;
       }
@@ -48,7 +52,7 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final apiResponse = ApiResponse.fromJson(
           json,
-          (data) => CreateInviteResultModel.fromJson(data as Map<String, dynamic>),
+          (data) => InvitesListModel.fromJson(data as Map<String, dynamic>),
         );
         return apiResponse.data;
       } else if (response.statusCode == 401) {
@@ -69,7 +73,7 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
   }
 
   @override
-  Future<CreateInviteResultModel?> getCurrentInvite() async {
+  Future<InvitesListModel?> getCurrentInvites() async {
     try {
       final response = await apiClient.get(
         '/api/invites/current',
@@ -80,11 +84,11 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final apiResponse = ApiResponse.fromJson(
           json,
-          (data) => CreateInviteResultModel.fromJson(data as Map<String, dynamic>),
+          (data) => InvitesListModel.fromJson(data as Map<String, dynamic>),
         );
         return apiResponse.data;
       } else if (response.statusCode == 404) {
-        // Активного инвайта нет - это нормальная ситуация
+        // Инвайтов нет - это нормальная ситуация
         return null;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');

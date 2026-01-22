@@ -4,15 +4,15 @@ import '../../core/usecase/usecase.dart';
 import '../entities/invite.dart';
 import '../repositories/invite_repository.dart';
 
-/// Use Case для получения текущего активного приглашения
-class GetCurrentInvite implements UseCase<CreateInviteResult?, NoParams> {
+/// Use Case для получения текущих приглашений
+class GetCurrentInvite implements UseCase<InvitesList?, NoParams> {
   final InviteRepository repository;
 
   GetCurrentInvite(this.repository);
 
   @override
-  Future<Either<Failure, CreateInviteResult?>> call(NoParams params) async {
-    return await repository.getCurrentInvite();
+  Future<Either<Failure, InvitesList?>> call(NoParams params) async {
+    return await repository.getCurrentInvites();
   }
 }
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../providers/profile_provider.dart';
 import '../providers/invite_provider.dart';
 import '../../domain/entities/business.dart';
 import '../widgets/create_business_dialog.dart';
+import '../widgets/business_choice_dialog.dart';
+import '../../core/utils/constants.dart';
 // Временно закомментировано
 // import '../widgets/voice_record_widget.dart';
 // import '../../core/services/voice_context.dart';
@@ -25,11 +25,19 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
   @override
   void initState() {
     super.initState();
-    // Загружаем список бизнесов при инициализации
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<ProfileProvider>(context, listen: false);
-      if (provider.businesses == null && !provider.isLoading) {
-        provider.loadBusinesses();
+    // Загружаем список бизнесов и создаем/загружаем инвайты при инициализации
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      if (profileProvider.businesses == null && !profileProvider.isLoading) {
+        profileProvider.loadBusinesses();
+      }
+      // Автоматически создаем/загружаем инвайты при первом открытии страницы
+      final inviteProvider = Provider.of<InviteProvider>(context, listen: false);
+      // Сначала пытаемся загрузить существующие инвайты
+      await inviteProvider.loadCurrentInvite();
+      // Если инвайтов нет, создаем их через POST /api/invites
+      if (inviteProvider.invitesList == null || inviteProvider.invitesList!.invites.isEmpty) {
+        await inviteProvider.createInviteLink();
       }
     });
   }
@@ -75,8 +83,18 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
     ProfileProvider provider,
   ) async {
     if (businessList.isNotEmpty) {
-      // Если есть бизнесы - выбираем нулевой элемент
-      await _selectWorkspace(businessList[0]);
+      // Если есть бизнесы - показываем диалог выбора
+      final result = await showDialog<Business>(
+        context: context,
+        builder: (context) => BusinessChoiceDialog(
+          businesses: businessList,
+        ),
+      );
+
+      if (result != null && mounted) {
+        // Выбираем выбранный или созданный бизнес
+        await _selectWorkspace(result);
+      }
     } else {
       // Если нет бизнесов - показываем диалог создания
       final result = await showDialog<Business>(
@@ -98,6 +116,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
   Future<void> _showInviteDialog(bool isFamily) async {
     final inviteProvider = Provider.of<InviteProvider>(context, listen: false);
 
+    // Создаем/обновляем инвайты (POST /api/invites создает инвайты лениво)
     await inviteProvider.createInviteLink();
 
     if (!mounted) return;
@@ -112,45 +131,40 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
       return;
     }
 
-    final inviteResult = inviteProvider.inviteResult;
-    if (inviteResult != null) {
-      // Используем веб-ссылку вместо deep link
-      final inviteLink = inviteResult.links.web;
+    // Получаем нужный инвайт по типу
+    final invite = isFamily 
+        ? inviteProvider.familyInvite 
+        : inviteProvider.businessInvite;
 
-      // На веб и macOS - копируем ссылку в буфер обмена
-      // (на macOS в share sheet нет кнопки копирования)
-      final isMacOS =
-          !kIsWeb && (Theme.of(context).platform == TargetPlatform.macOS);
-      if (kIsWeb || isMacOS) {
-        await Clipboard.setData(ClipboardData(text: inviteLink));
+    if (invite != null) {
+      // Используем ссылку из API (links.web или links.deepLink)
+      final inviteLink = invite.links.web.isNotEmpty 
+          ? invite.links.web 
+          : AppConstants.buildInviteLink(invite.invite.code);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ссылка скопирована в буфер обмена'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        // На мобильных платформах (iOS/Android) - используем Share API с веб-ссылкой
-        try {
-          await Share.share(
-            inviteLink,
-            subject: isFamily ? 'Приглашение в семью' : 'Приглашение в бизнес',
-          );
-        } catch (e) {
-          // Если Share API недоступен, копируем в буфер обмена
-          await Clipboard.setData(ClipboardData(text: inviteLink));
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ссылка скопирована в буфер обмена'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        }
+      // Всегда копируем ссылку в буфер обмена
+      await Clipboard.setData(ClipboardData(text: inviteLink));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ссылка скопирована в буфер обмена'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      // Если инвайт нужного типа не найден
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isFamily 
+                ? 'Семейный инвайт недоступен' 
+                : 'Бизнес-инвайт недоступен. У вас нет прав для создания бизнес-инвайта.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     }
   }
@@ -238,26 +252,33 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
                 // Кнопки приглашения
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildInviteButton(
-                          title: 'Пригласить члена семьи',
-                          icon: Icons.family_restroom,
-                          color: Colors.green,
-                          onTap: () => _showInviteDialog(true),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildInviteButton(
-                          title: 'Пригласить коллегу',
-                          icon: Icons.business,
-                          color: Colors.blue,
-                          onTap: () => _showInviteDialog(false),
-                        ),
-                      ),
-                    ],
+                  child: Consumer<InviteProvider>(
+                    builder: (context, inviteProvider, child) {
+                      final hasBusiness = inviteProvider.hasBusiness;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _buildInviteButton(
+                              title: 'Пригласить члена семьи',
+                              icon: Icons.family_restroom,
+                              color: Colors.green,
+                              onTap: () => _showInviteDialog(true),
+                              enabled: true,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildInviteButton(
+                              title: 'Пригласить коллегу',
+                              icon: Icons.business,
+                              color: Colors.blue,
+                              onTap: () => _showInviteDialog(false),
+                              enabled: hasBusiness,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
 
@@ -336,6 +357,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
     final darkerColor = Color.fromRGBO(
       (color.red * 0.7).round(),
@@ -343,10 +365,15 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
       (color.blue * 0.7).round(),
       1.0,
     );
+    final disabledColor = Colors.grey;
+    final disabledDarkerColor = Colors.grey.shade700;
+    
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color, darkerColor],
+          colors: enabled 
+              ? [color, darkerColor]
+              : [disabledColor, disabledDarkerColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -355,25 +382,28 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(icon, color: Colors.white, size: 24),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+          child: Opacity(
+            opacity: enabled ? 1.0 : 0.6,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -528,78 +558,79 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
     );
   }
 
-  Widget _buildBottomActionBar() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          Expanded(
-            child: _buildBottomActionItem(
-              icon: Icons.add,
-              label: 'Создать задачу',
-              onTap: () {
-                // Переход на создание задачи
-                Navigator.of(context).pushNamed('/tasks');
-              },
-            ),
-          ),
-          Expanded(
-            child: _buildBottomActionItem(
-              icon: Icons.edit_note,
-              label: 'Не забыть',
-              onTap: () {
-                Navigator.of(context).pushNamed('/remember');
-              },
-            ),
-          ),
-          // Временно закомментировано
-          // Expanded(
-          //   child: _buildBottomActionItem(
-          //     icon: Icons.mic,
-          //     label: '',
-          //     onTap: _showVoiceRecordDialog,
-          //   ),
-          // ),
-        ],
-      ),
-    );
-  }
+  // Временно закомментировано
+  // Widget _buildBottomActionBar() {
+  //   return Container(
+  //     margin: const EdgeInsets.all(16),
+  //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  //     decoration: BoxDecoration(
+  //       color: Colors.grey.shade800,
+  //       borderRadius: BorderRadius.circular(12),
+  //     ),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceAround,
+  //       children: [
+  //         Expanded(
+  //           child: _buildBottomActionItem(
+  //             icon: Icons.add,
+  //             label: 'Создать задачу',
+  //             onTap: () {
+  //               // Переход на создание задачи
+  //               Navigator.of(context).pushNamed('/tasks');
+  //             },
+  //           ),
+  //         ),
+  //         Expanded(
+  //           child: _buildBottomActionItem(
+  //             icon: Icons.edit_note,
+  //             label: 'Не забыть',
+  //             onTap: () {
+  //               Navigator.of(context).pushNamed('/remember');
+  //             },
+  //           ),
+  //         ),
+  //         // Временно закомментировано
+  //         // Expanded(
+  //         //   child: _buildBottomActionItem(
+  //         //     icon: Icons.mic,
+  //         //     label: '',
+  //         //     onTap: _showVoiceRecordDialog,
+  //         //   ),
+  //         // ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Widget _buildBottomActionItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 20),
-              if (label.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildBottomActionItem({
+  //   required IconData icon,
+  //   required String label,
+  //   required VoidCallback onTap,
+  // }) {
+  //   return Material(
+  //     color: Colors.transparent,
+  //     child: InkWell(
+  //       onTap: onTap,
+  //       borderRadius: BorderRadius.circular(8),
+  //       child: Padding(
+  //         padding: const EdgeInsets.symmetric(vertical: 8),
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Icon(icon, color: Colors.white, size: 20),
+  //             if (label.isNotEmpty) ...[
+  //               const SizedBox(width: 8),
+  //               Text(
+  //                 label,
+  //                 style: const TextStyle(color: Colors.white, fontSize: 14),
+  //               ),
+  //             ],
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildBusinessList(List<Business> businesses) {
     return Card(

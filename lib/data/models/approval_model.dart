@@ -315,6 +315,9 @@ class ApprovalModel extends Approval implements Model {
       case 'AWAITING_CONFIRMATION':
       case 'AWAITINGCONFIRMATION':
         return ApprovalStatus.awaitingConfirmation;
+      case 'AWAITING_PAYMENT_DETAILS':
+      case 'AWAITINGPAYMENTDETAILS':
+        return ApprovalStatus.awaitingPaymentDetails;
       case 'COMPLETED':
         return ApprovalStatus.completed;
       case 'CANCELLED':
@@ -341,6 +344,8 @@ class ApprovalModel extends Approval implements Model {
         return 'IN_EXECUTION';
       case ApprovalStatus.awaitingConfirmation:
         return 'AWAITING_CONFIRMATION';
+      case ApprovalStatus.awaitingPaymentDetails:
+        return 'AWAITING_PAYMENT_DETAILS';
       case ApprovalStatus.completed:
         return 'COMPLETED';
       case ApprovalStatus.cancelled:

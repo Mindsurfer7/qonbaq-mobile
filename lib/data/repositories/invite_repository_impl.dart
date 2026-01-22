@@ -15,12 +15,14 @@ class InviteRepositoryImpl extends RepositoryImpl implements InviteRepository {
   });
 
   @override
-  Future<Either<Failure, CreateInviteResult>> createInvite({
+  Future<Either<Failure, InvitesList>> createInvite({
+    String? inviteType,
     int? maxUses,
     DateTime? expiresAt,
   }) async {
     try {
       final result = await remoteDataSource.createInvite(
+        inviteType: inviteType,
         maxUses: maxUses,
         expiresAt: expiresAt,
       );
@@ -31,12 +33,12 @@ class InviteRepositoryImpl extends RepositoryImpl implements InviteRepository {
   }
 
   @override
-  Future<Either<Failure, CreateInviteResult?>> getCurrentInvite() async {
+  Future<Either<Failure, InvitesList?>> getCurrentInvites() async {
     try {
-      final result = await remoteDataSource.getCurrentInvite();
+      final result = await remoteDataSource.getCurrentInvites();
       return Right(result?.toEntity());
     } catch (e) {
-      return Left(ServerFailure('Ошибка при получении текущего приглашения: $e'));
+      return Left(ServerFailure('Ошибка при получении текущих приглашений: $e'));
     }
   }
 }

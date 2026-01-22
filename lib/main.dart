@@ -260,11 +260,25 @@ class MyApp extends StatelessWidget {
     final getUserBusinesses = GetUserBusinesses(userRepository);
     final getUserProfile = GetUserProfile(userRepository);
     final createBusiness = CreateBusiness(userRepository);
+    
+    // Инициализация зависимостей для ролей (нужно для ProfileProvider и RolesProvider)
+    final employmentRemoteDataSource = EmploymentRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final EmploymentRepository employmentRepository = EmploymentRepositoryImpl(
+      remoteDataSource: employmentRemoteDataSource,
+    );
+    final getBusinessEmploymentsWithRoles = GetBusinessEmploymentsWithRoles(
+      employmentRepository,
+    );
+    
     final profileProvider = ProfileProvider(
       getUserBusinesses: getUserBusinesses,
       getUserProfile: getUserProfile,
       createBusiness: createBusiness,
       userRepository: userRepository,
+      getBusinessEmploymentsWithRoles: getBusinessEmploymentsWithRoles,
+      // currentUserId будет установлен после авторизации через AuthProvider
     );
 
     // Инициализация зависимостей для задач
@@ -474,16 +488,7 @@ class MyApp extends StatelessWidget {
       remoteDataSource: timeSlotRemoteDataSource,
     );
 
-    // Инициализация зависимостей для ролей
-    final employmentRemoteDataSource = EmploymentRemoteDataSourceImpl(
-      apiClient: apiClient,
-    );
-    final EmploymentRepository employmentRepository = EmploymentRepositoryImpl(
-      remoteDataSource: employmentRemoteDataSource,
-    );
-    final getBusinessEmploymentsWithRoles = GetBusinessEmploymentsWithRoles(
-      employmentRepository,
-    );
+    // employmentRepository и getBusinessEmploymentsWithRoles уже созданы выше для ProfileProvider
     final updateEmploymentsRoles = UpdateEmploymentsRoles(employmentRepository);
     final rolesProvider = RolesProvider(
       getBusinessEmploymentsWithRoles: getBusinessEmploymentsWithRoles,

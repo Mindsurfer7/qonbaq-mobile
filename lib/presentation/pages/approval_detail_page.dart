@@ -238,6 +238,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         return 'В исполнении';
       case ApprovalStatus.awaitingConfirmation:
         return 'Ожидает подтверждения';
+      case ApprovalStatus.awaitingPaymentDetails:
+        return 'Ожидает платежных реквизитов';
       case ApprovalStatus.completed:
         return 'Завершено';
       case ApprovalStatus.cancelled:
@@ -259,6 +261,8 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         return Colors.blue;
       case ApprovalStatus.awaitingConfirmation:
         return Colors.red;
+      case ApprovalStatus.awaitingPaymentDetails:
+        return Colors.purple;
       case ApprovalStatus.completed:
         return Colors.teal;
       case ApprovalStatus.cancelled:

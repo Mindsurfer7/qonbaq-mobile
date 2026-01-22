@@ -19,6 +19,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/dynamic_block_form.dart';
 import '../widgets/voice_record_block.dart';
 import '../widgets/pending_confirmations_section.dart';
+import '../widgets/awaiting_payment_details_section.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -43,6 +44,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
   List<Approval> _approvedApprovals = []; // Утвержденные (APPROVED)
   List<Approval> _rejectedApprovals = []; // Отклоненные (REJECTED)
+  List<Approval> _awaitingPaymentDetailsApprovals =
+      []; // Ожидают платежных реквизитов
   late TabController _tabController;
   bool _canApproveInCurrentBusiness = false;
   bool _isLoadingAllApprovals = false; // Флаг загрузки расширенного списка
@@ -230,6 +233,14 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           ),
         );
 
+        // Загружаем согласования, требующие заполнения платежных реквизитов
+        final awaitingPaymentDetailsResult = await getApprovalsUseCase.call(
+          GetApprovalsParams(
+            businessId: selectedBusiness.id,
+            status: ApprovalStatus.awaitingPaymentDetails,
+          ),
+        );
+
         result.fold(
           (failure) {
             setState(() {
@@ -262,6 +273,18 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           (result) {
             setState(() {
               _myApprovals = result.approvals;
+            });
+          },
+        );
+
+        // Обрабатываем результат загрузки согласований, требующих платежных реквизитов
+        awaitingPaymentDetailsResult.fold(
+          (failure) {
+            // Игнорируем ошибки загрузки
+          },
+          (result) {
+            setState(() {
+              _awaitingPaymentDetailsApprovals = result.approvals;
             });
           },
         );
@@ -329,6 +352,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _isLoading = false;
           _pendingApprovals = allPending;
           _myApprovals = []; // Очищаем при загрузке других вкладок
+          _awaitingPaymentDetailsApprovals =
+              []; // Очищаем при загрузке других вкладок
         });
       } else if (actualTabIndex == 2) {
         // Вкладка "Завершенные" - загружаем COMPLETED, APPROVED, REJECTED
@@ -398,6 +423,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _approvedApprovals = approved;
           _rejectedApprovals = rejected;
           _myApprovals = []; // Очищаем при загрузке других вкладок
+          _awaitingPaymentDetailsApprovals =
+              []; // Очищаем при загрузке других вкладок
         });
       }
     } catch (e) {
@@ -570,6 +597,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         return 'В исполнении';
       case ApprovalStatus.awaitingConfirmation:
         return 'Ожидает подтверждения';
+      case ApprovalStatus.awaitingPaymentDetails:
+        return 'Ожидает платежных реквизитов';
       case ApprovalStatus.completed:
         return 'Завершено';
       case ApprovalStatus.cancelled:
@@ -591,6 +620,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         return Colors.blue;
       case ApprovalStatus.awaitingConfirmation:
         return Colors.red;
+      case ApprovalStatus.awaitingPaymentDetails:
+        return Colors.purple;
       case ApprovalStatus.completed:
         return Colors.teal;
       case ApprovalStatus.cancelled:
@@ -685,6 +716,14 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     );
   }
 
+  /// Виджет секции awaiting payment details (переиспользуемый)
+  Widget _buildAwaitingPaymentDetailsSection() {
+    return AwaitingPaymentDetailsSection(
+      approvals: _awaitingPaymentDetailsApprovals,
+      onPaymentDetailsFilled: () => _loadApprovalsForTab(_tabController.index),
+    );
+  }
+
   Widget _buildApprovalsList(List<Approval> approvals) {
     return RefreshIndicator(
       onRefresh: _loadApprovals,
@@ -693,6 +732,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         children: [
           // Секция pending confirmations
           _buildPendingConfirmationsSection(),
+          // Секция awaiting payment details
+          _buildAwaitingPaymentDetailsSection(),
           // Основной список
           if (approvals.isEmpty)
             Padding(
@@ -723,6 +764,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           children: [
             // Секция pending confirmations
             _buildPendingConfirmationsSection(),
+            // Секция awaiting payment details
+            _buildAwaitingPaymentDetailsSection(),
             // Основной список согласований
             if (_canApproveApprovals.isEmpty)
               Padding(
@@ -750,6 +793,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         children: [
           // Секция pending confirmations
           _buildPendingConfirmationsSection(),
+          // Секция awaiting payment details
+          _buildAwaitingPaymentDetailsSection(),
           // Список согласований, требующих решения
           if (_canApproveApprovals.isEmpty)
             Padding(
@@ -943,6 +988,8 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         children: [
           // Секция pending confirmations
           _buildPendingConfirmationsSection(),
+          // Секция awaiting payment details
+          _buildAwaitingPaymentDetailsSection(),
           if (!hasAny)
             Padding(
               padding: const EdgeInsets.all(32.0),

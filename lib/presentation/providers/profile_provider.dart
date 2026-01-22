@@ -3,9 +3,11 @@ import 'package:dartz/dartz.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/employee.dart';
+import '../../domain/entities/employment_with_role.dart';
 import '../../domain/usecases/get_user_businesses.dart';
 import '../../domain/usecases/get_user_profile.dart';
 import '../../domain/usecases/create_business.dart';
+import '../../domain/usecases/get_business_employments_with_roles.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/workspace_storage.dart';
@@ -16,12 +18,16 @@ class ProfileProvider with ChangeNotifier {
   final GetUserProfile getUserProfile;
   final CreateBusiness createBusiness;
   final UserRepository userRepository;
+  final GetBusinessEmploymentsWithRoles getBusinessEmploymentsWithRoles;
+  final String? currentUserId; // ID текущего пользователя для поиска его employment
 
   ProfileProvider({
     required this.getUserBusinesses,
     required this.getUserProfile,
     required this.createBusiness,
     required this.userRepository,
+    required this.getBusinessEmploymentsWithRoles,
+    this.currentUserId,
   });
 
   List<Business>? _businesses;
@@ -30,6 +36,7 @@ class ProfileProvider with ChangeNotifier {
   Business? _selectedWorkspace; // Выбранный workspace (семья или бизнес)
   Map<String, List<Employee>> _employeesByBusiness =
       {}; // Кэш сотрудников по businessId
+  EmploymentWithRole? _currentUserEmployment; // Employment текущего пользователя в выбранном бизнесе
   bool _isLoading = false;
   String? _error;
 
@@ -50,6 +57,15 @@ class ProfileProvider with ChangeNotifier {
 
   /// Сообщение об ошибке
   String? get error => _error;
+
+  /// Employment текущего пользователя в выбранном бизнесе
+  EmploymentWithRole? get currentUserEmployment => _currentUserEmployment;
+
+  /// Код роли текущего пользователя в выбранном бизнесе
+  String? get currentUserRoleCode => _currentUserEmployment?.roleCode;
+
+  /// Проверка, является ли пользователь бухгалтером в текущем бизнесе
+  bool get isAccountant => currentUserRoleCode == 'ACCOUNTANT';
 
   /// Получить список сотрудников для выбранного бизнеса
   List<Employee>? getEmployeesForSelectedBusiness() {
@@ -130,8 +146,14 @@ class ProfileProvider with ChangeNotifier {
         .toList();
   }
 
+  /// Установить ID текущего пользователя (вызывается при авторизации)
+  void setCurrentUserId(String userId) {
+    // Обновляем currentUserId динамически
+    // Это будет использоваться для загрузки employment
+  }
+
   /// Загрузить профиль пользователя
-  Future<void> loadProfile() async {
+  Future<void> loadProfile({String? userId}) async {
     if (_selectedBusiness == null) return;
 
     _isLoading = true;
@@ -153,8 +175,44 @@ class ProfileProvider with ChangeNotifier {
         _isLoading = false;
         _error = null;
         notifyListeners();
+        
+        // Загружаем employment текущего пользователя
+        // Используем userId из параметра или из профиля
+        final userIdToUse = userId ?? currentUserId ?? profile.user.id;
+        loadCurrentUserEmployment(_selectedBusiness!.id, userIdToUse);
       },
     );
+  }
+
+  /// Загрузить employment текущего пользователя для бизнеса
+  Future<void> loadCurrentUserEmployment(String businessId, String userId) async {
+    try {
+      final result = await getBusinessEmploymentsWithRoles.call(
+        GetBusinessEmploymentsWithRolesParams(businessId: businessId),
+      );
+
+      result.fold(
+        (failure) {
+          // Ошибка не критична, просто не сохраняем employment
+          _currentUserEmployment = null;
+        },
+        (employments) {
+          // Находим employment текущего пользователя
+          try {
+            _currentUserEmployment = employments.firstWhere(
+              (emp) => emp.userId == userId,
+            );
+          } catch (e) {
+            // Пользователь не найден в списке сотрудников
+            _currentUserEmployment = null;
+          }
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      // Ошибка не критична
+      _currentUserEmployment = null;
+    }
   }
 
   /// Выбрать компанию
@@ -163,6 +221,7 @@ class ProfileProvider with ChangeNotifier {
 
     _selectedBusiness = business;
     _profile = null;
+    _currentUserEmployment = null; // Сбрасываем employment при смене бизнеса
     notifyListeners();
     loadProfile();
     // Загружаем сотрудников для выбранного бизнеса
@@ -176,6 +235,7 @@ class ProfileProvider with ChangeNotifier {
     _selectedWorkspace = workspace;
     _selectedBusiness = workspace;
     _profile = null;
+    _currentUserEmployment = null; // Сбрасываем employment при смене workspace
 
     // Сохраняем выбранный workspace в локальное хранилище
     await WorkspaceStorage.saveSelectedWorkspaceId(workspace.id);

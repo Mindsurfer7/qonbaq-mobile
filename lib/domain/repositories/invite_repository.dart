@@ -6,14 +6,15 @@ import '../repositories/repository.dart';
 /// Интерфейс репозитория для работы с приглашениями
 /// Реализация находится в data слое
 abstract class InviteRepository extends Repository {
-  /// Создать новое приглашение
-  Future<Either<Failure, CreateInviteResult>> createInvite({
+  /// Создать новое приглашение (новый формат: возвращает список инвайтов)
+  Future<Either<Failure, InvitesList>> createInvite({
+    String? inviteType,
     int? maxUses,
     DateTime? expiresAt,
   });
 
-  /// Получить текущий активный инвайт
-  /// Возвращает null в Right, если активного инвайта нет (404)
-  Future<Either<Failure, CreateInviteResult?>> getCurrentInvite();
+  /// Получить текущие инвайты (новый формат: возвращает список инвайтов)
+  /// Возвращает null в Right, если инвайтов нет (404)
+  Future<Either<Failure, InvitesList?>> getCurrentInvites();
 }
 

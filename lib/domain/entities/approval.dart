@@ -17,6 +17,7 @@ enum ApprovalStatus {
   rejected, // Отклонено
   inExecution, // В исполнении
   awaitingConfirmation, // Ожидает подтверждения
+  awaitingPaymentDetails, // Ожидает заполнения платежных реквизитов
   completed, // Завершено
   cancelled, // Отменено
 }

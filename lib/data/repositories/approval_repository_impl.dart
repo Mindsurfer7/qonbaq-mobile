@@ -370,5 +370,31 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
       return Left(ServerFailure('Ошибка при подтверждении согласования: $e'));
     }
   }
+
+  @override
+  Future<Either<Failure, Approval>> fillPaymentDetails(
+    String id, {
+    required String paymentMethod,
+    String? accountId,
+    String? fromAccountId,
+  }) async {
+    try {
+      final approval = await remoteDataSource.fillPaymentDetails(
+        id,
+        paymentMethod: paymentMethod,
+        accountId: accountId,
+        fromAccountId: fromAccountId,
+      );
+      return Right(approval.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при заполнении платежных реквизитов: $e'));
+    }
+  }
 }
 

@@ -15,12 +15,23 @@ class InviteProvider with ChangeNotifier {
     required this.getCurrentInvite,
   });
 
-  CreateInviteResult? _inviteResult;
+  InvitesList? _invitesList;
   bool _isLoading = false;
   String? _error;
 
-  /// Результат создания приглашения
-  CreateInviteResult? get inviteResult => _inviteResult;
+  /// Список инвайтов
+  InvitesList? get invitesList => _invitesList;
+
+  /// Получить инвайт по типу
+  InviteWithLinks? getInviteByType(InviteType type) {
+    return _invitesList?.getInviteByType(type);
+  }
+
+  /// Получить FAMILY инвайт
+  InviteWithLinks? get familyInvite => getInviteByType(InviteType.family);
+
+  /// Получить BUSINESS инвайт
+  InviteWithLinks? get businessInvite => getInviteByType(InviteType.business);
 
   /// Статус загрузки
   bool get isLoading => _isLoading;
@@ -28,18 +39,36 @@ class InviteProvider with ChangeNotifier {
   /// Сообщение об ошибке
   String? get error => _error;
 
+  /// Есть ли у пользователя бизнес (если есть BUSINESS инвайт)
+  bool get hasBusiness => _invitesList?.hasBusiness ?? false;
+
+  /// Результат создания приглашения (для обратной совместимости)
+  /// Возвращает FAMILY инвайт, если есть, иначе первый доступный
+  CreateInviteResult? get inviteResult {
+    if (_invitesList == null || _invitesList!.invites.isEmpty) {
+      return null;
+    }
+    final invite = familyInvite ?? _invitesList!.invites.first;
+    return CreateInviteResult(
+      invite: invite.invite,
+      links: invite.links,
+      hasBusiness: hasBusiness,
+    );
+  }
+
   /// Создать приглашение
   Future<void> createInviteLink({
+    String? inviteType,
     int? maxUses,
     DateTime? expiresAt,
   }) async {
     _isLoading = true;
     _error = null;
-    _inviteResult = null;
     notifyListeners();
 
     final result = await createInvite.call(
       CreateInviteParams(
+        inviteType: inviteType,
         maxUses: maxUses,
         expiresAt: expiresAt,
       ),
@@ -52,7 +81,7 @@ class InviteProvider with ChangeNotifier {
         notifyListeners();
       },
       (result) {
-        _inviteResult = result;
+        _invitesList = result;
         _isLoading = false;
         _error = null;
         notifyListeners();
@@ -60,7 +89,7 @@ class InviteProvider with ChangeNotifier {
     );
   }
 
-  /// Загрузить текущий активный инвайт
+  /// Загрузить текущие инвайты
   Future<void> loadCurrentInvite() async {
     _isLoading = true;
     _error = null;
@@ -75,7 +104,7 @@ class InviteProvider with ChangeNotifier {
         notifyListeners();
       },
       (result) {
-        _inviteResult = result; // Может быть null, если активного инвайта нет
+        _invitesList = result; // Может быть null, если инвайтов нет
         _isLoading = false;
         _error = null;
         notifyListeners();
@@ -85,7 +114,7 @@ class InviteProvider with ChangeNotifier {
 
   /// Сбросить состояние
   void reset() {
-    _inviteResult = null;
+    _invitesList = null;
     _error = null;
     _isLoading = false;
     notifyListeners();
