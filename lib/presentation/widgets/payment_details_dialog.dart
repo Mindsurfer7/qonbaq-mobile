@@ -9,6 +9,7 @@ import '../../domain/usecases/get_payment_details_schema.dart';
 import '../../core/error/failures.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../providers/profile_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
 import 'dynamic_block_form.dart';
 
 /// Диалог для заполнения платежных реквизитов
@@ -247,6 +248,13 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
         });
       },
       (_) {
+        // Удаляем approvalId из провайдера, так как payment details успешно заполнены
+        final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+          context,
+          listen: false,
+        );
+        pendingProvider.removeAwaitingPaymentDetails(widget.approvalId);
+        
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

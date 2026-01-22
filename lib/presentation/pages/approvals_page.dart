@@ -11,12 +11,12 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
 import '../../domain/usecases/create_approval.dart';
 import '../../domain/usecases/get_approval_templates.dart';
-import '../../domain/usecases/get_notifications.dart';
 import '../../domain/entities/approvals_result.dart';
 import '../../domain/entities/missing_role_info.dart';
 import '../../core/error/failures.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
 import '../widgets/dynamic_block_form.dart';
 import '../widgets/voice_record_block.dart';
 import '../widgets/pending_confirmations_section.dart';
@@ -45,10 +45,6 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _completedApprovals = []; // Завершенные (COMPLETED)
   List<Approval> _approvedApprovals = []; // Утвержденные (APPROVED)
   List<Approval> _rejectedApprovals = []; // Отклоненные (REJECTED)
-  List<Approval> _awaitingPaymentDetailsApprovals =
-      []; // Ожидают платежных реквизитов (загруженные по статусу, для обратной совместимости)
-  List<String> _awaitingPaymentDetailsIds =
-      []; // ID согласований из notifications (awaitingPaymentDetails)
   late TabController _tabController;
   bool _canApproveInCurrentBusiness = false;
   bool _isLoadingAllApprovals = false; // Флаг загрузки расширенного списка
@@ -236,16 +232,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           ),
         );
 
-        // Загружаем согласования, требующие заполнения платежных реквизитов
-        final awaitingPaymentDetailsResult = await getApprovalsUseCase.call(
-          GetApprovalsParams(
-            businessId: selectedBusiness.id,
-            status: ApprovalStatus.awaitingPaymentDetails,
-          ),
-        );
-
-        // Загружаем уведомления
-        await _loadNotifications();
+        // awaitingPaymentDetails теперь загружаются через PendingConfirmationsProvider
 
         result.fold(
           (failure) {
@@ -283,17 +270,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           },
         );
 
-        // Обрабатываем результат загрузки согласований, требующих платежных реквизитов
-        awaitingPaymentDetailsResult.fold(
-          (failure) {
-            // Игнорируем ошибки загрузки
-          },
-          (result) {
-            setState(() {
-              _awaitingPaymentDetailsApprovals = result.approvals;
-            });
-          },
-        );
+        // awaitingPaymentDetails теперь загружаются через PendingConfirmationsProvider
       } else if (actualTabIndex == 1) {
         // Вкладка "Ожидают" - загружаем DRAFT, PENDING и IN_EXECUTION
         final draftResult = await getApprovalsUseCase.call(
@@ -358,8 +335,6 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _isLoading = false;
           _pendingApprovals = allPending;
           _myApprovals = []; // Очищаем при загрузке других вкладок
-          _awaitingPaymentDetailsApprovals =
-              []; // Очищаем при загрузке других вкладок
         });
       } else if (actualTabIndex == 2) {
         // Вкладка "Завершенные" - загружаем COMPLETED, APPROVED, REJECTED
@@ -429,8 +404,6 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           _approvedApprovals = approved;
           _rejectedApprovals = rejected;
           _myApprovals = []; // Очищаем при загрузке других вкладок
-          _awaitingPaymentDetailsApprovals =
-              []; // Очищаем при загрузке других вкладок
         });
       }
     } catch (e) {
@@ -447,42 +420,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     _loadApprovalsForTab(_tabController.index);
   }
 
-  /// Загрузка уведомлений и согласований из notifications
-  Future<void> _loadNotifications() async {
-    final profileProvider = Provider.of<ProfileProvider>(
-      context,
-      listen: false,
-    );
-    final selectedBusiness = profileProvider.selectedBusiness;
-
-    if (selectedBusiness == null) {
-      return;
-    }
-
-    final getNotificationsUseCase = Provider.of<GetNotifications>(
-      context,
-      listen: false,
-    );
-    final result = await getNotificationsUseCase.call(
-      GetNotificationsParams(businessId: selectedBusiness.id),
-    );
-
-    result.fold(
-      (failure) {
-        // Игнорируем ошибки загрузки уведомлений, чтобы не блокировать основной список
-      },
-      (notifications) {
-        if (mounted) {
-          // Извлекаем ID согласований из awaitingPaymentDetails
-          final awaitingPaymentDetails =
-              notifications.accountant?.awaitingPaymentDetails ?? {};
-          setState(() {
-            _awaitingPaymentDetailsIds = awaitingPaymentDetails.keys.toList();
-          });
-        }
-      },
-    );
-  }
+  // awaitingPaymentDetails теперь загружаются через PendingConfirmationsProvider
 
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
@@ -761,19 +699,27 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
   /// Виджет секции awaiting payment details (переиспользуемый)
   Widget _buildAwaitingPaymentDetailsSection() {
-    // Используем ID из notifications (awaitingPaymentDetails)
-    // Если их нет, используем ID из загруженных по статусу (для обратной совместимости)
-    final idsToShow =
-        _awaitingPaymentDetailsIds.isNotEmpty
-            ? _awaitingPaymentDetailsIds
-            : _awaitingPaymentDetailsApprovals.map((a) => a.id).toList();
-
-    return AwaitingPaymentDetailsSection(
-      approvalIds: idsToShow,
-      onPaymentDetailsFilled: () {
-        // Перезагружаем notifications и согласования
-        _loadNotifications();
-        _loadApprovalsForTab(_tabController.index);
+    return Consumer<PendingConfirmationsProvider>(
+      builder: (context, provider, child) {
+        return AwaitingPaymentDetailsSection(
+          approvalIds: provider.awaitingPaymentDetailsIds,
+          onPaymentDetailsFilled: () {
+            // Обновляем awaiting payment details через провайдер
+            final profileProvider = Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            );
+            final selectedBusiness = profileProvider.selectedBusiness;
+            if (selectedBusiness != null) {
+              // Перезагружаем awaiting payment details
+              provider.loadAwaitingPaymentDetails(
+                businessId: selectedBusiness.id,
+              );
+            }
+            // Перезагружаем согласования
+            _loadApprovalsForTab(_tabController.index);
+          },
+        );
       },
     );
   }

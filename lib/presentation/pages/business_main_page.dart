@@ -287,7 +287,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
                           ),
                           child: Center(
                             child: Text(
-                              provider.count > 99 ? '99+' : '${provider.count}',
+                              provider.totalCount > 99 ? '99+' : '${provider.totalCount}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,

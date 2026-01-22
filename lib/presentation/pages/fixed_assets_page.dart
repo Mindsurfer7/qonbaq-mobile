@@ -89,7 +89,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     Provider.of<PendingConfirmationsProvider>(
       context,
       listen: false,
-    ).loadPendingConfirmations(businessId: businessId);
+    ).loadAll(businessId: businessId);
     if (currentUserId != null) {
       _loadMyPendingTransferApprovals(
         businessId: businessId,
@@ -112,7 +112,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
     await Provider.of<PendingConfirmationsProvider>(
       context,
       listen: false,
-    ).loadPendingConfirmations(businessId: selectedBusiness.id);
+    ).loadAll(businessId: selectedBusiness.id);
     if (currentUserId != null) {
       await _loadMyPendingTransferApprovals(
         businessId: selectedBusiness.id,

@@ -14,7 +14,9 @@ import '../repositories/repository.dart';
 abstract class ApprovalRepository extends Repository {
   // Шаблоны согласований
   /// Создать шаблон
-  Future<Either<Failure, ApprovalTemplate>> createTemplate(ApprovalTemplate template);
+  Future<Either<Failure, ApprovalTemplate>> createTemplate(
+    ApprovalTemplate template,
+  );
 
   /// Получить список шаблонов с метаданными
   Future<Either<Failure, TemplatesResult>> getTemplates({String? businessId});
@@ -65,7 +67,10 @@ abstract class ApprovalRepository extends Repository {
 
   // Комментарии
   /// Создать комментарий
-  Future<Either<Failure, ApprovalComment>> createComment(String approvalId, String text);
+  Future<Either<Failure, ApprovalComment>> createComment(
+    String approvalId,
+    String text,
+  );
 
   /// Получить список комментариев
   Future<Either<Failure, List<ApprovalComment>>> getComments(String approvalId);
@@ -78,7 +83,10 @@ abstract class ApprovalRepository extends Repository {
   );
 
   /// Удалить комментарий
-  Future<Either<Failure, void>> deleteComment(String approvalId, String commentId);
+  Future<Either<Failure, void>> deleteComment(
+    String approvalId,
+    String commentId,
+  );
 
   // Вложения
   /// Добавить вложение
@@ -91,14 +99,21 @@ abstract class ApprovalRepository extends Repository {
   );
 
   /// Получить список вложений
-  Future<Either<Failure, List<ApprovalAttachment>>> getAttachments(String approvalId);
+  Future<Either<Failure, List<ApprovalAttachment>>> getAttachments(
+    String approvalId,
+  );
 
   /// Удалить вложение
-  Future<Either<Failure, void>> deleteAttachment(String approvalId, String attachmentId);
+  Future<Either<Failure, void>> deleteAttachment(
+    String approvalId,
+    String attachmentId,
+  );
 
   // Подтверждения
   /// Получить список согласований, требующих подтверждения
-  Future<Either<Failure, List<PendingConfirmation>>> getPendingConfirmations({String? businessId});
+  Future<Either<Failure, List<PendingConfirmation>>> getPendingConfirmations({
+    String? businessId,
+  });
 
   /// Подтвердить согласование
   Future<Either<Failure, Approval>> confirmApproval(
@@ -118,6 +133,7 @@ abstract class ApprovalRepository extends Repository {
   });
 
   /// Получить схему формы для заполнения payment details
-  Future<Either<Failure, Map<String, dynamic>>> getPaymentDetailsSchema(String id);
+  Future<Either<Failure, Map<String, dynamic>>> getPaymentDetailsSchema(
+    String id,
+  );
 }
-

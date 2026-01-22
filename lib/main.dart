@@ -415,10 +415,6 @@ class MyApp extends StatelessWidget {
     final confirmApproval = ConfirmApproval(approvalRepository);
     final fillPaymentDetails = FillPaymentDetails(approvalRepository);
     final getPaymentDetailsSchema = GetPaymentDetailsSchema(approvalRepository);
-    final pendingConfirmationsProvider = PendingConfirmationsProvider(
-      getPendingConfirmations: getPendingConfirmations,
-      confirmApproval: confirmApproval,
-    );
 
     // Инициализация зависимостей для уведомлений
     final notificationRemoteDataSource = NotificationRemoteDataSourceImpl(
@@ -428,6 +424,12 @@ class MyApp extends StatelessWidget {
       remoteDataSource: notificationRemoteDataSource,
     );
     final getNotifications = GetNotifications(notificationRepository);
+
+    final pendingConfirmationsProvider = PendingConfirmationsProvider(
+      getPendingConfirmations: getPendingConfirmations,
+      confirmApproval: confirmApproval,
+      getNotifications: getNotifications,
+    );
 
     // Инициализация зависимостей для финансовых форм
     final financialRemoteDataSource = FinancialRemoteDataSourceImpl(
