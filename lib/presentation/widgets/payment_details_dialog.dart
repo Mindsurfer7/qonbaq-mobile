@@ -173,40 +173,38 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
     _formKey.currentState!.save();
     final formValues = _formKey.currentState!.value;
 
-    // Извлекаем paymentMethod из формы (может быть в динамической форме или в старом формате)
-    String? paymentMethod = formValues['paymentMethod'] as String?;
-    if (paymentMethod == null) {
+    // Извлекаем paymentMethod из формы (может быть в динамической форме с префиксом блока или в старом формате)
+    String? paymentMethod;
+    
+    // Сначала проверяем прямое значение (для старой формы)
+    final directValue = formValues['paymentMethod'];
+    if (directValue != null && directValue.toString().isNotEmpty) {
+      paymentMethod = directValue.toString();
+    } else {
+      // Ищем с префиксами блоков (для динамической формы: payment.paymentMethod, paymentInfo.paymentMethod и т.д.)
+      for (final key in formValues.keys) {
+        final keyStr = key.toString();
+        // Ищем ключи, заканчивающиеся на .paymentMethod или содержащие paymentMethod
+        if (keyStr.endsWith('.paymentMethod') || 
+            (keyStr.contains('paymentMethod') && keyStr.contains('.'))) {
+          final value = formValues[key];
+          if (value != null && value.toString().isNotEmpty) {
+            paymentMethod = value.toString();
+            break;
+          }
+        }
+      }
+    }
+    
+    // Если не нашли в форме, используем сохраненное значение (для старой формы)
+    if (paymentMethod == null || paymentMethod.isEmpty) {
       paymentMethod = _selectedPaymentMethod;
     }
+    
+    // Нормализуем значение
+    paymentMethod = paymentMethod?.trim();
 
-    // Валидация полей в зависимости от способа оплаты (для старой формы)
-    if (paymentMethod == 'CASH') {
-      if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
-        // Проверяем, есть ли accountId в динамической форме
-        final accountId = formValues['accountId'] as String?;
-        if (accountId == null || accountId.isEmpty) {
-          setState(() {
-            _error = 'Для наличных необходимо выбрать кассу';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-    } else if (paymentMethod == 'BANK_TRANSFER' || 
-               paymentMethod == 'TERMINAL') {
-      if (_selectedFromAccountId == null || _selectedFromAccountId!.isEmpty) {
-        // Проверяем, есть ли fromAccountId в динамической форме
-        final fromAccountId = formValues['fromAccountId'] as String?;
-        if (fromAccountId == null || fromAccountId.isEmpty) {
-          setState(() {
-            _error = 'Для безналичных необходимо выбрать банковский счет';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-    }
-
+    // ВАЛИДАЦИЯ: проверяем наличие способа оплаты ПЕРВЫМ делом
     if (paymentMethod == null || paymentMethod.isEmpty) {
       setState(() {
         _error = 'Необходимо выбрать способ оплаты';
@@ -215,17 +213,82 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
       return;
     }
 
+    // Вспомогательная функция для извлечения значения с учетом префиксов блоков
+    String? _extractFieldValue(String fieldName) {
+      // Сначала проверяем прямое значение
+      final directValue = formValues[fieldName];
+      if (directValue != null && directValue.toString().isNotEmpty) {
+        return directValue.toString();
+      }
+      
+      // Ищем с префиксами блоков (payment.accountId, paymentInfo.accountId и т.д.)
+      for (final key in formValues.keys) {
+        final keyStr = key.toString();
+        if (keyStr.endsWith('.$fieldName') || 
+            (keyStr.contains(fieldName) && keyStr.contains('.'))) {
+          final value = formValues[key];
+          if (value != null && value.toString().isNotEmpty) {
+            return value.toString();
+          }
+        }
+      }
+      
+      return null;
+    }
+
     // Извлекаем accountId и fromAccountId из формы
-    // Для динамической формы они могут быть в formValues, для старой формы - в _selectedAccountId/_selectedFromAccountId
-    final accountId = formValues['accountId'] as String? ?? _selectedAccountId;
-    final fromAccountId = formValues['fromAccountId'] as String? ?? _selectedFromAccountId;
+    String? accountId = _extractFieldValue('accountId') ?? _selectedAccountId;
+    String? fromAccountId = _extractFieldValue('fromAccountId') ?? _selectedFromAccountId;
+
+    // Валидация полей в зависимости от способа оплаты
+    if (paymentMethod == 'CASH') {
+      if (accountId == null || accountId.isEmpty) {
+        setState(() {
+          _error = 'Для наличных необходимо выбрать кассу';
+          _isLoading = false;
+        });
+        return;
+      }
+    } else if (paymentMethod == 'BANK_TRANSFER' || 
+               paymentMethod == 'TERMINAL') {
+      if (fromAccountId == null || fromAccountId.isEmpty) {
+        setState(() {
+          _error = 'Для безналичных необходимо выбрать банковский счет';
+          _isLoading = false;
+        });
+        return;
+      }
+    }
+
+    // Собираем все данные формы в formData, убирая префиксы блоков
+    // formValues содержит данные вида {'main.projectId': '...', 'payment.paymentMethod': '...'}
+    // Нужно убрать префиксы блоков и оставить только имена полей
+    final dynamicFormData = <String, dynamic>{};
+    formValues.forEach((key, value) {
+      if (value != null) {
+        // Убираем префикс блока (main., payment., expense. и т.д.)
+        final fieldName = key.contains('.') ? key.split('.').last : key;
+        // Исключаем системные поля формы
+        if (fieldName != 'title' && 
+            fieldName != 'description' && 
+            fieldName != 'paymentDueDate' && 
+            fieldName != 'requestDate') {
+          // Преобразуем DateTime в ISO строку для отправки на сервер
+          if (value is DateTime) {
+            dynamicFormData[fieldName] = value.toIso8601String();
+          } else {
+            dynamicFormData[fieldName] = value;
+          }
+        }
+      }
+    });
 
     final fillPaymentDetailsUseCase = Provider.of<FillPaymentDetails>(
       context,
       listen: false,
     );
 
-    // Структура запроса: { paymentMethod, accountId?, fromAccountId? }
+    // Передаем все данные формы в formData, а также отдельные поля для обратной совместимости
     final result = await fillPaymentDetailsUseCase.call(
       FillPaymentDetailsParams(
         approvalId: widget.approvalId,
@@ -235,6 +298,7 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                        paymentMethod == 'TERMINAL') 
             ? fromAccountId 
             : null,
+        formData: dynamicFormData.isNotEmpty ? dynamicFormData : null,
       ),
     );
 

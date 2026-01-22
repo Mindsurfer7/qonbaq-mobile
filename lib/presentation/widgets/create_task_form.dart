@@ -10,6 +10,7 @@ import '../../data/models/validation_error.dart';
 import '../../data/models/task_model.dart';
 import '../../core/services/voice_context.dart';
 import '../providers/auth_provider.dart';
+import '../providers/profile_provider.dart';
 import 'user_selector_widget.dart';
 import 'voice_record_block.dart';
 
@@ -56,6 +57,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   String? _assignedById;
   // Храним ошибки валидации для отображения в полях
   final Map<String, String> _fieldErrors = {};
+  String? _currentUserFullName; // Полное имя текущего пользователя для отображения
 
   @override
   void didUpdateWidget(CreateTaskForm oldWidget) {
@@ -118,6 +120,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (widget.initialDescription != null) {
       _descriptionController.text = widget.initialDescription!;
     }
+    // Загружаем имя текущего пользователя
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCurrentUserName();
+    });
     // Применяем предзаполненные данные задачи, если есть
     if (widget.initialTaskData != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -138,6 +144,46 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     }
   }
 
+  /// Загружает имя текущего пользователя из списка сотрудников
+  Future<void> _loadCurrentUserName() async {
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+
+    if (currentUserId == null) return;
+
+    // Получаем список сотрудников из кэша
+    var employees = profileProvider.getEmployeesForBusiness(widget.businessId);
+    
+    // Если сотрудников нет в кэше, загружаем их
+    if (employees == null || employees.isEmpty) {
+      await profileProvider.loadEmployees(widget.businessId);
+      employees = profileProvider.getEmployeesForBusiness(widget.businessId);
+    }
+
+    if (employees != null && employees.isNotEmpty) {
+      try {
+        final currentEmployee = employees.firstWhere(
+          (e) => e.id == currentUserId,
+        );
+        if (mounted) {
+          setState(() {
+            _currentUserFullName = currentEmployee.fullName;
+          });
+        }
+      } catch (e) {
+        // Пользователь не найден в списке сотрудников
+        if (mounted) {
+          setState(() {
+            _currentUserFullName = null;
+          });
+        }
+      }
+    }
+  }
+
   /// Устанавливает текущего пользователя как исполнителя
   void _setCurrentUserAsAssignee() {
     if (!mounted || _formKey.currentState == null) return;
@@ -152,6 +198,20 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       });
       _formKey.currentState?.fields['assignedTo']?.didChange(currentUserId);
     }
+  }
+
+  /// Проверяет, может ли пользователь изменять исполнителя задачи (назначать на других)
+  bool _canChangeAssignee() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    final profile = profileProvider.profile;
+
+    // Админы, гендиректоры, руководители проектов и отделов могут изменять исполнителя
+    return currentUser?.isAdmin == true ||
+        profile?.orgStructure.isGeneralDirector == true ||
+        profile?.orgStructure.isProjectManager == true ||
+        profile?.orgStructure.isDepartmentHead == true;
   }
 
   /// Применяет предзаполненные данные задачи к форме
@@ -169,11 +229,14 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       formState.fields['description']?.didChange(taskData.description);
     }
     formState.fields['status']?.didChange(taskData.status);
-    if (taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
+    
+    // Если пользователь может изменять исполнителя и в предзаполненных данных есть исполнитель, используем его
+    // Иначе всегда устанавливаем текущего пользователя (по умолчанию задача на себя)
+    if (_canChangeAssignee() && taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
       _assignedToId = taskData.assignedTo;
       formState.fields['assignedTo']?.didChange(taskData.assignedTo);
     } else {
-      // Если в предзаполненных данных нет исполнителя, устанавливаем текущего пользователя
+      // По умолчанию задача на текущего пользователя
       _setCurrentUserAsAssignee();
     }
     if (taskData.assignedBy != null && taskData.assignedBy!.isNotEmpty) {
@@ -367,18 +430,31 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             const SizedBox(height: 16),
 
             // Исполнитель
-            UserSelectorWidget(
-              businessId: widget.businessId,
-              userRepository: widget.userRepository,
-              selectedUserId: _assignedToId,
-              onUserSelected: (userId) {
-                setState(() {
-                  _assignedToId = userId;
-                });
-                _formKey.currentState?.fields['assignedTo']?.didChange(userId);
-              },
-              label: 'Исполнитель',
-            ),
+            _canChangeAssignee()
+                ? UserSelectorWidget(
+                    businessId: widget.businessId,
+                    userRepository: widget.userRepository,
+                    selectedUserId: _assignedToId,
+                    onUserSelected: (userId) {
+                      setState(() {
+                        _assignedToId = userId;
+                      });
+                      _formKey.currentState?.fields['assignedTo']?.didChange(userId);
+                    },
+                    label: 'Исполнитель',
+                  )
+                : TextFormField(
+                    initialValue: _currentUserFullName ?? 'Загрузка...',
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Исполнитель',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.person),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      helperText: 'Задача будет назначена на вас',
+                    ),
+                  ),
             const SizedBox(height: 16),
 
             // Поручитель
@@ -502,6 +578,16 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     setState(() {
       _fieldErrors.clear();
     });
+
+    // Если пользователь не может изменять исполнителя, принудительно устанавливаем текущего пользователя
+    // (на случай, если кто-то попытается изменить значение программно)
+    if (!_canChangeAssignee()) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentUserId = authProvider.user?.id;
+      if (currentUserId != null) {
+        _assignedToId = currentUserId;
+      }
+    }
 
     // Сохраняем значения из UserSelectorWidget
     _formKey.currentState?.fields['assignedTo']?.didChange(_assignedToId);
