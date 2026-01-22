@@ -942,13 +942,16 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     required String paymentMethod,
     String? accountId,
     String? fromAccountId,
+    Map<String, dynamic>? formData,
   }) async {
     try {
+      // Структура запроса: { paymentMethod, accountId?, fromAccountId? }
       final body = <String, dynamic>{
         'paymentMethod': paymentMethod,
       };
       if (accountId != null) body['accountId'] = accountId;
       if (fromAccountId != null) body['fromAccountId'] = fromAccountId;
+      // formData не отправляется в этом эндпоинте
 
       final response = await apiClient.patch(
         '/api/approvals/$id/payment-details',
@@ -988,6 +991,46 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       if (e is ValidationException) {
         rethrow;
       }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPaymentDetailsSchema(String id) async {
+    try {
+      final response = await apiClient.get(
+        '/api/approvals/$id/payment-details-schema',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => data as Map<String, dynamic>,
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Нет прав на получение схемы формы',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 404) {
+        throw Exception('Согласование не найдено');
+      } else {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка сервера: ${response.statusCode}',
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
       if (e is Exception) {
         rethrow;
       }

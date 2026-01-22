@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../domain/entities/approval.dart';
 import '../../core/theme/theme_extensions.dart';
-import '../providers/auth_provider.dart';
-import '../providers/profile_provider.dart';
 import 'payment_details_dialog.dart';
 
 /// Секция "Требует заполнения платежных реквизитов".
 ///
-/// Отображает согласования со статусом AWAITING_PAYMENT_DETAILS,
-/// которые требуют заполнения платежных реквизитов бухгалтером.
+/// Отображает согласования, для которых требуется заполнение платежных реквизитов.
+/// Список согласований определяется через awaitingPaymentDetails из notifications.
 class AwaitingPaymentDetailsSection extends StatelessWidget {
-  final List<Approval> approvals;
+  final List<Approval> approvals; // Список согласований для отображения
   final String headerText;
   final EdgeInsets headerPadding;
   final EdgeInsets cardMargin;
@@ -33,44 +30,10 @@ class AwaitingPaymentDetailsSection extends StatelessWidget {
     this.onPaymentDetailsFilled,
   });
 
-  /// Проверка, является ли пользователь бухгалтером или генеральным директором
-  bool _isAccountantOrGeneralDirector(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final currentUser = authProvider.user;
-    final selectedBusiness = profileProvider.selectedBusiness;
-
-    if (currentUser == null || selectedBusiness == null) return false;
-
-    // Админы могут видеть
-    if (currentUser.isAdmin) return true;
-
-    // Проверяем, является ли пользователь генеральным директором
-    final permission = currentUser.getPermissionsForBusiness(selectedBusiness.id);
-    if (permission != null && permission.isGeneralDirector) {
-      return true;
-    }
-
-    // Проверяем роль бухгалтера через employment
-    if (profileProvider.isAccountant) {
-      return true;
-    }
-
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Проверяем права доступа
-    if (!_isAccountantOrGeneralDirector(context)) {
-      return const SizedBox.shrink();
-    }
-
-    // Фильтруем только согласования со статусом awaitingPaymentDetails
-    final filteredApprovals = approvals
-        .where((approval) =>
-            approval.status == ApprovalStatus.awaitingPaymentDetails)
-        .toList();
+    // Показываем все переданные согласования (они уже отфильтрованы по awaitingPaymentDetails)
+    final filteredApprovals = approvals;
 
     if (filteredApprovals.isEmpty) {
       return const SizedBox.shrink();

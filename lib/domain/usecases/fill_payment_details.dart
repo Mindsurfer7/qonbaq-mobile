@@ -10,12 +10,14 @@ class FillPaymentDetailsParams {
   final String paymentMethod; // "CASH" | "BANK_TRANSFER" | "TERMINAL"
   final String? accountId; // Для CASH
   final String? fromAccountId; // Для BANK_TRANSFER/TERMINAL
+  final Map<String, dynamic>? formData; // Данные динамической формы
 
   FillPaymentDetailsParams({
     required this.approvalId,
     required this.paymentMethod,
     this.accountId,
     this.fromAccountId,
+    this.formData,
   });
 }
 
@@ -32,6 +34,7 @@ class FillPaymentDetails implements UseCase<Approval, FillPaymentDetailsParams> 
       paymentMethod: params.paymentMethod,
       accountId: params.accountId,
       fromAccountId: params.fromAccountId,
+      formData: params.formData,
     );
   }
 }

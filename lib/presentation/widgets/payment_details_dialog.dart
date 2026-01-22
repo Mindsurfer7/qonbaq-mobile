@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/usecases/fill_payment_details.dart';
 import '../../domain/usecases/get_accounts.dart';
+import '../../domain/usecases/get_payment_details_schema.dart';
 import '../../core/error/failures.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../providers/profile_provider.dart';
+import 'dynamic_block_form.dart';
 
 /// Диалог для заполнения платежных реквизитов
 class PaymentDetailsDialog extends StatefulWidget {
@@ -24,9 +27,10 @@ class PaymentDetailsDialog extends StatefulWidget {
 }
 
 class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
-  final _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormBuilderState>();
   bool _isLoading = false;
   bool _isLoadingAccounts = false;
+  bool _isLoadingSchema = false;
   String? _error;
   
   String? _selectedPaymentMethod; // "CASH" | "BANK_TRANSFER" | "TERMINAL"
@@ -35,6 +39,9 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
   
   List<Account> _cashAccounts = []; // Кассы для CASH
   List<Account> _bankAccounts = []; // Банковские счета для BANK_TRANSFER/TERMINAL
+  
+  Map<String, dynamic>? _formSchema; // Схема динамической формы
+  Map<String, dynamic>? _initialValues; // Начальные значения для формы
 
   @override
   void initState() {
@@ -44,8 +51,43 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
       _selectedPaymentMethod = widget.approval.formData!['paymentMethod']?.toString();
       _selectedAccountId = widget.approval.formData!['accountId']?.toString();
       _selectedFromAccountId = widget.approval.formData!['fromAccountId']?.toString();
+      // Сохраняем formData как начальные значения для динамической формы
+      _initialValues = Map<String, dynamic>.from(widget.approval.formData!);
     }
+    _loadSchema();
     _loadAccounts();
+  }
+
+  Future<void> _loadSchema() async {
+    setState(() {
+      _isLoadingSchema = true;
+      _error = null;
+    });
+
+    final getSchemaUseCase = Provider.of<GetPaymentDetailsSchema>(
+      context,
+      listen: false,
+    );
+
+    final result = await getSchemaUseCase.call(widget.approval.id);
+
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        // Если схема не найдена или ошибка - используем старую форму
+        setState(() {
+          _isLoadingSchema = false;
+          _formSchema = null;
+        });
+      },
+      (schema) {
+        setState(() {
+          _isLoadingSchema = false;
+          _formSchema = schema;
+        });
+      },
+    );
   }
 
   Future<void> _loadAccounts() async {
@@ -106,6 +148,13 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
   }
 
   Future<void> _handleSubmit() async {
+    if (_formKey.currentState == null) {
+      setState(() {
+        _error = 'Ошибка формы';
+      });
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -117,39 +166,71 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
       _error = null;
     });
 
-    // Валидация полей в зависимости от способа оплаты
-    if (_selectedPaymentMethod == 'CASH') {
+    // Сохраняем значения формы
+    _formKey.currentState!.save();
+    final formValues = _formKey.currentState!.value;
+
+    // Извлекаем paymentMethod из формы (может быть в динамической форме или в старом формате)
+    String? paymentMethod = formValues['paymentMethod'] as String?;
+    if (paymentMethod == null) {
+      paymentMethod = _selectedPaymentMethod;
+    }
+
+    // Валидация полей в зависимости от способа оплаты (для старой формы)
+    if (paymentMethod == 'CASH') {
       if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
-        setState(() {
-          _error = 'Для наличных необходимо выбрать кассу';
-          _isLoading = false;
-        });
-        return;
+        // Проверяем, есть ли accountId в динамической форме
+        final accountId = formValues['accountId'] as String?;
+        if (accountId == null || accountId.isEmpty) {
+          setState(() {
+            _error = 'Для наличных необходимо выбрать кассу';
+            _isLoading = false;
+          });
+          return;
+        }
       }
-    } else if (_selectedPaymentMethod == 'BANK_TRANSFER' || 
-               _selectedPaymentMethod == 'TERMINAL') {
+    } else if (paymentMethod == 'BANK_TRANSFER' || 
+               paymentMethod == 'TERMINAL') {
       if (_selectedFromAccountId == null || _selectedFromAccountId!.isEmpty) {
-        setState(() {
-          _error = 'Для безналичных необходимо выбрать банковский счет';
-          _isLoading = false;
-        });
-        return;
+        // Проверяем, есть ли fromAccountId в динамической форме
+        final fromAccountId = formValues['fromAccountId'] as String?;
+        if (fromAccountId == null || fromAccountId.isEmpty) {
+          setState(() {
+            _error = 'Для безналичных необходимо выбрать банковский счет';
+            _isLoading = false;
+          });
+          return;
+        }
       }
     }
+
+    if (paymentMethod == null || paymentMethod.isEmpty) {
+      setState(() {
+        _error = 'Необходимо выбрать способ оплаты';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Извлекаем accountId и fromAccountId из формы
+    // Для динамической формы они могут быть в formValues, для старой формы - в _selectedAccountId/_selectedFromAccountId
+    final accountId = formValues['accountId'] as String? ?? _selectedAccountId;
+    final fromAccountId = formValues['fromAccountId'] as String? ?? _selectedFromAccountId;
 
     final fillPaymentDetailsUseCase = Provider.of<FillPaymentDetails>(
       context,
       listen: false,
     );
 
+    // Структура запроса: { paymentMethod, accountId?, fromAccountId? }
     final result = await fillPaymentDetailsUseCase.call(
       FillPaymentDetailsParams(
         approvalId: widget.approval.id,
-        paymentMethod: _selectedPaymentMethod!,
-        accountId: _selectedPaymentMethod == 'CASH' ? _selectedAccountId : null,
-        fromAccountId: (_selectedPaymentMethod == 'BANK_TRANSFER' || 
-                       _selectedPaymentMethod == 'TERMINAL') 
-            ? _selectedFromAccountId 
+        paymentMethod: paymentMethod,
+        accountId: paymentMethod == 'CASH' ? accountId : null,
+        fromAccountId: (paymentMethod == 'BANK_TRANSFER' || 
+                       paymentMethod == 'TERMINAL') 
+            ? fromAccountId 
             : null,
       ),
     );
@@ -202,7 +283,7 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 500),
         child: SingleChildScrollView(
-          child: Form(
+          child: FormBuilder(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -250,108 +331,134 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Способ оплаты
-                DropdownButtonFormField<String>(
-                  value: _selectedPaymentMethod,
-                  decoration: const InputDecoration(
-                    labelText: 'Способ оплаты *',
-                    border: OutlineInputBorder(),
+                // Если загружается схема, показываем индикатор
+                if (_isLoadingSchema)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                // Если схема загружена, используем динамическую форму
+                else if (_formSchema != null) ...[
+                  DynamicBlockForm(
+                    key: ValueKey('payment-details-${widget.approval.id}'),
+                    formSchema: _formSchema,
+                    formKey: _formKey,
+                    initialValues: _initialValues,
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'CASH',
-                      child: Text('Наличные'),
+                ]
+                // Иначе используем старую форму
+                else ...[
+                  // Способ оплаты
+                  FormBuilderDropdown<String>(
+                    name: 'paymentMethod',
+                    initialValue: _selectedPaymentMethod,
+                    decoration: const InputDecoration(
+                      labelText: 'Способ оплаты *',
+                      border: OutlineInputBorder(),
                     ),
-                    DropdownMenuItem(
-                      value: 'BANK_TRANSFER',
-                      child: Text('Банковский перевод'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'TERMINAL',
-                      child: Text('Терминал'),
-                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'CASH',
+                        child: Text('Наличные'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'BANK_TRANSFER',
+                        child: Text('Банковский перевод'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'TERMINAL',
+                        child: Text('Терминал'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                        // Очищаем выбранные счета при смене способа оплаты
+                        _selectedAccountId = null;
+                        _selectedFromAccountId = null;
+                        // Обновляем значение в форме
+                        _formKey.currentState?.fields['accountId']?.didChange(null);
+                        _formKey.currentState?.fields['fromAccountId']?.didChange(null);
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Пожалуйста, выберите способ оплаты';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Поле для кассы (только для CASH)
+                  if (_selectedPaymentMethod == 'CASH') ...[
+                    if (_isLoadingAccounts)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      FormBuilderDropdown<String>(
+                        name: 'accountId',
+                        initialValue: _selectedAccountId,
+                        decoration: const InputDecoration(
+                          labelText: 'Касса *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _cashAccounts.map((account) {
+                          return DropdownMenuItem(
+                            value: account.id,
+                            child: Text('${account.name} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedAccountId = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (_selectedPaymentMethod == 'CASH' && 
+                              (value == null || value.isEmpty)) {
+                            return 'Пожалуйста, выберите кассу';
+                          }
+                          return null;
+                        },
+                      ),
+                    const SizedBox(height: 16),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPaymentMethod = value;
-                      // Очищаем выбранные счета при смене способа оплаты
-                      _selectedAccountId = null;
-                      _selectedFromAccountId = null;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Пожалуйста, выберите способ оплаты';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Поле для кассы (только для CASH)
-                if (_selectedPaymentMethod == 'CASH') ...[
-                  if (_isLoadingAccounts)
-                    const Center(child: CircularProgressIndicator())
-                  else
-                    DropdownButtonFormField<String>(
-                      value: _selectedAccountId,
-                      decoration: const InputDecoration(
-                        labelText: 'Касса *',
-                        border: OutlineInputBorder(),
+                  // Поле для банковского счета (для BANK_TRANSFER и TERMINAL)
+                  if (_selectedPaymentMethod == 'BANK_TRANSFER' || 
+                      _selectedPaymentMethod == 'TERMINAL') ...[
+                    if (_isLoadingAccounts)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      FormBuilderDropdown<String>(
+                        name: 'fromAccountId',
+                        initialValue: _selectedFromAccountId,
+                        decoration: const InputDecoration(
+                          labelText: 'Банковский счет *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _bankAccounts.map((account) {
+                          return DropdownMenuItem(
+                            value: account.id,
+                            child: Text('${account.name} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedFromAccountId = value;
+                          });
+                        },
+                        validator: (value) {
+                          if ((_selectedPaymentMethod == 'BANK_TRANSFER' || 
+                               _selectedPaymentMethod == 'TERMINAL') && 
+                              (value == null || value.isEmpty)) {
+                            return 'Пожалуйста, выберите банковский счет';
+                          }
+                          return null;
+                        },
                       ),
-                      items: _cashAccounts.map((account) {
-                        return DropdownMenuItem(
-                          value: account.id,
-                          child: Text('${account.name} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedAccountId = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (_selectedPaymentMethod == 'CASH' && 
-                            (value == null || value.isEmpty)) {
-                          return 'Пожалуйста, выберите кассу';
-                        }
-                        return null;
-                      },
-                    ),
-                  const SizedBox(height: 16),
-                ],
-                // Поле для банковского счета (для BANK_TRANSFER и TERMINAL)
-                if (_selectedPaymentMethod == 'BANK_TRANSFER' || 
-                    _selectedPaymentMethod == 'TERMINAL') ...[
-                  if (_isLoadingAccounts)
-                    const Center(child: CircularProgressIndicator())
-                  else
-                    DropdownButtonFormField<String>(
-                      value: _selectedFromAccountId,
-                      decoration: const InputDecoration(
-                        labelText: 'Банковский счет *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _bankAccounts.map((account) {
-                        return DropdownMenuItem(
-                          value: account.id,
-                          child: Text('${account.name} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedFromAccountId = value;
-                        });
-                      },
-                      validator: (value) {
-                        if ((_selectedPaymentMethod == 'BANK_TRANSFER' || 
-                             _selectedPaymentMethod == 'TERMINAL') && 
-                            (value == null || value.isEmpty)) {
-                          return 'Пожалуйста, выберите банковский счет';
-                        }
-                        return null;
-                      },
-                    ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                  ],
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),

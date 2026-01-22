@@ -11,6 +11,8 @@ import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
 import '../../domain/usecases/create_approval.dart';
 import '../../domain/usecases/get_approval_templates.dart';
+import '../../domain/usecases/get_notifications.dart';
+import '../../domain/usecases/get_approval_by_id.dart';
 import '../../domain/entities/approvals_result.dart';
 import '../../domain/entities/missing_role_info.dart';
 import '../../core/error/failures.dart';
@@ -45,7 +47,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   List<Approval> _approvedApprovals = []; // Утвержденные (APPROVED)
   List<Approval> _rejectedApprovals = []; // Отклоненные (REJECTED)
   List<Approval> _awaitingPaymentDetailsApprovals =
-      []; // Ожидают платежных реквизитов
+      []; // Ожидают платежных реквизитов (загруженные по статусу)
+  List<Approval> _notificationsApprovals =
+      []; // Согласования из notifications (awaitingPaymentDetails)
   late TabController _tabController;
   bool _canApproveInCurrentBusiness = false;
   bool _isLoadingAllApprovals = false; // Флаг загрузки расширенного списка
@@ -240,6 +244,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             status: ApprovalStatus.awaitingPaymentDetails,
           ),
         );
+
+        // Загружаем уведомления
+        await _loadNotifications();
 
         result.fold(
           (failure) {
@@ -439,6 +446,77 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   Future<void> _loadApprovals() async {
     // Загружаем данные для текущей активной вкладки
     _loadApprovalsForTab(_tabController.index);
+  }
+
+  /// Загрузка уведомлений и согласований из notifications
+  Future<void> _loadNotifications() async {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      return;
+    }
+
+    final getNotificationsUseCase = Provider.of<GetNotifications>(
+      context,
+      listen: false,
+    );
+    final result = await getNotificationsUseCase.call(
+      GetNotificationsParams(businessId: selectedBusiness.id),
+    );
+
+    result.fold(
+      (failure) {
+        // Игнорируем ошибки загрузки уведомлений, чтобы не блокировать основной список
+      },
+      (notifications) async {
+        if (mounted) {
+          // Загружаем согласования по ID из awaitingPaymentDetails
+          final awaitingPaymentDetails =
+              notifications.accountant?.awaitingPaymentDetails ?? {};
+          if (awaitingPaymentDetails.isNotEmpty) {
+            await _loadNotificationsApprovals(
+              awaitingPaymentDetails.keys.toList(),
+            );
+          }
+        }
+      },
+    );
+  }
+
+  /// Загрузка согласований по списку ID
+  Future<void> _loadNotificationsApprovals(List<String> approvalIds) async {
+    final getApprovalByIdUseCase = Provider.of<GetApprovalById>(
+      context,
+      listen: false,
+    );
+
+    final loadedApprovals = <Approval>[];
+
+    // Загружаем согласования параллельно
+    final results = await Future.wait(
+      approvalIds.map((id) => getApprovalByIdUseCase.call(id)),
+    );
+
+    for (final result in results) {
+      result.fold(
+        (failure) {
+          // Игнорируем ошибки загрузки отдельных согласований
+        },
+        (approval) {
+          loadedApprovals.add(approval);
+        },
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _notificationsApprovals = loadedApprovals;
+      });
+    }
   }
 
   String _getErrorMessage(Failure failure) {
@@ -718,9 +796,20 @@ class _ApprovalsPageState extends State<ApprovalsPage>
 
   /// Виджет секции awaiting payment details (переиспользуемый)
   Widget _buildAwaitingPaymentDetailsSection() {
+    // Используем согласования из notifications (awaitingPaymentDetails)
+    // Если их нет, используем загруженные по статусу (для обратной совместимости)
+    final approvalsToShow =
+        _notificationsApprovals.isNotEmpty
+            ? _notificationsApprovals
+            : _awaitingPaymentDetailsApprovals;
+
     return AwaitingPaymentDetailsSection(
-      approvals: _awaitingPaymentDetailsApprovals,
-      onPaymentDetailsFilled: () => _loadApprovalsForTab(_tabController.index),
+      approvals: approvalsToShow,
+      onPaymentDetailsFilled: () {
+        // Перезагружаем notifications и согласования
+        _loadNotifications();
+        _loadApprovalsForTab(_tabController.index);
+      },
     );
   }
 

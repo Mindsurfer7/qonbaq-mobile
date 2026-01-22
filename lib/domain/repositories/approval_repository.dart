@@ -114,6 +114,10 @@ abstract class ApprovalRepository extends Repository {
     required String paymentMethod,
     String? accountId,
     String? fromAccountId,
+    Map<String, dynamic>? formData,
   });
+
+  /// Получить схему формы для заполнения payment details
+  Future<Either<Failure, Map<String, dynamic>>> getPaymentDetailsSchema(String id);
 }
 

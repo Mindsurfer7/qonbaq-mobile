@@ -377,6 +377,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
     required String paymentMethod,
     String? accountId,
     String? fromAccountId,
+    Map<String, dynamic>? formData,
   }) async {
     try {
       final approval = await remoteDataSource.fillPaymentDetails(
@@ -384,6 +385,7 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
         paymentMethod: paymentMethod,
         accountId: accountId,
         fromAccountId: fromAccountId,
+        formData: formData,
       );
       return Right(approval.toEntity());
     } on ValidationException catch (e) {
@@ -394,6 +396,16 @@ class ApprovalRepositoryImpl extends RepositoryImpl implements ApprovalRepositor
       ));
     } catch (e) {
       return Left(ServerFailure('Ошибка при заполнении платежных реквизитов: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getPaymentDetailsSchema(String id) async {
+    try {
+      final schema = await remoteDataSource.getPaymentDetailsSchema(id);
+      return Right(schema);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении схемы формы: $e'));
     }
   }
 }

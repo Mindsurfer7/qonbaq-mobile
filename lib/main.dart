@@ -138,6 +138,12 @@ import 'package:qonbaq/domain/usecases/get_approval_templates.dart';
 import 'package:qonbaq/domain/usecases/get_approval_template_by_code.dart';
 import 'package:qonbaq/domain/usecases/get_pending_confirmations.dart';
 import 'package:qonbaq/domain/usecases/confirm_approval.dart';
+import 'package:qonbaq/domain/usecases/fill_payment_details.dart';
+import 'package:qonbaq/domain/usecases/get_payment_details_schema.dart';
+import 'package:qonbaq/data/datasources/notification_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/notification_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/notification_repository.dart';
+import 'package:qonbaq/domain/usecases/get_notifications.dart';
 import 'package:qonbaq/presentation/pages/approval_detail_page.dart';
 import 'package:qonbaq/presentation/providers/pending_confirmations_provider.dart';
 import 'package:qonbaq/data/datasources/financial_remote_datasource_impl.dart';
@@ -407,10 +413,21 @@ class MyApp extends StatelessWidget {
     );
     final getPendingConfirmations = GetPendingConfirmations(approvalRepository);
     final confirmApproval = ConfirmApproval(approvalRepository);
+    final fillPaymentDetails = FillPaymentDetails(approvalRepository);
+    final getPaymentDetailsSchema = GetPaymentDetailsSchema(approvalRepository);
     final pendingConfirmationsProvider = PendingConfirmationsProvider(
       getPendingConfirmations: getPendingConfirmations,
       confirmApproval: confirmApproval,
     );
+
+    // Инициализация зависимостей для уведомлений
+    final notificationRemoteDataSource = NotificationRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final NotificationRepository notificationRepository = NotificationRepositoryImpl(
+      remoteDataSource: notificationRemoteDataSource,
+    );
+    final getNotifications = GetNotifications(notificationRepository);
 
     // Инициализация зависимостей для финансовых форм
     final financialRemoteDataSource = FinancialRemoteDataSourceImpl(
@@ -555,6 +572,9 @@ class MyApp extends StatelessWidget {
         Provider<GetApprovalTemplateByCode>(
           create: (_) => getApprovalTemplateByCode,
         ),
+        Provider<GetNotifications>(create: (_) => getNotifications),
+        Provider<FillPaymentDetails>(create: (_) => fillPaymentDetails),
+        Provider<GetPaymentDetailsSchema>(create: (_) => getPaymentDetailsSchema),
         Provider<GetFinancialForm>(create: (_) => getFinancialForm),
         Provider<CreateIncome>(create: (_) => createIncome),
         Provider<CreateExpense>(create: (_) => createExpense),

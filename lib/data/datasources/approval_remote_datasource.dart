@@ -113,6 +113,10 @@ abstract class ApprovalRemoteDataSource extends DataSource {
     required String paymentMethod,
     String? accountId,
     String? fromAccountId,
+    Map<String, dynamic>? formData,
   });
+
+  /// Получить схему формы для заполнения payment details
+  Future<Map<String, dynamic>> getPaymentDetailsSchema(String id);
 }
 
