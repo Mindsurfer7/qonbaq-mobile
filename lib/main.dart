@@ -26,6 +26,7 @@ import 'package:qonbaq/presentation/pages/clients_list_page.dart';
 import 'package:qonbaq/presentation/pages/client_card_page.dart';
 import 'package:qonbaq/presentation/pages/client_requisites_page.dart';
 import 'package:qonbaq/presentation/pages/client_deal_page.dart';
+import 'package:qonbaq/presentation/pages/customer_detail_page.dart';
 import 'package:qonbaq/presentation/pages/tasks_crm_page.dart';
 import 'package:qonbaq/presentation/pages/operational_tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_card_page.dart';
@@ -207,7 +208,15 @@ import 'package:qonbaq/data/repositories/customer_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/customer_repository.dart';
 import 'package:qonbaq/domain/usecases/get_customers.dart';
 import 'package:qonbaq/domain/usecases/create_customer.dart';
+import 'package:qonbaq/domain/usecases/get_customer.dart';
+import 'package:qonbaq/domain/usecases/get_customer_contacts.dart';
 import 'package:qonbaq/presentation/providers/crm_provider.dart';
+import 'package:qonbaq/data/datasources/order_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/order_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/order_repository.dart';
+import 'package:qonbaq/domain/usecases/get_orders.dart';
+import 'package:qonbaq/domain/usecases/create_order.dart';
+import 'package:qonbaq/presentation/providers/orders_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
@@ -548,9 +557,25 @@ class MyApp extends StatelessWidget {
     );
     final getCustomers = GetCustomers(customerRepository);
     final createCustomer = CreateCustomer(customerRepository);
+    final getCustomer = GetCustomer(customerRepository);
+    final getCustomerContacts = GetCustomerContacts(customerRepository);
     final crmProvider = CrmProvider(
       getCustomers: getCustomers,
       createCustomer: createCustomer,
+    );
+
+    // Инициализация зависимостей для заказов
+    final orderRemoteDataSource = OrderRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final OrderRepository orderRepository = OrderRepositoryImpl(
+      remoteDataSource: orderRemoteDataSource,
+    );
+    final getOrders = GetOrders(orderRepository);
+    final createOrder = CreateOrder(orderRepository);
+    final ordersProvider = OrdersProvider(
+      getOrders: getOrders,
+      createOrder: createOrder,
     );
 
     // Инициализация провайдера темы
@@ -569,6 +594,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => rolesProvider),
         ChangeNotifierProvider(create: (_) => pendingConfirmationsProvider),
         ChangeNotifierProvider(create: (_) => crmProvider),
+        ChangeNotifierProvider(create: (_) => ordersProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
@@ -619,6 +645,8 @@ class MyApp extends StatelessWidget {
         Provider<AddPhoto>(create: (_) => addPhoto),
         Provider<WriteOffFixedAsset>(create: (_) => writeOffFixedAsset),
         Provider<ArchiveFixedAsset>(create: (_) => archiveFixedAsset),
+        Provider<GetCustomer>(create: (_) => getCustomer),
+        Provider<GetCustomerContacts>(create: (_) => getCustomerContacts),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),
@@ -662,6 +690,16 @@ class MyApp extends StatelessWidget {
                   (context) => const ClientRequisitesPage(),
               '/business/operational/crm/clients_list/client_card/client_deal':
                   (context) => const ClientDealPage(),
+              '/business/operational/crm/customer_detail': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments;
+                final customerId = args is String ? args : (args as Map<String, dynamic>?)?['customerId'] as String?;
+                if (customerId == null) {
+                  return const Scaffold(
+                    body: Center(child: Text('ID клиента не указан')),
+                  );
+                }
+                return CustomerDetailPage(customerId: customerId);
+              },
               '/business/operational/crm/tasks_crm':
                   (context) => const TasksCrmPage(),
               '/business/operational/tasks':

@@ -6,27 +6,25 @@ class CustomerMiniCard extends StatelessWidget {
   final Customer customer;
   final VoidCallback? onTap;
 
-  const CustomerMiniCard({
-    super.key,
-    required this.customer,
-    this.onTap,
-  });
+  const CustomerMiniCard({super.key, required this.customer, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     // Определяем название клиента
-    final displayName = customer.displayName ?? 
-                       customer.name ?? 
-                       (customer.customerType == CustomerType.individual
-                           ? _getIndividualName()
-                           : 'Без названия');
-    
+    final displayName =
+        customer.displayName ??
+        customer.name ??
+        (customer.customerType == CustomerType.individual
+            ? _getIndividualName()
+            : 'Без названия');
+
     // Иконка в зависимости от типа клиента
-    final icon = customer.customerType == CustomerType.individual
-        ? Icons.person
-        : Icons.business;
+    final icon =
+        customer.customerType == CustomerType.individual
+            ? Icons.person
+            : Icons.business;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -44,11 +42,7 @@ class CustomerMiniCard extends StatelessWidget {
                   color: theme.colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  color: theme.colorScheme.primary,
-                  size: 20,
-                ),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
               ),
               const SizedBox(width: 12),
               // Название клиента

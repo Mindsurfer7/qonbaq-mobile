@@ -3,6 +3,7 @@ import 'business.dart';
 import 'user_profile.dart';
 import 'task_comment.dart';
 import 'approval.dart';
+import 'customer.dart';
 
 /// Статус задачи
 enum TaskStatus {
@@ -135,6 +136,7 @@ class Task extends Entity {
   final List<TaskIndicator>? indicators;
   final TaskRecurrence? recurrence;
   final String? approvalId; // ID согласования (если задача создана для исполнения согласования)
+  final String? customerId; // ID клиента (если задача привязана к клиенту)
   
   // Детальные данные (для детальной страницы)
   final Business? business;
@@ -143,6 +145,7 @@ class Task extends Entity {
   final List<TaskObserver>? observers;
   final List<TaskComment>? comments;
   final Approval? approval; // Связанное согласование
+  final Customer? customer; // Связанный клиент
 
   const Task({
     required this.id,
@@ -168,12 +171,14 @@ class Task extends Entity {
     this.indicators,
     this.recurrence,
     this.approvalId,
+    this.customerId,
     this.business,
     this.assignee,
     this.assigner,
     this.observers,
     this.comments,
     this.approval,
+    this.customer,
   });
 
   @override

@@ -21,6 +21,8 @@ abstract class TaskRemoteDataSource extends DataSource {
     bool? isImportant,
     bool? hasControlPoint,
     bool? dontForget,
+    String? customerId,
+    bool? hasCustomer,
     int? page,
     int? limit,
   });

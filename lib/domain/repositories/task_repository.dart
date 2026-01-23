@@ -23,6 +23,8 @@ abstract class TaskRepository extends Repository {
     bool? isImportant,
     bool? hasControlPoint,
     bool? dontForget,
+    String? customerId,
+    bool? hasCustomer,
     int? page,
     int? limit,
   });

@@ -54,6 +54,8 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
     bool? isImportant,
     bool? hasControlPoint,
     bool? dontForget,
+    String? customerId,
+    bool? hasCustomer,
     int? page,
     int? limit,
   }) async {
@@ -67,6 +69,8 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
         isImportant: isImportant,
         hasControlPoint: hasControlPoint,
         dontForget: dontForget,
+        customerId: customerId,
+        hasCustomer: hasCustomer,
         page: page,
         limit: limit,
       );

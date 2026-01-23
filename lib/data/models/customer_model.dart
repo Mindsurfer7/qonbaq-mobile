@@ -58,14 +58,21 @@ class CustomerModel extends Customer implements Model {
     // Парсинг responsible
     User? responsible;
     if (json['responsible'] != null) {
-      final responsibleJson = json['responsible'] as Map<String, dynamic>;
-      responsible = User(
-        id: responsibleJson['id'] as String,
-        name: responsibleJson['firstName'] != null && responsibleJson['lastName'] != null
-            ? '${responsibleJson['firstName']} ${responsibleJson['lastName']}'
-            : responsibleJson['email'] as String? ?? '',
-        email: responsibleJson['email'] as String,
-      );
+      try {
+        final responsibleJson = json['responsible'] as Map<String, dynamic>;
+        if (responsibleJson['id'] != null && responsibleJson['email'] != null) {
+          responsible = User(
+            id: responsibleJson['id'] as String,
+            name: responsibleJson['firstName'] != null && responsibleJson['lastName'] != null
+                ? '${responsibleJson['firstName']} ${responsibleJson['lastName']}'
+                : responsibleJson['email'] as String? ?? '',
+            email: responsibleJson['email'] as String,
+          );
+        }
+      } catch (e) {
+        // Если не удалось распарсить responsible, оставляем null
+        responsible = null;
+      }
     }
 
     // Парсинг contacts
@@ -89,7 +96,7 @@ class CustomerModel extends Customer implements Model {
     return CustomerModel(
       id: json['id'] as String,
       businessId: json['businessId'] as String,
-      customerType: _parseCustomerType(json['customerType'] as String),
+      customerType: _parseCustomerType(json['customerType'] as String? ?? 'LEGAL_ENTITY'),
       displayName: json['displayName'] as String?,
       name: json['name'] as String?,
       bin: json['bin'] as String?,
@@ -108,14 +115,18 @@ class CustomerModel extends Customer implements Model {
           : null,
       currency: json['currency'] as String?,
       logoUrl: json['logoUrl'] as String?,
-      salesFunnelStage: json['salesFunnelStage'] != null
+      salesFunnelStage: json['salesFunnelStage'] != null && json['salesFunnelStage'] is String
           ? _parseSalesFunnelStage(json['salesFunnelStage'] as String)
           : null,
       refusalReason: json['refusalReason'] as String?,
       responsibleId: json['responsibleId'] as String?,
       responsible: responsible,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
       lastActivity: json['lastActivity'] != null
           ? DateTime.parse(json['lastActivity'] as String)
           : null,

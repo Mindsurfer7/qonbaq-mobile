@@ -14,6 +14,8 @@ class GetTasksParams {
   final bool? isImportant;
   final bool? hasControlPoint;
   final bool? dontForget;
+  final String? customerId;
+  final bool? hasCustomer;
   final int? page;
   final int? limit;
 
@@ -26,6 +28,8 @@ class GetTasksParams {
     this.isImportant,
     this.hasControlPoint,
     this.dontForget,
+    this.customerId,
+    this.hasCustomer,
     this.page,
     this.limit,
   });
@@ -48,6 +52,8 @@ class GetTasks implements UseCase<List<Task>, GetTasksParams> {
       isImportant: params.isImportant,
       hasControlPoint: params.hasControlPoint,
       dontForget: params.dontForget,
+      customerId: params.customerId,
+      hasCustomer: params.hasCustomer,
       page: params.page,
       limit: params.limit,
     );

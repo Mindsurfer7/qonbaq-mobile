@@ -3,9 +3,11 @@ import '../../domain/entities/business.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/task_comment.dart';
 import '../../domain/entities/approval.dart';
+import '../../domain/entities/customer.dart';
 import '../models/model.dart';
 import 'task_comment_model.dart';
 import 'approval_model.dart';
+import 'customer_model.dart';
 
 /// Модель задачи
 class TaskModel extends Task implements Model {
@@ -33,12 +35,14 @@ class TaskModel extends Task implements Model {
     super.indicators,
     super.recurrence,
     super.approvalId,
+    super.customerId,
     super.business,
     super.assignee,
     super.assigner,
     super.observers,
     super.comments,
     super.approval,
+    super.customer,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -226,6 +230,26 @@ class TaskModel extends Task implements Model {
       approval = ApprovalModel.fromJson(approvalJson).toEntity();
     }
 
+    // Парсинг customer (клиент)
+    Customer? customer;
+    if (json['customer'] != null) {
+      try {
+        final customerJson = json['customer'] as Map<String, dynamic>;
+        // Проверяем наличие обязательных полей перед парсингом
+        if (customerJson['id'] != null &&
+            customerJson['businessId'] != null &&
+            customerJson['customerType'] != null &&
+            customerJson['createdAt'] != null &&
+            customerJson['updatedAt'] != null) {
+          customer = CustomerModel.fromJson(customerJson).toEntity();
+        }
+      } catch (e) {
+        // Если не удалось распарсить customer, оставляем null
+        // Это не критично, так как customer - опциональное поле
+        customer = null;
+      }
+    }
+
     return TaskModel(
       id: json['id'] as String,
       businessId: json['businessId'] as String,
@@ -256,12 +280,14 @@ class TaskModel extends Task implements Model {
       indicators: indicators,
       recurrence: recurrence,
       approvalId: json['approvalId'] as String?,
+      customerId: json['customerId'] as String?,
       business: business,
       assignee: assignee,
       assigner: assigner,
       observers: observers,
       comments: comments,
       approval: approval,
+      customer: customer,
     );
   }
 
@@ -394,6 +420,7 @@ class TaskModel extends Task implements Model {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (approvalId != null) 'approvalId': approvalId,
+      if (customerId != null) 'customerId': customerId,
       if (observerIds != null && observerIds!.isNotEmpty)
         'observerIds': observerIds,
       if (attachments != null && attachments!.isNotEmpty)
@@ -463,6 +490,8 @@ class TaskModel extends Task implements Model {
       if (dontForget) 'dontForget': dontForget,
       if (approvalId != null && approvalId!.isNotEmpty)
         'approvalId': approvalId,
+      if (customerId != null && customerId!.isNotEmpty)
+        'customerId': customerId,
       if (voiceNoteUrl != null && voiceNoteUrl!.isNotEmpty)
         'voiceNoteUrl': voiceNoteUrl,
       if (observerIds != null && observerIds!.isNotEmpty)
@@ -540,12 +569,14 @@ class TaskModel extends Task implements Model {
       indicators: task.indicators,
       recurrence: task.recurrence,
       approvalId: task.approvalId,
+      customerId: task.customerId,
       business: task.business,
       assignee: task.assignee,
       assigner: task.assigner,
       observers: task.observers,
       comments: task.comments,
       approval: task.approval,
+      customer: task.customer,
     );
   }
 }

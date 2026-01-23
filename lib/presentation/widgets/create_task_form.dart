@@ -25,7 +25,9 @@ class CreateTaskForm extends StatefulWidget {
   final Function(String)? onError; // Callback для обновления ошибки
   final String? initialDescription; // Начальное значение для поля описания
   final TaskModel?
-  initialTaskData; // Предзаполненные данные задачи из voice-assist
+      initialTaskData; // Предзаполненные данные задачи из voice-assist
+  final String? customerId; // ID клиента для привязки задачи
+  final String? customerName; // Название клиента для отображения
 
   const CreateTaskForm({
     super.key,
@@ -38,6 +40,8 @@ class CreateTaskForm extends StatefulWidget {
     this.onError,
     this.initialDescription,
     this.initialTaskData,
+    this.customerId,
+    this.customerName,
   });
 
   @override
@@ -345,6 +349,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   ],
                 ),
               ),
+            // Поле клиента (если указан)
+            if (widget.customerId != null && widget.customerName != null) ...[
+              FormBuilderTextField(
+                name: 'customer',
+                initialValue: widget.customerName,
+                decoration: InputDecoration(
+                  labelText: 'Клиент',
+                  icon: const Icon(Icons.business),
+                  suffixIcon: const Icon(Icons.lock, size: 16),
+                  helperText: 'Задача будет привязана к этому клиенту',
+                ),
+                readOnly: true,
+                enabled: false,
+              ),
+              const SizedBox(height: 16),
+            ],
             // Блок голосовой записи
             VoiceRecordBlock(
               context: VoiceContext.task,
@@ -612,6 +632,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         isRecurring: formData['isRecurring'] as bool? ?? false,
         hasControlPoint: formData['hasControlPoint'] as bool? ?? false,
         dontForget: formData['dontForget'] as bool? ?? false,
+        customerId: widget.customerId,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

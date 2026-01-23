@@ -109,6 +109,8 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
     bool? isImportant,
     bool? hasControlPoint,
     bool? dontForget,
+    String? customerId,
+    bool? hasCustomer,
     int? page,
     int? limit,
   }) async {
@@ -131,6 +133,12 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       }
       if (dontForget != null) {
         queryParams['dontForget'] = dontForget.toString();
+      }
+      if (customerId != null) {
+        queryParams['customerId'] = customerId;
+      }
+      if (hasCustomer != null) {
+        queryParams['hasCustomer'] = hasCustomer.toString();
       }
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();

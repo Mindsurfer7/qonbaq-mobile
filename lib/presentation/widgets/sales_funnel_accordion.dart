@@ -183,11 +183,10 @@ class _SalesFunnelAccordionState extends State<SalesFunnelAccordion> {
         return CustomerMiniCard(
           customer: customer,
           onTap: () {
-            // TODO: Навигация на карточку клиента
-            // Navigator.of(context).pushNamed(
-            //   '/business/operational/crm/clients_list/client_card',
-            //   arguments: customer.id,
-            // );
+            Navigator.of(context).pushNamed(
+              '/business/operational/crm/customer_detail',
+              arguments: customer.id,
+            );
           },
         );
       },
