@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/order.dart';
-import '../providers/orders_provider.dart';
+import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/funnel_accordion.dart';
 import '../widgets/create_order_dialog.dart';
@@ -25,11 +25,11 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
 
   void _loadOrders() {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     
     final businessId = profileProvider.selectedBusiness?.id;
     if (businessId != null) {
-      ordersProvider.loadAllOrders(businessId);
+      crmProvider.loadAllOrders(businessId);
     }
   }
 
@@ -62,8 +62,8 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               if (businessId != null) {
-                final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-                ordersProvider.refreshAll(businessId);
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                crmProvider.refreshAllOrders(businessId);
               }
             },
             tooltip: 'Обновить',
@@ -82,13 +82,13 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
             )
           : RefreshIndicator(
               onRefresh: () async {
-                final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-                await ordersProvider.refreshAll(businessId);
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                await crmProvider.refreshAllOrders(businessId);
               },
-              child: Consumer<OrdersProvider>(
-                builder: (context, ordersProvider, child) {
-                  if (ordersProvider.isLoading && 
-                      ordersProvider.getOrdersByStage(OrderFunnelStage.orderAccepted).isEmpty) {
+              child: Consumer<CrmProvider>(
+                builder: (context, crmProvider, child) {
+                  if (crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderAccepted) && 
+                      crmProvider.getOrdersByStage(OrderFunnelStage.orderAccepted).isEmpty) {
                     return const Center(
                       child: CircularProgressIndicator(),
                     );
@@ -103,14 +103,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         orderFunnelStage: OrderFunnelStage.orderAccepted,
                         title: 'Заказ принят',
                         isExpanded: true, // Первая открыта по умолчанию
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderAccepted),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderAccepted),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderAccepted),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderAccepted)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderAccepted),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderAccepted),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderAccepted);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderAccepted);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderAccepted);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderAccepted);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
@@ -124,14 +124,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         cardType: FunnelCardType.order,
                         orderFunnelStage: OrderFunnelStage.orderStarted,
                         title: 'Заказ начат',
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderStarted),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderStarted),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderStarted),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderStarted)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderStarted),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderStarted),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderStarted);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderStarted);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderStarted);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderStarted);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
@@ -142,14 +142,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         cardType: FunnelCardType.order,
                         orderFunnelStage: OrderFunnelStage.orderInProgress,
                         title: 'Заказ в работе',
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderInProgress),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderInProgress),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderInProgress),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderInProgress)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderInProgress),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderInProgress),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderInProgress);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderInProgress);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderInProgress);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderInProgress);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
@@ -160,14 +160,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         cardType: FunnelCardType.order,
                         orderFunnelStage: OrderFunnelStage.orderReady,
                         title: 'Заказ готов',
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderReady),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderReady),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderReady),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderReady)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderReady),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderReady),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReady);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReady);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReady);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReady);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
@@ -178,14 +178,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         cardType: FunnelCardType.order,
                         orderFunnelStage: OrderFunnelStage.orderDelivered,
                         title: 'Заказ передан клиенту',
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderDelivered),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderDelivered),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderDelivered),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderDelivered)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderDelivered),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderDelivered),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderDelivered);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderDelivered);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderDelivered);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderDelivered);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
@@ -196,14 +196,14 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         cardType: FunnelCardType.order,
                         orderFunnelStage: OrderFunnelStage.orderReturned,
                         title: 'Возврат по причине',
-                        orders: ordersProvider.getOrdersByStage(OrderFunnelStage.orderReturned),
-                        isLoadingOrders: ordersProvider.isLoadingStage(OrderFunnelStage.orderReturned),
-                        orderError: ordersProvider.getErrorForStage(OrderFunnelStage.orderReturned),
+                        orders: List<Order>.from(crmProvider.getOrdersByStage(OrderFunnelStage.orderReturned)),
+                        isLoadingOrders: crmProvider.isLoadingOrdersStage(OrderFunnelStage.orderReturned),
+                        orderError: crmProvider.getErrorForOrdersStage(OrderFunnelStage.orderReturned),
                         onLoadOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReturned);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReturned);
                         },
                         onRetryOrders: () {
-                          ordersProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReturned);
+                          crmProvider.loadOrdersForStage(businessId, OrderFunnelStage.orderReturned);
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа

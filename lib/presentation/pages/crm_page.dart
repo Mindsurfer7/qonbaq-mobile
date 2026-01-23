@@ -1,11 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../domain/entities/customer.dart';
+import '../../domain/entities/order.dart';
+import '../providers/crm_provider.dart';
+import '../providers/profile_provider.dart';
 
 /// Страница CRM
-class CrmPage extends StatelessWidget {
+class CrmPage extends StatefulWidget {
   const CrmPage({super.key});
 
   @override
+  State<CrmPage> createState() => _CrmPageState();
+}
+
+class _CrmPageState extends State<CrmPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCrmData();
+    });
+  }
+
+  void _loadCrmData() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+    
+    final businessId = profileProvider.selectedBusiness?.id;
+    if (businessId != null) {
+      crmProvider.loadAllCrmData(businessId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final businessId = profileProvider.selectedBusiness?.id;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CRM'),
@@ -15,6 +46,16 @@ class CrmPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              if (businessId != null) {
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                crmProvider.refreshAllCrmData(businessId);
+              }
+            },
+            tooltip: 'Обновить',
+          ),
+          IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
               Navigator.of(context).pushReplacementNamed('/business');
@@ -22,52 +63,107 @@ class CrmPage extends StatelessWidget {
           ),
         ],
       ),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: const EdgeInsets.all(16),
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        children: [
-          // Левый верхний: Воронка продаж
-          _buildSalesFunnelBlock(context),
-          // Правый верхний: Воронка заказов
-          _buildOrdersFunnelBlock(context),
-          // Левый нижний: Задачи по клиентам
-          _buildClientTasksBlock(context),
-          // Правый нижний: Список клиентов
-          _buildClientsListBlock(context),
-        ],
-      ),
+      body: businessId == null
+          ? const Center(
+              child: Text('Выберите бизнес для просмотра CRM'),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                await crmProvider.refreshAllCrmData(businessId);
+              },
+              child: Consumer<CrmProvider>(
+                builder: (context, crmProvider, child) {
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    padding: const EdgeInsets.all(16),
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    children: [
+                      // Левый верхний: Воронка продаж
+                      _buildSalesFunnelBlock(context, crmProvider),
+                      // Правый верхний: Задачи по клиентам и список клиентов
+                      _buildTasksAndClientsBlock(context, crmProvider),
+                      // Левый нижний: Воронка заказов
+                      _buildOrdersFunnelBlock(context, crmProvider),
+                      // Правый нижний: Аналитика
+                      _buildAnalyticsBlock(context),
+                    ],
+                  );
+                },
+              ),
+            ),
     );
   }
 
   /// Левый верхний блок: Воронка продаж
-  Widget _buildSalesFunnelBlock(BuildContext context) {
+  Widget _buildSalesFunnelBlock(BuildContext context, CrmProvider crmProvider) {
     return Card(
-      color: Colors.green.withOpacity(0.1),
+      elevation: 2,
       child: InkWell(
         onTap: () {
           Navigator.of(context).pushNamed('/business/operational/crm/sales_funnel');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.trending_down,
-                size: 32,
-                color: Colors.green.shade700,
+              Row(
+                children: [
+                  Icon(
+                    Icons.trending_down,
+                    size: 28,
+                    color: Colors.green.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Воронка продаж',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Воронка продаж',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    _buildStageRow(
+                      'Необработанные',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.unprocessed),
+                      Colors.grey,
+                    ),
+                    _buildStageRow(
+                      'В работе',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.inProgress),
+                      Colors.blue,
+                    ),
+                    _buildStageRow(
+                      'Заинтересованы',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.interested),
+                      Colors.orange,
+                    ),
+                    _buildStageRow(
+                      'Заключен договор',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.contractSigned),
+                      Colors.purple,
+                    ),
+                    _buildStageRow(
+                      'Продажи по договору',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.salesByContract),
+                      Colors.green,
+                    ),
+                    _buildStageRow(
+                      'Отказ по причине',
+                      crmProvider.getCustomersCountByStage(SalesFunnelStage.refused),
+                      Colors.red,
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -76,33 +172,74 @@ class CrmPage extends StatelessWidget {
     );
   }
 
-  /// Правый верхний блок: Воронка заказов
-  Widget _buildOrdersFunnelBlock(BuildContext context) {
+  /// Левый нижний блок: Воронка заказов
+  Widget _buildOrdersFunnelBlock(BuildContext context, CrmProvider crmProvider) {
     return Card(
-      color: Colors.green.withOpacity(0.1),
+      elevation: 2,
       child: InkWell(
         onTap: () {
           Navigator.of(context).pushNamed('/business/operational/crm/orders_funnel');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.shopping_cart,
-                size: 32,
-                color: Colors.green.shade700,
+              Row(
+                children: [
+                  Icon(
+                    Icons.shopping_cart,
+                    size: 28,
+                    color: Colors.blue.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Воронка заказов',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Воронка заказов',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    _buildStageRow(
+                      'Заказ принят',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderAccepted),
+                      Colors.grey,
+                    ),
+                    _buildStageRow(
+                      'Заказ начат',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderStarted),
+                      Colors.blue,
+                    ),
+                    _buildStageRow(
+                      'Заказ в работе',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderInProgress),
+                      Colors.orange,
+                    ),
+                    _buildStageRow(
+                      'Заказ готов',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReady),
+                      Colors.purple,
+                    ),
+                    _buildStageRow(
+                      'Заказ передан клиенту',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderDelivered),
+                      Colors.green,
+                    ),
+                    _buildStageRow(
+                      'Возврат по причине',
+                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReturned),
+                      Colors.red,
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -111,82 +248,186 @@ class CrmPage extends StatelessWidget {
     );
   }
 
-  /// Левый нижний блок: Задачи по клиентам
-  Widget _buildClientTasksBlock(BuildContext context) {
+  /// Правый верхний блок: Задачи по клиентам и список клиентов
+  Widget _buildTasksAndClientsBlock(BuildContext context, CrmProvider crmProvider) {
     return Card(
-      color: Colors.green.withOpacity(0.1),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/crm/tasks_crm');
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.task,
-                size: 32,
-                color: Colors.green.shade700,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Задачи по клиентам',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Задачи по клиентам
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).pushNamed('/business/operational/crm/tasks_crm');
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.task,
+                        size: 32,
+                        color: Colors.orange.shade700,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Задачи по клиентам',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${crmProvider.customerTasksCount}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            // Список клиентов
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).pushNamed('/business/operational/crm/clients_list');
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.people,
+                        size: 32,
+                        color: Colors.blue.shade700,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Клиенты',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${crmProvider.allCustomers.length}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Правый нижний блок: Список клиентов
-  Widget _buildClientsListBlock(BuildContext context) {
+  /// Правый нижний блок: Аналитика
+  Widget _buildAnalyticsBlock(BuildContext context) {
     return Card(
-      color: Colors.green.withOpacity(0.1),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/crm/clients_list');
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.people,
-                size: 32,
-                color: Colors.green.shade700,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Список клиентов',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+      elevation: 2,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
         ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Аналитика',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Скоро',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Строка со статусом и количеством
+  Widget _buildStageRow(String title, int count, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-

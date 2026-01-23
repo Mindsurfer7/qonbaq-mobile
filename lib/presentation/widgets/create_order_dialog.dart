@@ -6,7 +6,6 @@ import '../../domain/entities/customer.dart';
 import '../../data/models/order_model.dart';
 import '../../data/models/validation_error.dart';
 import '../../core/error/failures.dart';
-import '../providers/orders_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/crm_provider.dart';
 
@@ -136,7 +135,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
     });
 
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     final businessId = profileProvider.selectedBusiness?.id;
 
     if (businessId == null) {
@@ -186,7 +185,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
       updatedAt: DateTime.now(),
     );
 
-    final result = await ordersProvider.createOrderForBusiness(
+    final result = await crmProvider.createOrderForBusiness(
       order.toEntity(),
       businessId,
     );
@@ -207,7 +206,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
         // Успешно создан - закрываем диалог и обновляем список
         Navigator.of(context).pop();
         // Обновляем список заказов для соответствующего статуса
-        ordersProvider.refreshStage(businessId, createdOrder.stage);
+        crmProvider.refreshOrdersStage(businessId, createdOrder.stage);
       },
     );
   }

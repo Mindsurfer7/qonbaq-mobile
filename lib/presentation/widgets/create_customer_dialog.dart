@@ -162,7 +162,7 @@ class _CreateCustomerDialogState extends State<CreateCustomerDialog> {
         // Успешно создан - закрываем диалог и обновляем список
         Navigator.of(context).pop();
         // Обновляем список клиентов для соответствующего статуса
-        crmProvider.refreshStage(businessId, createdCustomer.salesFunnelStage ?? SalesFunnelStage.unprocessed);
+        crmProvider.refreshCustomersStage(businessId, createdCustomer.salesFunnelStage ?? SalesFunnelStage.unprocessed);
       },
     );
   }

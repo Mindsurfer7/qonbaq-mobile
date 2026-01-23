@@ -63,7 +63,7 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
             onPressed: () {
               if (businessId != null) {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                crmProvider.refreshAll(businessId);
+                crmProvider.refreshAllCustomers(businessId);
               }
             },
             tooltip: 'Обновить',

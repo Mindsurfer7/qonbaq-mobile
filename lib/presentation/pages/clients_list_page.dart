@@ -1,11 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/crm_provider.dart';
+import '../providers/profile_provider.dart';
+import '../../domain/entities/customer.dart';
+import 'customer_detail_page.dart';
 
 /// Страница списка клиентов
-class ClientsListPage extends StatelessWidget {
+class ClientsListPage extends StatefulWidget {
   const ClientsListPage({super.key});
 
   @override
+  State<ClientsListPage> createState() => _ClientsListPageState();
+}
+
+class _ClientsListPageState extends State<ClientsListPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCustomers();
+    });
+  }
+
+  void _loadCustomers() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+    
+    final businessId = profileProvider.selectedBusiness?.id;
+    if (businessId != null) {
+      crmProvider.loadAllCustomersList(businessId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final businessId = profileProvider.selectedBusiness?.id;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Список клиентов'),
@@ -15,6 +46,16 @@ class ClientsListPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              if (businessId != null) {
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                crmProvider.loadAllCustomersList(businessId);
+              }
+            },
+            tooltip: 'Обновить',
+          ),
+          IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
               Navigator.of(context).pushReplacementNamed('/business');
@@ -22,32 +63,161 @@ class ClientsListPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: ListTile(
-              title: const Text('Клиент 1'),
-              subtitle: const Text('Пример карточки клиента'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pushNamed(
-                  '/business/operational/crm/clients_list/client_card',
-                );
+      body: businessId == null
+          ? const Center(
+              child: Text('Выберите бизнес для просмотра списка клиентов'),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                await crmProvider.loadAllCustomersList(businessId);
               },
+              child: Consumer<CrmProvider>(
+                builder: (context, crmProvider, child) {
+                  if (crmProvider.isLoadingAllCustomers && crmProvider.allCustomers.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (crmProvider.errorAllCustomers != null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            crmProvider.errorAllCustomers!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              crmProvider.loadAllCustomersList(businessId);
+                            },
+                            child: const Text('Повторить'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (crmProvider.allCustomers.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Нет клиентов',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Клиенты будут отображаться здесь',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: crmProvider.allCustomers.length,
+                    itemBuilder: (context, index) {
+                      final customer = crmProvider.allCustomers[index];
+                      return _buildCustomerCard(context, customer);
+                    },
+                  );
+                },
+              ),
             ),
+    );
+  }
+
+  Widget _buildCustomerCard(BuildContext context, Customer customer) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          child: Icon(
+            customer.customerType == CustomerType.individual
+                ? Icons.person
+                : Icons.business,
+            color: Theme.of(context).colorScheme.primary,
           ),
-        ],
+        ),
+        title: Text(
+          customer.displayName ?? customer.name ?? 'Клиент',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (customer.salesFunnelStage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Chip(
+                  label: Text(
+                    _getStageName(customer.salesFunnelStage!),
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  backgroundColor: _getStageColor(customer.salesFunnelStage!).withOpacity(0.2),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+          ],
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => CustomerDetailPage(customerId: customer.id),
+            ),
+          );
+        },
       ),
     );
   }
+
+  String _getStageName(SalesFunnelStage stage) {
+    switch (stage) {
+      case SalesFunnelStage.unprocessed:
+        return 'Необработанные';
+      case SalesFunnelStage.inProgress:
+        return 'В работе';
+      case SalesFunnelStage.interested:
+        return 'Заинтересованы';
+      case SalesFunnelStage.contractSigned:
+        return 'Заключен договор';
+      case SalesFunnelStage.salesByContract:
+        return 'Продажи по договору';
+      case SalesFunnelStage.refused:
+        return 'Отказ по причине';
+    }
+  }
+
+  Color _getStageColor(SalesFunnelStage stage) {
+    switch (stage) {
+      case SalesFunnelStage.unprocessed:
+        return Colors.grey;
+      case SalesFunnelStage.inProgress:
+        return Colors.blue;
+      case SalesFunnelStage.interested:
+        return Colors.orange;
+      case SalesFunnelStage.contractSigned:
+        return Colors.purple;
+      case SalesFunnelStage.salesByContract:
+        return Colors.green;
+      case SalesFunnelStage.refused:
+        return Colors.red;
+    }
+  }
 }
-
-
-
-
-
-
-
-
-

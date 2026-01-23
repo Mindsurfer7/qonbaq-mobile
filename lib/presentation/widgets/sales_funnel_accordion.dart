@@ -47,8 +47,8 @@ class _SalesFunnelAccordionState extends State<SalesFunnelAccordion> {
     }
 
     final customers = crmProvider.getCustomersByStage(widget.stage);
-    final isLoading = crmProvider.isLoadingStage(widget.stage);
-    final error = crmProvider.getErrorForStage(widget.stage);
+    final isLoading = crmProvider.isLoadingCustomersStage(widget.stage);
+    final error = crmProvider.getErrorForCustomersStage(widget.stage);
 
     // Определяем счетчик
     final displayCount = widget.currentCount ?? customers.length;
