@@ -28,7 +28,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
     
     final businessId = profileProvider.selectedBusiness?.id;
     if (businessId != null) {
-      crmProvider.loadAllCustomersList(businessId);
+      final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+      crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
     }
   }
 
@@ -50,7 +51,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
             onPressed: () {
               if (businessId != null) {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                crmProvider.loadAllCustomersList(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
               }
             },
             tooltip: 'Обновить',
@@ -70,7 +72,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
           : RefreshIndicator(
               onRefresh: () async {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                await crmProvider.loadAllCustomersList(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                await crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
@@ -95,7 +98,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
-                              crmProvider.loadAllCustomersList(businessId);
+                              final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                              crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
                             },
                             child: const Text('Повторить'),
                           ),

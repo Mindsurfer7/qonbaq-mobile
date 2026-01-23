@@ -10,6 +10,7 @@ class GetCustomersParams {
   final SalesFunnelStage? salesFunnelStage;
   final String? responsibleId;
   final String? search;
+  final bool? showAll;
   final int? limit;
   final int? offset;
 
@@ -18,6 +19,7 @@ class GetCustomersParams {
     this.salesFunnelStage,
     this.responsibleId,
     this.search,
+    this.showAll,
     this.limit,
     this.offset,
   });
@@ -36,6 +38,7 @@ class GetCustomers implements UseCase<List<Customer>, GetCustomersParams> {
       salesFunnelStage: params.salesFunnelStage,
       responsibleId: params.responsibleId,
       search: params.search,
+      showAll: params.showAll,
       limit: params.limit,
       offset: params.offset,
     );

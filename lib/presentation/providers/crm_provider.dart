@@ -28,13 +28,13 @@ class CrmProvider with ChangeNotifier {
   });
 
   // ========== КЛИЕНТЫ (Воронка продаж) ==========
-  
+
   // Кэш клиентов по статусам воронки
   final Map<SalesFunnelStage, List<Customer>> _customersByStage = {};
-  
+
   // Статусы загрузки по статусам
   final Map<SalesFunnelStage, bool> _loadingCustomersByStage = {};
-  
+
   // Ошибки по статусам
   final Map<SalesFunnelStage, String?> _errorsCustomersByStage = {};
 
@@ -44,24 +44,24 @@ class CrmProvider with ChangeNotifier {
   String? _errorAllCustomers;
 
   // ========== ЗАКАЗЫ (Воронка заказов) ==========
-  
+
   // Кэш заказов по статусам воронки
   final Map<OrderFunnelStage, List<Order>> _ordersByStage = {};
-  
+
   // Статусы загрузки по статусам
   final Map<OrderFunnelStage, bool> _loadingOrdersByStage = {};
-  
+
   // Ошибки по статусам
   final Map<OrderFunnelStage, String?> _errorsOrdersByStage = {};
 
   // ========== ЗАДАЧИ ПО КЛИЕНТАМ ==========
-  
+
   List<Task> _customerTasks = [];
   bool _isLoadingCustomerTasks = false;
   String? _errorCustomerTasks;
 
   // ========== ОБЩИЕ ПОЛЯ ==========
-  
+
   // Последний загруженный businessId
   String? _lastBusinessId;
 
@@ -97,7 +97,7 @@ class CrmProvider with ChangeNotifier {
   String? get errorAllCustomers => _errorAllCustomers;
 
   /// Загрузить клиентов для всех статусов воронки
-  Future<void> loadAllCustomers(String businessId) async {
+  Future<void> loadAllCustomers(String businessId, {bool? showAll}) async {
     if (_lastBusinessId == businessId && _customersByStage.isNotEmpty) {
       // Уже загружены для этого businessId
       return;
@@ -105,23 +105,63 @@ class CrmProvider with ChangeNotifier {
 
     _lastBusinessId = businessId;
 
-    // Загружаем клиентов для каждого статуса параллельно
-    final stages = SalesFunnelStage.values;
-    await Future.wait(
-      stages.map((stage) => _loadCustomersForStage(businessId, stage)),
+    // Загружаем всех клиентов одним запросом без фильтра по статусу
+    final result = await getCustomers.call(
+      GetCustomersParams(businessId: businessId, showAll: showAll),
+    );
+
+    await result.fold(
+      (failure) async {
+        // Если не удалось загрузить всех, пробуем загрузить по статусам (fallback)
+        final stages = SalesFunnelStage.values;
+        await Future.wait(
+          stages.map(
+            (stage) =>
+                _loadCustomersForStage(businessId, stage, showAll: showAll),
+          ),
+        );
+      },
+      (allCustomers) async {
+        // Очищаем кэш
+        _customersByStage.clear();
+
+        // Распределяем клиентов по статусам на клиенте
+        for (final customer in allCustomers) {
+          // Клиентов с null статусом относим к unprocessed
+          final stage =
+              customer.salesFunnelStage ?? SalesFunnelStage.unprocessed;
+          if (!_customersByStage.containsKey(stage)) {
+            _customersByStage[stage] = [];
+          }
+          _customersByStage[stage]!.add(customer);
+        }
+
+        // Устанавливаем флаги загрузки для всех статусов
+        for (final stage in SalesFunnelStage.values) {
+          _loadingCustomersByStage[stage] = false;
+          _errorsCustomersByStage[stage] = null;
+        }
+
+        notifyListeners();
+      },
     );
   }
 
   /// Загрузить клиентов для конкретного статуса
-  Future<void> loadCustomersForStage(String businessId, SalesFunnelStage stage) async {
-    await _loadCustomersForStage(businessId, stage);
+  Future<void> loadCustomersForStage(
+    String businessId,
+    SalesFunnelStage stage, {
+    bool? showAll,
+  }) async {
+    await _loadCustomersForStage(businessId, stage, showAll: showAll);
   }
 
   /// Внутренний метод загрузки клиентов для статуса
   Future<Either<Failure, List<Customer>>> _loadCustomersForStage(
     String businessId,
-    SalesFunnelStage stage,
-  ) async {
+    SalesFunnelStage stage, {
+    bool? showAll,
+  }) async {
     _loadingCustomersByStage[stage] = true;
     _errorsCustomersByStage[stage] = null;
     notifyListeners();
@@ -130,6 +170,7 @@ class CrmProvider with ChangeNotifier {
       GetCustomersParams(
         businessId: businessId,
         salesFunnelStage: stage,
+        showAll: showAll,
       ),
     );
 
@@ -151,16 +192,14 @@ class CrmProvider with ChangeNotifier {
   }
 
   /// Загрузить всех клиентов (без фильтра по статусу)
-  Future<void> loadAllCustomersList(String businessId) async {
+  Future<void> loadAllCustomersList(String businessId, {bool? showAll}) async {
     _isLoadingAllCustomers = true;
     _errorAllCustomers = null;
     notifyListeners();
 
     // Загружаем всех клиентов без фильтра по статусу
     final result = await getCustomers.call(
-      GetCustomersParams(
-        businessId: businessId,
-      ),
+      GetCustomersParams(businessId: businessId, showAll: showAll),
     );
 
     _isLoadingAllCustomers = false;
@@ -179,15 +218,19 @@ class CrmProvider with ChangeNotifier {
   }
 
   /// Обновить клиентов для конкретного статуса
-  Future<void> refreshCustomersStage(String businessId, SalesFunnelStage stage) async {
-    await _loadCustomersForStage(businessId, stage);
+  Future<void> refreshCustomersStage(
+    String businessId,
+    SalesFunnelStage stage, {
+    bool? showAll,
+  }) async {
+    await _loadCustomersForStage(businessId, stage, showAll: showAll);
   }
 
   /// Обновить всех клиентов
-  Future<void> refreshAllCustomers(String businessId) async {
+  Future<void> refreshAllCustomers(String businessId, {bool? showAll}) async {
     _customersByStage.clear();
     _errorsCustomersByStage.clear();
-    await loadAllCustomers(businessId);
+    await loadAllCustomers(businessId, showAll: showAll);
   }
 
   /// Обновить всех клиентов (старый метод для совместимости)
@@ -212,9 +255,9 @@ class CrmProvider with ChangeNotifier {
   @Deprecated('Используйте isLoading')
   bool get isLoading {
     return _loadingCustomersByStage.values.any((loading) => loading) ||
-           _loadingOrdersByStage.values.any((loading) => loading) ||
-           _isLoadingAllCustomers ||
-           _isLoadingCustomerTasks;
+        _loadingOrdersByStage.values.any((loading) => loading) ||
+        _isLoadingAllCustomers ||
+        _isLoadingCustomerTasks;
   }
 
   /// Создать клиента
@@ -224,20 +267,21 @@ class CrmProvider with ChangeNotifier {
   ) async {
     final result = await createCustomer.call(customer);
 
-    return result.fold(
-      (failure) => Left(failure),
-      (createdCustomer) {
-        // Добавляем созданного клиента в кэш соответствующего статуса
-        final stage = createdCustomer.salesFunnelStage ?? SalesFunnelStage.unprocessed;
-        if (_customersByStage.containsKey(stage)) {
-          _customersByStage[stage] = [..._customersByStage[stage]!, createdCustomer];
-        } else {
-          _customersByStage[stage] = [createdCustomer];
-        }
-        notifyListeners();
-        return Right(createdCustomer);
-      },
-    );
+    return result.fold((failure) => Left(failure), (createdCustomer) {
+      // Добавляем созданного клиента в кэш соответствующего статуса
+      final stage =
+          createdCustomer.salesFunnelStage ?? SalesFunnelStage.unprocessed;
+      if (_customersByStage.containsKey(stage)) {
+        _customersByStage[stage] = [
+          ..._customersByStage[stage]!,
+          createdCustomer,
+        ];
+      } else {
+        _customersByStage[stage] = [createdCustomer];
+      }
+      notifyListeners();
+      return Right(createdCustomer);
+    });
   }
 
   // ========== МЕТОДЫ ДЛЯ ЗАКАЗОВ ==========
@@ -271,15 +315,48 @@ class CrmProvider with ChangeNotifier {
 
     _lastBusinessId = businessId;
 
-    // Загружаем заказы для каждого статуса параллельно
-    final stages = OrderFunnelStage.values;
-    await Future.wait(
-      stages.map((stage) => _loadOrdersForStage(businessId, stage)),
+    // Загружаем все заказы одним запросом без фильтра по статусу
+    final result = await getOrders.call(
+      GetOrdersParams(businessId: businessId),
+    );
+
+    await result.fold(
+      (failure) async {
+        // Если не удалось загрузить всех, пробуем загрузить по статусам (fallback)
+        final stages = OrderFunnelStage.values;
+        await Future.wait(
+          stages.map((stage) => _loadOrdersForStage(businessId, stage)),
+        );
+      },
+      (allOrders) async {
+        // Очищаем кэш
+        _ordersByStage.clear();
+
+        // Распределяем заказы по статусам на клиенте
+        for (final order in allOrders) {
+          final stage = order.stage;
+          if (!_ordersByStage.containsKey(stage)) {
+            _ordersByStage[stage] = [];
+          }
+          _ordersByStage[stage]!.add(order);
+        }
+
+        // Устанавливаем флаги загрузки для всех статусов
+        for (final stage in OrderFunnelStage.values) {
+          _loadingOrdersByStage[stage] = false;
+          _errorsOrdersByStage[stage] = null;
+        }
+
+        notifyListeners();
+      },
     );
   }
 
   /// Загрузить заказы для конкретного статуса
-  Future<void> loadOrdersForStage(String businessId, OrderFunnelStage stage) async {
+  Future<void> loadOrdersForStage(
+    String businessId,
+    OrderFunnelStage stage,
+  ) async {
     await _loadOrdersForStage(businessId, stage);
   }
 
@@ -293,10 +370,7 @@ class CrmProvider with ChangeNotifier {
     notifyListeners();
 
     final result = await getOrders.call(
-      GetOrdersParams(
-        businessId: businessId,
-        stage: stage,
-      ),
+      GetOrdersParams(businessId: businessId, stage: stage),
     );
 
     _loadingOrdersByStage[stage] = false;
@@ -318,7 +392,10 @@ class CrmProvider with ChangeNotifier {
   }
 
   /// Обновить заказы для конкретного статуса
-  Future<void> refreshOrdersStage(String businessId, OrderFunnelStage stage) async {
+  Future<void> refreshOrdersStage(
+    String businessId,
+    OrderFunnelStage stage,
+  ) async {
     await _loadOrdersForStage(businessId, stage);
   }
 
@@ -335,26 +412,20 @@ class CrmProvider with ChangeNotifier {
     String businessId,
   ) async {
     final result = await createOrder.call(
-      CreateOrderParams(
-        order: order,
-        businessId: businessId,
-      ),
+      CreateOrderParams(order: order, businessId: businessId),
     );
 
-    return result.fold(
-      (failure) => Left(failure),
-      (createdOrder) {
-        // Добавляем созданный заказ в кэш соответствующего статуса
-        final stage = createdOrder.stage;
-        if (_ordersByStage.containsKey(stage)) {
-          _ordersByStage[stage] = [..._ordersByStage[stage]!, createdOrder];
-        } else {
-          _ordersByStage[stage] = [createdOrder];
-        }
-        notifyListeners();
-        return Right(createdOrder);
-      },
-    );
+    return result.fold((failure) => Left(failure), (createdOrder) {
+      // Добавляем созданный заказ в кэш соответствующего статуса
+      final stage = createdOrder.stage;
+      if (_ordersByStage.containsKey(stage)) {
+        _ordersByStage[stage] = [..._ordersByStage[stage]!, createdOrder];
+      } else {
+        _ordersByStage[stage] = [createdOrder];
+      }
+      notifyListeners();
+      return Right(createdOrder);
+    });
   }
 
   // ========== МЕТОДЫ ДЛЯ ЗАДАЧ ==========
@@ -408,26 +479,26 @@ class CrmProvider with ChangeNotifier {
   // ========== ОБЩИЕ МЕТОДЫ ==========
 
   /// Загрузить все данные CRM
-  Future<void> loadAllCrmData(String businessId) async {
+  Future<void> loadAllCrmData(String businessId, {bool? showAll}) async {
     _lastBusinessId = businessId;
-    
+
     // Загружаем все данные параллельно
     await Future.wait([
-      loadAllCustomers(businessId),
+      loadAllCustomers(businessId, showAll: showAll),
       loadAllOrders(businessId),
       loadCustomerTasks(businessId),
-      loadAllCustomersList(businessId),
+      loadAllCustomersList(businessId, showAll: showAll),
     ]);
   }
 
   /// Обновить все данные CRM
-  Future<void> refreshAllCrmData(String businessId) async {
+  Future<void> refreshAllCrmData(String businessId, {bool? showAll}) async {
     _customersByStage.clear();
     _errorsCustomersByStage.clear();
     _ordersByStage.clear();
     _errorsOrdersByStage.clear();
     _customerTasks.clear();
-    await loadAllCrmData(businessId);
+    await loadAllCrmData(businessId, showAll: showAll);
   }
 
   /// Очистить кэш

@@ -74,10 +74,7 @@ class BusinessInfo extends Entity {
   final String id;
   final String name;
 
-  const BusinessInfo({
-    required this.id,
-    required this.name,
-  });
+  const BusinessInfo({required this.id, required this.name});
 
   @override
   bool operator ==(Object other) =>
@@ -174,9 +171,7 @@ class Department extends Entity {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Department &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      other is Department && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
@@ -184,4 +179,3 @@ class Department extends Entity {
   @override
   String toString() => 'Department(id: $id, name: $name)';
 }
-

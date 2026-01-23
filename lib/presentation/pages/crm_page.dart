@@ -28,7 +28,8 @@ class _CrmPageState extends State<CrmPage> {
     
     final businessId = profileProvider.selectedBusiness?.id;
     if (businessId != null) {
-      crmProvider.loadAllCrmData(businessId);
+      final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+      crmProvider.loadAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
     }
   }
 
@@ -50,7 +51,8 @@ class _CrmPageState extends State<CrmPage> {
             onPressed: () {
               if (businessId != null) {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                crmProvider.refreshAllCrmData(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                crmProvider.refreshAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
               }
             },
             tooltip: 'Обновить',
@@ -70,7 +72,8 @@ class _CrmPageState extends State<CrmPage> {
           : RefreshIndicator(
               onRefresh: () async {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                await crmProvider.refreshAllCrmData(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                await crmProvider.refreshAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {

@@ -48,7 +48,8 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
             onPressed: () {
               if (businessId != null) {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                crmProvider.refreshAllCustomers(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                crmProvider.refreshAllCustomers(businessId, showAll: isGeneralDirector ? true : null);
               }
             },
             tooltip: 'Обновить',
@@ -68,7 +69,8 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
           : RefreshIndicator(
               onRefresh: () async {
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                await crmProvider.refreshAll(businessId);
+                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+                await crmProvider.refreshAllCustomers(businessId, showAll: isGeneralDirector ? true : null);
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
