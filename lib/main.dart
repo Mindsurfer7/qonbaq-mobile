@@ -21,6 +21,7 @@ import 'package:qonbaq/presentation/pages/admin_block_page.dart';
 import 'package:qonbaq/presentation/pages/analytics_block_page.dart';
 import 'package:qonbaq/presentation/pages/crm_page.dart';
 import 'package:qonbaq/presentation/pages/sales_funnel_page.dart';
+import 'package:qonbaq/presentation/pages/orders_funnel_page.dart';
 import 'package:qonbaq/presentation/pages/clients_list_page.dart';
 import 'package:qonbaq/presentation/pages/client_card_page.dart';
 import 'package:qonbaq/presentation/pages/client_requisites_page.dart';
@@ -630,6 +631,8 @@ class MyApp extends StatelessWidget {
               '/business/operational/crm': (context) => const CrmPage(),
               '/business/operational/crm/sales_funnel':
                   (context) => const SalesFunnelPage(),
+              '/business/operational/crm/orders_funnel':
+                  (context) => const OrdersFunnelPage(),
               '/business/operational/crm/clients_list':
                   (context) => const ClientsListPage(),
               '/business/operational/crm/clients_list/client_card':

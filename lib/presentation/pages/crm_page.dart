@@ -22,45 +22,161 @@ class CrmPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
+      body: GridView.count(
+        crossAxisCount: 2,
         padding: const EdgeInsets.all(16),
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
         children: [
-          _buildSectionCard(
-            context,
-            'Воронка продаж',
-            '/business/operational/crm/sales_funnel',
-            Icons.trending_down,
-          ),
-          _buildSectionCard(
-            context,
-            'Список клиентов',
-            '/business/operational/crm/clients_list',
-            Icons.people,
-          ),
-          _buildSectionCard(
-            context,
-            'Задачи по клиентам CRM',
-            '/business/operational/crm/tasks_crm',
-            Icons.task,
-          ),
+          // Левый верхний: Воронка продаж
+          _buildSalesFunnelBlock(context),
+          // Правый верхний: Воронка заказов
+          _buildOrdersFunnelBlock(context),
+          // Левый нижний: Задачи по клиентам
+          _buildClientTasksBlock(context),
+          // Правый нижний: Список клиентов
+          _buildClientsListBlock(context),
         ],
       ),
     );
   }
 
-  Widget _buildSectionCard(
-    BuildContext context,
-    String title,
-    String route,
-    IconData icon,
-  ) {
+  /// Левый верхний блок: Воронка продаж
+  Widget _buildSalesFunnelBlock(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(title),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).pushNamed(route),
+      color: Colors.green.withOpacity(0.1),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed('/business/operational/crm/sales_funnel');
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.trending_down,
+                size: 32,
+                color: Colors.green.shade700,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Воронка продаж',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Правый верхний блок: Воронка заказов
+  Widget _buildOrdersFunnelBlock(BuildContext context) {
+    return Card(
+      color: Colors.green.withOpacity(0.1),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed('/business/operational/crm/orders_funnel');
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.shopping_cart,
+                size: 32,
+                color: Colors.green.shade700,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Воронка заказов',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Левый нижний блок: Задачи по клиентам
+  Widget _buildClientTasksBlock(BuildContext context) {
+    return Card(
+      color: Colors.green.withOpacity(0.1),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed('/business/operational/crm/tasks_crm');
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.task,
+                size: 32,
+                color: Colors.green.shade700,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Задачи по клиентам',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Правый нижний блок: Список клиентов
+  Widget _buildClientsListBlock(BuildContext context) {
+    return Card(
+      color: Colors.green.withOpacity(0.1),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed('/business/operational/crm/clients_list');
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people,
+                size: 32,
+                color: Colors.green.shade700,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Список клиентов',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
