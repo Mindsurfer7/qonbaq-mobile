@@ -202,6 +202,12 @@ import 'package:qonbaq/domain/usecases/add_inventory.dart';
 import 'package:qonbaq/domain/usecases/add_photo.dart';
 import 'package:qonbaq/domain/usecases/write_off_fixed_asset.dart';
 import 'package:qonbaq/domain/usecases/archive_fixed_asset.dart';
+import 'package:qonbaq/data/datasources/customer_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/customer_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/customer_repository.dart';
+import 'package:qonbaq/domain/usecases/get_customers.dart';
+import 'package:qonbaq/domain/usecases/create_customer.dart';
+import 'package:qonbaq/presentation/providers/crm_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 // Глобальный ключ для навигации (для интерсептора)
@@ -533,6 +539,20 @@ class MyApp extends StatelessWidget {
     final writeOffFixedAsset = WriteOffFixedAsset(fixedAssetRepository);
     final archiveFixedAsset = ArchiveFixedAsset(fixedAssetRepository);
 
+    // Инициализация зависимостей для CRM (клиенты)
+    final customerRemoteDataSource = CustomerRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final CustomerRepository customerRepository = CustomerRepositoryImpl(
+      remoteDataSource: customerRemoteDataSource,
+    );
+    final getCustomers = GetCustomers(customerRepository);
+    final createCustomer = CreateCustomer(customerRepository);
+    final crmProvider = CrmProvider(
+      getCustomers: getCustomers,
+      createCustomer: createCustomer,
+    );
+
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
@@ -548,6 +568,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => financialProvider),
         ChangeNotifierProvider(create: (_) => rolesProvider),
         ChangeNotifierProvider(create: (_) => pendingConfirmationsProvider),
+        ChangeNotifierProvider(create: (_) => crmProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
