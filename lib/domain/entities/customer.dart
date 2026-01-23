@@ -54,7 +54,7 @@ class Customer extends Entity {
   final String? refusalReason;
 
   // Ответственные
-  final String? responsibleId;
+  final String responsibleId; // Теперь всегда заполнено
   final User? responsible;
 
   // Даты
@@ -109,7 +109,7 @@ class Customer extends Entity {
     this.logoUrl,
     this.salesFunnelStage,
     this.refusalReason,
-    this.responsibleId,
+    required this.responsibleId,
     this.responsible,
     required this.createdAt,
     required this.updatedAt,

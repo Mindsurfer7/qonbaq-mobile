@@ -13,6 +13,7 @@ class BusinessModel extends Business implements Model {
     super.hireDate,
     super.createdAt,
     super.type,
+    super.autoAssignDepartments = true,
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +51,7 @@ class BusinessModel extends Business implements Model {
               ? DateTime.parse(json['createdAt'] as String)
               : null,
       type: type,
+      autoAssignDepartments: json['autoAssignDepartments'] as bool? ?? true,
     );
   }
 
@@ -65,6 +67,7 @@ class BusinessModel extends Business implements Model {
       if (hireDate != null) 'hireDate': hireDate!.toIso8601String(),
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (type != null) 'type': type == BusinessType.family ? 'Family' : 'Business',
+      'autoAssignDepartments': autoAssignDepartments,
     };
   }
 
@@ -88,6 +91,7 @@ class BusinessModel extends Business implements Model {
       hireDate: hireDate,
       createdAt: createdAt,
       type: type,
+      autoAssignDepartments: autoAssignDepartments,
     );
   }
 
@@ -102,7 +106,17 @@ class BusinessModel extends Business implements Model {
       hireDate: business.hireDate,
       createdAt: business.createdAt,
       type: business.type,
+      autoAssignDepartments: business.autoAssignDepartments,
     );
+  }
+
+  /// JSON для обновления бизнеса
+  Map<String, dynamic> toUpdateJson() {
+    return {
+      if (name.isNotEmpty) 'name': name,
+      if (description != null) 'description': description,
+      'autoAssignDepartments': autoAssignDepartments,
+    };
   }
 }
 

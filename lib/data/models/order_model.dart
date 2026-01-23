@@ -42,13 +42,16 @@ class OrderModel extends Order implements Model {
     User? mover;
     if (json['mover'] != null) {
       final moverJson = json['mover'] as Map<String, dynamic>;
-      mover = User(
-        id: moverJson['id'] as String,
-        name: moverJson['firstName'] != null && moverJson['lastName'] != null
-            ? '${moverJson['firstName']} ${moverJson['lastName']}'
-            : moverJson['email'] as String? ?? '',
-        email: moverJson['email'] as String,
-      );
+      final email = moverJson['email'] as String?;
+      if (email != null) {
+        mover = User(
+          id: moverJson['id'] as String,
+          name: moverJson['firstName'] != null && moverJson['lastName'] != null
+              ? '${moverJson['firstName']} ${moverJson['lastName']}'
+              : email,
+          email: email,
+        );
+      }
     }
 
     // Парсинг customer
@@ -86,8 +89,8 @@ class OrderModel extends Order implements Model {
       orderNumber: orderNumber,
       description: json['description'] as String?,
       returnReason: json['returnReason'] as String?,
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      paidAmount: (json['paidAmount'] as num).toDouble(),
+      totalAmount: _parseAmount(json['totalAmount']),
+      paidAmount: _parseAmount(json['paidAmount']),
       isPaid: json['isPaid'] as bool,
       isPartiallyPaid: json['isPartiallyPaid'] as bool,
       isOverdue: json['isOverdue'] as bool,
@@ -100,17 +103,33 @@ class OrderModel extends Order implements Model {
       lastPaymentDate: json['lastPaymentDate'] != null
           ? DateTime.parse(json['lastPaymentDate'] as String)
           : null,
-      isBlocked: json['isBlocked'] as bool,
+      isBlocked: json['isBlocked'] as bool? ?? false,
       blockedReason: json['blockedReason'] as String?,
-      movedAt: DateTime.parse(json['movedAt'] as String),
+      movedAt: json['movedAt'] != null
+          ? DateTime.parse(json['movedAt'] as String)
+          : DateTime.now(),
       movedBy: json['movedBy'] as String?,
       mover: mover,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
       customer: customer,
       observers: observers,
       business: business,
     );
+  }
+
+  /// Парсинг суммы - может быть строкой или числом
+  static double _parseAmount(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
   }
 
   static OrderFunnelStage _parseOrderFunnelStage(String stage) {

@@ -56,7 +56,10 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
   }
 
   Future<void> _loadCustomers() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     final businessId = profileProvider.selectedBusiness?.id;
 
@@ -86,7 +89,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
     setState(() {
       _customers = allCustomers;
       _isLoadingCustomers = false;
-      
+
       // Если указан initialCustomerId, выбираем его
       if (widget.initialCustomerId != null && allCustomers.isNotEmpty) {
         try {
@@ -135,7 +138,10 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
       _validationErrors = null;
     });
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     final businessId = profileProvider.selectedBusiness?.id;
 
@@ -150,7 +156,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
     // Парсим сумму заказа
     double totalAmount;
     try {
-      totalAmount = double.parse(_totalAmountController.text.trim().replaceAll(' ', ''));
+      totalAmount = double.parse(
+        _totalAmountController.text.trim().replaceAll(' ', ''),
+      );
       if (totalAmount <= 0) {
         throw FormatException('Сумма должна быть больше нуля');
       }
@@ -168,12 +176,14 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
       businessId: businessId,
       customerId: _selectedCustomer!.id,
       stage: _selectedStage!,
-      orderNumber: _orderNumberController.text.trim().isNotEmpty
-          ? _orderNumberController.text.trim()
-          : null,
-      description: _descriptionController.text.trim().isNotEmpty
-          ? _descriptionController.text.trim()
-          : null,
+      orderNumber:
+          _orderNumberController.text.trim().isNotEmpty
+              ? _orderNumberController.text.trim()
+              : null,
+      description:
+          _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
       totalAmount: totalAmount,
       paidAmount: 0,
       isPaid: false,
@@ -229,7 +239,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
     // Используем контекст из корневого MaterialApp для доступа к MaterialLocalizations
     final rootContext = navigatorKey.currentContext;
     if (rootContext == null) return;
-    
+
     final picked = await showDatePicker(
       context: rootContext,
       initialDate: _paymentDueDate ?? now,
@@ -267,25 +277,28 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   errorText: _getFieldError('customerId'),
                   errorMaxLines: 2,
                 ),
-                items: _customers?.map((customer) {
-                  final displayName = customer.displayName ?? 
-                                     customer.name ?? 
-                                     'Клиент #${customer.id.substring(0, 8)}';
-                  return DropdownMenuItem(
-                    value: customer,
-                    child: Text(
-                      displayName,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-                onChanged: _isLoading || _isLoadingCustomers
-                    ? null
-                    : (value) {
-                        setState(() {
-                          _selectedCustomer = value;
-                        });
-                      },
+                items:
+                    _customers?.map((customer) {
+                      final displayName =
+                          customer.displayName ??
+                          customer.name ??
+                          'Клиент #${customer.id.substring(0, 8)}';
+                      return DropdownMenuItem(
+                        value: customer,
+                        child: Text(
+                          displayName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                onChanged:
+                    _isLoading || _isLoadingCustomers
+                        ? null
+                        : (value) {
+                          setState(() {
+                            _selectedCustomer = value;
+                          });
+                        },
                 validator: (value) {
                   if (value == null) {
                     return 'Выберите клиента';
@@ -344,7 +357,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     return 'Сумма заказа обязательна';
                   }
                   try {
-                    final amount = double.parse(value.trim().replaceAll(' ', ''));
+                    final amount = double.parse(
+                      value.trim().replaceAll(' ', ''),
+                    );
                     if (amount <= 0) {
                       return 'Сумма должна быть больше нуля';
                     }
@@ -371,12 +386,16 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   ),
                   child: Text(
                     _paymentDueDate != null
-                        ? DateFormat('dd.MM.yyyy', 'ru_RU').format(_paymentDueDate!)
+                        ? DateFormat(
+                          'dd.MM.yyyy',
+                          'ru_RU',
+                        ).format(_paymentDueDate!)
                         : 'Выберите дату',
                     style: TextStyle(
-                      color: _paymentDueDate != null
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withOpacity(0.5),
+                      color:
+                          _paymentDueDate != null
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -390,21 +409,23 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   labelText: 'Стадия воронки заказов',
                   border: OutlineInputBorder(),
                 ),
-                items: OrderFunnelStage.values.map((stage) {
-                  return DropdownMenuItem(
-                    value: stage,
-                    child: Text(_getStageTitle(stage)),
-                  );
-                }).toList(),
-                onChanged: _isLoading
-                    ? null
-                    : (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedStage = value;
-                          });
-                        }
-                      },
+                items:
+                    OrderFunnelStage.values.map((stage) {
+                      return DropdownMenuItem(
+                        value: stage,
+                        child: Text(_getStageTitle(stage)),
+                      );
+                    }).toList(),
+                onChanged:
+                    _isLoading
+                        ? null
+                        : (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedStage = value;
+                            });
+                          }
+                        },
               ),
 
               // Общая ошибка
@@ -433,13 +454,14 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _handleSubmit,
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Создать'),
+          child:
+              _isLoading
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Создать'),
         ),
       ],
     );

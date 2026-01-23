@@ -19,6 +19,7 @@ class DepartmentModel extends Department implements Model {
     super.employees,
     required super.createdAt,
     required super.updatedAt,
+    super.code,
   });
 
   factory DepartmentModel.fromJson(Map<String, dynamic> json) {
@@ -115,6 +116,12 @@ class DepartmentModel extends Department implements Model {
       updatedAt = DateTime.now();
     }
 
+    // Парсим code
+    DepartmentCode? code;
+    if (json['code'] != null) {
+      code = _parseDepartmentCode(json['code'] as String);
+    }
+
     return DepartmentModel(
       id: id,
       name: name,
@@ -131,7 +138,41 @@ class DepartmentModel extends Department implements Model {
       employees: employees,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      code: code,
     );
+  }
+
+  static DepartmentCode? _parseDepartmentCode(String codeStr) {
+    switch (codeStr.toUpperCase()) {
+      case 'ADMINISTRATION':
+        return DepartmentCode.administration;
+      case 'SALES':
+        return DepartmentCode.sales;
+      case 'ACCOUNTING':
+        return DepartmentCode.accounting;
+      case 'PRODUCTION':
+        return DepartmentCode.production;
+      case 'CUSTOM':
+        return DepartmentCode.custom;
+      default:
+        return null;
+    }
+  }
+
+  static String? _departmentCodeToString(DepartmentCode? code) {
+    if (code == null) return null;
+    switch (code) {
+      case DepartmentCode.administration:
+        return 'ADMINISTRATION';
+      case DepartmentCode.sales:
+        return 'SALES';
+      case DepartmentCode.accounting:
+        return 'ACCOUNTING';
+      case DepartmentCode.production:
+        return 'PRODUCTION';
+      case DepartmentCode.custom:
+        return 'CUSTOM';
+    }
   }
 
   @override
@@ -143,6 +184,7 @@ class DepartmentModel extends Department implements Model {
       'businessId': businessId,
       if (parentId != null) 'parentId': parentId,
       if (managerId != null) 'managerId': managerId,
+      if (code != null) 'code': _departmentCodeToString(code),
       if (manager != null)
         'manager': {
           'id': manager!.id,
@@ -196,6 +238,7 @@ class DepartmentModel extends Department implements Model {
       'businessId': businessId,
       if (parentId != null) 'parentId': parentId,
       if (managerId != null) 'managerId': managerId,
+      if (code != null) 'code': _departmentCodeToString(code),
     };
   }
 
@@ -225,6 +268,7 @@ class DepartmentModel extends Department implements Model {
       employees: employees,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      code: code,
     );
   }
 
@@ -245,6 +289,7 @@ class DepartmentModel extends Department implements Model {
       employees: department.employees,
       createdAt: department.createdAt,
       updatedAt: department.updatedAt,
+      code: department.code,
     );
   }
 }

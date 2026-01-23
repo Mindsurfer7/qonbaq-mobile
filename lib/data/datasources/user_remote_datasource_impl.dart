@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
+import '../../core/utils/error_handler.dart';
 import '../datasources/user_remote_datasource.dart';
 import '../models/user_model.dart';
 import '../models/business_model.dart';
@@ -185,6 +186,52 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
           }
           throw Exception('Ошибка при создании бизнеса');
         }
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<BusinessModel> updateBusiness(String id, BusinessModel business) async {
+    try {
+      final response = await apiClient.patch(
+        '/api/businesses/$id',
+        headers: _getAuthHeaders(),
+        body: business.toUpdateJson(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => BusinessModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        final errorMessage = ErrorHandler.getErrorMessage(
+          response.statusCode,
+          response.body,
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else {
+        final errorMessage = ErrorHandler.getErrorMessage(
+          response.statusCode,
+          response.body,
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {

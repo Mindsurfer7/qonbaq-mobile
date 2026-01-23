@@ -1,6 +1,52 @@
 import '../../domain/entities/employment_with_role.dart';
 import '../models/model.dart';
 
+/// Модель назначения департамента
+class DepartmentAssignmentModel implements Model {
+  final String departmentId;
+  final String departmentName;
+  final bool becameManager;
+
+  const DepartmentAssignmentModel({
+    required this.departmentId,
+    required this.departmentName,
+    required this.becameManager,
+  });
+
+  factory DepartmentAssignmentModel.fromJson(Map<String, dynamic> json) {
+    return DepartmentAssignmentModel(
+      departmentId: json['departmentId'] as String,
+      departmentName: json['departmentName'] as String,
+      becameManager: json['becameManager'] as bool,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'departmentId': departmentId,
+      'departmentName': departmentName,
+      'becameManager': becameManager,
+    };
+  }
+
+  DepartmentAssignment toEntity() {
+    return DepartmentAssignment(
+      departmentId: departmentId,
+      departmentName: departmentName,
+      becameManager: becameManager,
+    );
+  }
+
+  factory DepartmentAssignmentModel.fromEntity(DepartmentAssignment assignment) {
+    return DepartmentAssignmentModel(
+      departmentId: assignment.departmentId,
+      departmentName: assignment.departmentName,
+      becameManager: assignment.becameManager,
+    );
+  }
+}
+
 /// Модель трудоустройства с ролью
 class EmploymentWithRoleModel implements Model {
   final String id;
@@ -12,6 +58,7 @@ class EmploymentWithRoleModel implements Model {
   final EmploymentUserModel user;
   final EmploymentBusinessModel business;
   final EmploymentRoleModel? role;
+  final DepartmentAssignmentModel? departmentAssignment;
 
   const EmploymentWithRoleModel({
     required this.id,
@@ -23,6 +70,7 @@ class EmploymentWithRoleModel implements Model {
     required this.user,
     required this.business,
     this.role,
+    this.departmentAssignment,
   });
 
   factory EmploymentWithRoleModel.fromJson(Map<String, dynamic> json) {
@@ -37,6 +85,9 @@ class EmploymentWithRoleModel implements Model {
       business: EmploymentBusinessModel.fromJson(json['business'] as Map<String, dynamic>),
       role: json['role'] != null
           ? EmploymentRoleModel.fromJson(json['role'] as Map<String, dynamic>)
+          : null,
+      departmentAssignment: json['departmentAssignment'] != null
+          ? DepartmentAssignmentModel.fromJson(json['departmentAssignment'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -53,6 +104,7 @@ class EmploymentWithRoleModel implements Model {
       'user': user.toJson(),
       'business': business.toJson(),
       if (role != null) 'role': role!.toJson(),
+      if (departmentAssignment != null) 'departmentAssignment': departmentAssignment!.toJson(),
     };
   }
 
@@ -67,6 +119,7 @@ class EmploymentWithRoleModel implements Model {
       user: user.toEntity(),
       business: business.toEntity(),
       role: role?.toEntity(),
+      departmentAssignment: departmentAssignment?.toEntity(),
     );
   }
 
@@ -82,6 +135,13 @@ class EmploymentWithRoleModel implements Model {
       business: EmploymentBusinessModel.fromEntity(employment.business),
       role: employment.role != null
           ? EmploymentRoleModel.fromEntity(employment.role!)
+          : null,
+      departmentAssignment: employment.departmentAssignment != null
+          ? DepartmentAssignmentModel(
+              departmentId: employment.departmentAssignment!.departmentId,
+              departmentName: employment.departmentAssignment!.departmentName,
+              becameManager: employment.departmentAssignment!.becameManager,
+            )
           : null,
     );
   }

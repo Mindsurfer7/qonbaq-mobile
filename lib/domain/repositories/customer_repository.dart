@@ -19,6 +19,7 @@ abstract class CustomerRepository extends Repository {
     SalesFunnelStage? salesFunnelStage,
     String? responsibleId,
     String? search,
+    bool? showAll,
     int? limit,
     int? offset,
   });
@@ -81,5 +82,12 @@ abstract class CustomerRepository extends Repository {
   Future<Either<Failure, List<CustomerContact>>> getContacts(
     String customerId,
     String businessId,
+  );
+
+  /// Назначить ответственного за клиента
+  Future<Either<Failure, Customer>> assignResponsible(
+    String customerId,
+    String businessId,
+    String responsibleId,
   );
 }

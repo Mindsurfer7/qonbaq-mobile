@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../../domain/entities/project.dart';
+import '../../domain/entities/business.dart';
+import '../../core/error/failures.dart';
 import '../providers/department_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/project_provider.dart';
@@ -229,6 +231,14 @@ class _OrganizationalStructurePageState
                       ),
                     ),
                   ),
+                  // Разделитель
+                  Container(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  // Секция настроек автоматического распределения
+                  _buildAutoAssignSection(profileProvider, selectedBusiness.id),
                   // Разделитель
                   Container(
                     height: 1,
@@ -796,6 +806,169 @@ class _OrganizationalStructurePageState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAutoAssignSection(ProfileProvider profileProvider, String businessId) {
+    final business = profileProvider.selectedBusiness;
+    if (business == null) return const SizedBox.shrink();
+
+    // Проверяем, является ли пользователь гендиректором
+    final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+    if (!isGeneralDirector) return const SizedBox.shrink();
+
+    return _AutoAssignWidget(businessId: businessId);
+  }
+}
+
+/// Виджет для управления автоматическим распределением сотрудников
+class _AutoAssignWidget extends StatefulWidget {
+  final String businessId;
+
+  const _AutoAssignWidget({required this.businessId});
+
+  @override
+  State<_AutoAssignWidget> createState() => _AutoAssignWidgetState();
+}
+
+class _AutoAssignWidgetState extends State<_AutoAssignWidget> {
+  bool _isUpdating = false;
+  String? _errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ProfileProvider>(
+      builder: (context, provider, child) {
+        final currentBusiness = provider.selectedBusiness;
+        if (currentBusiness == null || currentBusiness.id != widget.businessId) {
+          return const SizedBox.shrink();
+        }
+
+        final autoAssign = currentBusiness.autoAssignDepartments;
+
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Автоматическое распределение сотрудников',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Автоматически распределять сотрудников по департаментам при назначении роли',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_isUpdating)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else
+                        Switch(
+                          value: autoAssign,
+                          onChanged: (value) async {
+                            setState(() {
+                              _isUpdating = true;
+                              _errorMessage = null;
+                            });
+
+                            try {
+                              final updatedBusiness = Business(
+                                id: currentBusiness.id,
+                                name: currentBusiness.name,
+                                description: currentBusiness.description,
+                                position: currentBusiness.position,
+                                orgPosition: currentBusiness.orgPosition,
+                                department: currentBusiness.department,
+                                hireDate: currentBusiness.hireDate,
+                                createdAt: currentBusiness.createdAt,
+                                type: currentBusiness.type,
+                                autoAssignDepartments: value,
+                              );
+
+                              final result = await provider.updateBusinessCall(
+                                currentBusiness.id,
+                                updatedBusiness,
+                              );
+
+                              result.fold(
+                                (failure) {
+                                  setState(() {
+                                    _errorMessage = failure is ServerFailure
+                                        ? failure.message
+                                        : 'Ошибка при обновлении настроек';
+                                    _isUpdating = false;
+                                  });
+                                },
+                                (updated) {
+                                  setState(() {
+                                    _isUpdating = false;
+                                    _errorMessage = null;
+                                  });
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          value
+                                              ? 'Автоматическое распределение включено'
+                                              : 'Автоматическое распределение отключено',
+                                        ),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                            } catch (e) {
+                              setState(() {
+                                _errorMessage = 'Ошибка: $e';
+                                _isUpdating = false;
+                              });
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

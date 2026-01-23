@@ -1,5 +1,28 @@
 import '../entities/entity.dart';
 
+/// Информация о назначении департамента при назначении роли
+class DepartmentAssignment extends Entity {
+  final String departmentId;
+  final String departmentName;
+  final bool becameManager; // Стал ли сотрудник менеджером департамента
+
+  const DepartmentAssignment({
+    required this.departmentId,
+    required this.departmentName,
+    required this.becameManager,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DepartmentAssignment &&
+          runtimeType == other.runtimeType &&
+          departmentId == other.departmentId;
+
+  @override
+  int get hashCode => departmentId.hashCode;
+}
+
 /// Доменная сущность трудоустройства с ролью
 class EmploymentWithRole extends Entity {
   final String id;
@@ -11,6 +34,7 @@ class EmploymentWithRole extends Entity {
   final EmploymentUser user;
   final EmploymentBusiness business;
   final EmploymentRole? role;
+  final DepartmentAssignment? departmentAssignment; // Информация о назначении департамента
 
   const EmploymentWithRole({
     required this.id,
@@ -22,6 +46,7 @@ class EmploymentWithRole extends Entity {
     required this.user,
     required this.business,
     this.role,
+    this.departmentAssignment,
   });
 
   /// Полное имя сотрудника

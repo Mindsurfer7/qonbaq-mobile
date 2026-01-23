@@ -30,7 +30,7 @@ class CustomerModel extends Customer implements Model {
     super.logoUrl,
     super.salesFunnelStage,
     super.refusalReason,
-    super.responsibleId,
+    required super.responsibleId,
     super.responsible,
     required super.createdAt,
     required super.updatedAt,
@@ -119,7 +119,7 @@ class CustomerModel extends Customer implements Model {
           ? _parseSalesFunnelStage(json['salesFunnelStage'] as String)
           : null,
       refusalReason: json['refusalReason'] as String?,
-      responsibleId: json['responsibleId'] as String?,
+      responsibleId: json['responsibleId'] as String? ?? '', // Теперь обязательное поле
       responsible: responsible,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -235,7 +235,7 @@ class CustomerModel extends Customer implements Model {
       if (logoUrl != null) 'logoUrl': logoUrl,
       if (salesFunnelStage != null) 'salesFunnelStage': _salesFunnelStageToString(salesFunnelStage),
       if (refusalReason != null) 'refusalReason': refusalReason,
-      if (responsibleId != null) 'responsibleId': responsibleId,
+      'responsibleId': responsibleId, // Теперь обязательное поле
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (lastActivity != null) 'lastActivity': lastActivity!.toIso8601String(),
@@ -279,7 +279,7 @@ class CustomerModel extends Customer implements Model {
       if (currency != null && currency!.isNotEmpty) 'currency': currency,
       if (logoUrl != null && logoUrl!.isNotEmpty) 'logoUrl': logoUrl,
       if (salesFunnelStage != null) 'salesFunnelStage': _salesFunnelStageToString(salesFunnelStage),
-      if (responsibleId != null && responsibleId!.isNotEmpty) 'responsibleId': responsibleId,
+      if (responsibleId.isNotEmpty) 'responsibleId': responsibleId,
       if (kbe != null && kbe!.isNotEmpty) 'kbe': kbe,
       if (headFullName != null && headFullName!.isNotEmpty) 'headFullName': headFullName,
       if (headPosition != null && headPosition!.isNotEmpty) 'headPosition': headPosition,
@@ -316,7 +316,7 @@ class CustomerModel extends Customer implements Model {
       if (logoUrl != null && logoUrl!.isNotEmpty) 'logoUrl': logoUrl,
       if (salesFunnelStage != null) 'salesFunnelStage': _salesFunnelStageToString(salesFunnelStage),
       if (refusalReason != null && refusalReason!.isNotEmpty) 'refusalReason': refusalReason,
-      if (responsibleId != null && responsibleId!.isNotEmpty) 'responsibleId': responsibleId,
+      if (responsibleId.isNotEmpty) 'responsibleId': responsibleId,
       if (kbe != null && kbe!.isNotEmpty) 'kbe': kbe,
       if (headFullName != null && headFullName!.isNotEmpty) 'headFullName': headFullName,
       if (headPosition != null && headPosition!.isNotEmpty) 'headPosition': headPosition,

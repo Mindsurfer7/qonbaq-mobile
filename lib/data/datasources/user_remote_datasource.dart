@@ -27,4 +27,7 @@ abstract class UserRemoteDataSource extends DataSource {
 
   /// Создать бизнес
   Future<BusinessModel> createBusiness(BusinessModel business);
+
+  /// Обновить бизнес
+  Future<BusinessModel> updateBusiness(String id, BusinessModel business);
 }

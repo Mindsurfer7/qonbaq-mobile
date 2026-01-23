@@ -45,6 +45,7 @@ class CustomerRepositoryImpl extends RepositoryImpl implements CustomerRepositor
     SalesFunnelStage? salesFunnelStage,
     String? responsibleId,
     String? search,
+    bool? showAll,
     int? limit,
     int? offset,
   }) async {
@@ -54,6 +55,7 @@ class CustomerRepositoryImpl extends RepositoryImpl implements CustomerRepositor
         salesFunnelStage: salesFunnelStage,
         responsibleId: responsibleId,
         search: search,
+        showAll: showAll,
         limit: limit,
         offset: offset,
       );
@@ -236,6 +238,30 @@ class CustomerRepositoryImpl extends RepositoryImpl implements CustomerRepositor
       return Right(contacts.map((model) => model.toEntity()).toList());
     } catch (e) {
       return Left(ServerFailure('Ошибка при получении контактов: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Customer>> assignResponsible(
+    String customerId,
+    String businessId,
+    String responsibleId,
+  ) async {
+    try {
+      final customer = await remoteDataSource.assignResponsible(
+        customerId,
+        businessId,
+        responsibleId,
+      );
+      return Right(customer.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при назначении ответственного: $e'));
     }
   }
 }

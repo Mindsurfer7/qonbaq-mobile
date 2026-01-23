@@ -99,6 +99,7 @@ class CustomerRemoteDataSourceImpl extends CustomerRemoteDataSource {
     SalesFunnelStage? salesFunnelStage,
     String? responsibleId,
     String? search,
+    bool? showAll,
     int? limit,
     int? offset,
   }) async {
@@ -114,6 +115,9 @@ class CustomerRemoteDataSourceImpl extends CustomerRemoteDataSource {
       }
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
+      }
+      if (showAll != null) {
+        queryParams['showAll'] = showAll.toString();
       }
       if (limit != null) {
         queryParams['limit'] = limit.toString();
@@ -621,6 +625,58 @@ class CustomerRemoteDataSourceImpl extends CustomerRemoteDataSource {
         throw Exception(errorMessage);
       }
     } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<CustomerModel> assignResponsible(
+    String customerId,
+    String businessId,
+    String responsibleId,
+  ) async {
+    try {
+      final response = await apiClient.post(
+        '/api/crm/customers/$customerId/assign-responsible?businessId=$businessId',
+        headers: _getAuthHeaders(),
+        body: {'responsibleId': responsibleId},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => CustomerModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final validationResponse = ValidationErrorResponse.fromJson(json);
+        throw ValidationException(validationResponse);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        final errorMessage = ErrorHandler.getErrorMessage(
+          response.statusCode,
+          response.body,
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 404) {
+        throw Exception('Клиент не найден');
+      } else {
+        final errorMessage = ErrorHandler.getErrorMessage(
+          response.statusCode,
+          response.body,
+        );
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is ValidationException) {
+        rethrow;
+      }
       if (e is Exception) {
         rethrow;
       }

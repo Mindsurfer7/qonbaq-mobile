@@ -96,11 +96,25 @@ class _CreateCustomerDialogState extends State<CreateCustomerDialog> {
       return;
     }
 
+    // Получаем ID текущего пользователя
+    final responsibleId = profileProvider.profile?.user.id ??
+        profileProvider.currentUserEmployment?.userId ??
+        '';
+    
+    if (responsibleId.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Не удалось определить ответственного пользователя';
+      });
+      return;
+    }
+
     // Создаем модель клиента
     final customer = CustomerModel(
       id: '', // Будет установлен сервером
       businessId: businessId,
       customerType: _customerType,
+      responsibleId: responsibleId,
       displayName: _customerType == CustomerType.legalEntity
           ? (_displayNameController.text.trim().isNotEmpty
               ? _displayNameController.text.trim()

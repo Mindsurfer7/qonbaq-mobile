@@ -1,5 +1,14 @@
 import '../entities/entity.dart';
 
+/// Код типа департамента
+enum DepartmentCode {
+  administration, // ADMINISTRATION - Администрация
+  sales, // SALES - Отдел продаж и клиентский сервис
+  accounting, // ACCOUNTING - Бухгалтерия и финансы
+  production, // PRODUCTION - Производство
+  custom, // CUSTOM - Кастомный департамент
+}
+
 /// Модель менеджера подразделения
 class DepartmentManager extends Entity {
   final String id;
@@ -141,6 +150,7 @@ class Department extends Entity {
   final List<DepartmentEmployee> employees;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DepartmentCode? code; // Код типа департамента
 
   const Department({
     required this.id,
@@ -158,6 +168,7 @@ class Department extends Entity {
     this.employees = const [],
     required this.createdAt,
     required this.updatedAt,
+    this.code,
   });
 
   @override

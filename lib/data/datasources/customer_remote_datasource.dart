@@ -18,6 +18,7 @@ abstract class CustomerRemoteDataSource extends DataSource {
     SalesFunnelStage? salesFunnelStage,
     String? responsibleId,
     String? search,
+    bool? showAll,
     int? limit,
     int? offset,
   });
@@ -80,5 +81,12 @@ abstract class CustomerRemoteDataSource extends DataSource {
   Future<List<CustomerContactModel>> getContacts(
     String customerId,
     String businessId,
+  );
+
+  /// Назначить ответственного за клиента
+  Future<CustomerModel> assignResponsible(
+    String customerId,
+    String businessId,
+    String responsibleId,
   );
 }
