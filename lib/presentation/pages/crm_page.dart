@@ -74,21 +74,37 @@ class _CrmPageState extends State<CrmPage> {
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(16),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    children: [
-                      // Левый верхний: Воронка продаж
-                      _buildSalesFunnelBlock(context, crmProvider),
-                      // Правый верхний: Задачи по клиентам и список клиентов
-                      _buildTasksAndClientsBlock(context, crmProvider),
-                      // Левый нижний: Воронка заказов
-                      _buildOrdersFunnelBlock(context, crmProvider),
-                      // Правый нижний: Аналитика
-                      _buildAnalyticsBlock(context),
-                    ],
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildSalesFunnelBlock(context, crmProvider),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildTasksAndClientsBlock(context, crmProvider),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildOrdersFunnelBlock(context, crmProvider),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildAnalyticsBlock(context),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -106,64 +122,67 @@ class _CrmPageState extends State<CrmPage> {
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   Icon(
                     Icons.trending_down,
-                    size: 28,
+                    size: 24,
                     color: Colors.green.shade700,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Воронка продаж',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 6),
+                  const Flexible(
+                    child: Text(
+                      'Воронка продаж',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    _buildStageRow(
-                      'Необработанные',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.unprocessed),
-                      Colors.grey,
-                    ),
-                    _buildStageRow(
-                      'В работе',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.inProgress),
-                      Colors.blue,
-                    ),
-                    _buildStageRow(
-                      'Заинтересованы',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.interested),
-                      Colors.orange,
-                    ),
-                    _buildStageRow(
-                      'Заключен договор',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.contractSigned),
-                      Colors.purple,
-                    ),
-                    _buildStageRow(
-                      'Продажи по договору',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.salesByContract),
-                      Colors.green,
-                    ),
-                    _buildStageRow(
-                      'Отказ по причине',
-                      crmProvider.getCustomersCountByStage(SalesFunnelStage.refused),
-                      Colors.red,
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStageRow(
+                    'Необработанные',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.unprocessed),
+                    Colors.grey,
+                  ),
+                  _buildStageRow(
+                    'В работе',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.inProgress),
+                    Colors.blue,
+                  ),
+                  _buildStageRow(
+                    'Заинтересованы',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.interested),
+                    Colors.orange,
+                  ),
+                  _buildStageRow(
+                    'Заключен договор',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.contractSigned),
+                    Colors.purple,
+                  ),
+                  _buildStageRow(
+                    'Продажи по договору',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.salesByContract),
+                    Colors.green,
+                  ),
+                  _buildStageRow(
+                    'Отказ по причине',
+                    crmProvider.getCustomersCountByStage(SalesFunnelStage.refused),
+                    Colors.red,
+                  ),
+                ],
               ),
             ],
           ),
@@ -182,64 +201,67 @@ class _CrmPageState extends State<CrmPage> {
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   Icon(
                     Icons.shopping_cart,
-                    size: 28,
+                    size: 24,
                     color: Colors.blue.shade700,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Воронка заказов',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 6),
+                  const Flexible(
+                    child: Text(
+                      'Воронка заказов',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    _buildStageRow(
-                      'Заказ принят',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderAccepted),
-                      Colors.grey,
-                    ),
-                    _buildStageRow(
-                      'Заказ начат',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderStarted),
-                      Colors.blue,
-                    ),
-                    _buildStageRow(
-                      'Заказ в работе',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderInProgress),
-                      Colors.orange,
-                    ),
-                    _buildStageRow(
-                      'Заказ готов',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReady),
-                      Colors.purple,
-                    ),
-                    _buildStageRow(
-                      'Заказ передан клиенту',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderDelivered),
-                      Colors.green,
-                    ),
-                    _buildStageRow(
-                      'Возврат по причине',
-                      crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReturned),
-                      Colors.red,
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStageRow(
+                    'Заказ принят',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderAccepted),
+                    Colors.grey,
+                  ),
+                  _buildStageRow(
+                    'Заказ начат',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderStarted),
+                    Colors.blue,
+                  ),
+                  _buildStageRow(
+                    'Заказ в работе',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderInProgress),
+                    Colors.orange,
+                  ),
+                  _buildStageRow(
+                    'Заказ готов',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReady),
+                    Colors.purple,
+                  ),
+                  _buildStageRow(
+                    'Заказ передан клиенту',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderDelivered),
+                    Colors.green,
+                  ),
+                  _buildStageRow(
+                    'Возврат по причине',
+                    crmProvider.getOrdersCountByStage(OrderFunnelStage.orderReturned),
+                    Colors.red,
+                  ),
+                ],
               ),
             ],
           ),
@@ -253,8 +275,9 @@ class _CrmPageState extends State<CrmPage> {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Задачи по клиентам
             Expanded(
@@ -264,34 +287,37 @@ class _CrmPageState extends State<CrmPage> {
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.task,
-                        size: 32,
+                        size: 20,
                         color: Colors.orange.shade700,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        'Задачи по клиентам',
+                        'Задачи',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.orange.shade700,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         '${crmProvider.customerTasksCount}',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.orange.shade700,
                         ),
@@ -301,7 +327,7 @@ class _CrmPageState extends State<CrmPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(width: 8),
             // Список клиентов
             Expanded(
               child: InkWell(
@@ -310,34 +336,37 @@ class _CrmPageState extends State<CrmPage> {
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.people,
-                        size: 32,
+                        size: 20,
                         color: Colors.blue.shade700,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
                         'Клиенты',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.blue.shade700,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         '${crmProvider.allCustomers.length}',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.blue.shade700,
                         ),
@@ -358,34 +387,39 @@ class _CrmPageState extends State<CrmPage> {
     return Card(
       elevation: 2,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.analytics,
-              size: 48,
+              size: 40,
               color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Аналитика',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-              ),
             ),
             const SizedBox(height: 8),
             Text(
+              'Аналитика',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
               'Скоро',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.grey.shade500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -396,31 +430,33 @@ class _CrmPageState extends State<CrmPage> {
   /// Строка со статусом и количеством
   Widget _buildStageRow(String title, int count, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
+          Flexible(
+            flex: 3,
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
