@@ -101,21 +101,7 @@ class _FunnelAccordionState extends State<FunnelAccordion> {
               setState(() {
                 _isExpanded = !_isExpanded;
               });
-              
-              // Загружаем данные при первом открытии
-              if (_isExpanded && !isLoading) {
-                if (widget.cardType == FunnelCardType.customer) {
-                  final customers = widget.customers ?? [];
-                  if (customers.isEmpty && widget.onLoadCustomers != null) {
-                    widget.onLoadCustomers!();
-                  }
-                } else {
-                  final orders = widget.orders ?? [];
-                  if (orders.isEmpty && widget.onLoadOrders != null) {
-                    widget.onLoadOrders!();
-                  }
-                }
-              }
+              // Данные уже загружены на рут-странице CRM, не делаем запросы при открытии
             },
             child: Padding(
               padding: const EdgeInsets.all(16),

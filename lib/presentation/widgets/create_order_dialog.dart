@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../main.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/customer.dart';
 import '../../data/models/order_model.dart';
@@ -225,8 +226,12 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
     final firstDate = now;
     final lastDate = DateTime(now.year + 1, 12, 31);
 
+    // Используем контекст из корневого MaterialApp для доступа к MaterialLocalizations
+    final rootContext = navigatorKey.currentContext;
+    if (rootContext == null) return;
+    
     final picked = await showDatePicker(
-      context: context,
+      context: rootContext,
       initialDate: _paymentDueDate ?? now,
       firstDate: firstDate,
       lastDate: lastDate,

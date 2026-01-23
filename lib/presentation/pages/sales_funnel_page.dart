@@ -15,23 +15,8 @@ class SalesFunnelPage extends StatefulWidget {
 }
 
 class _SalesFunnelPageState extends State<SalesFunnelPage> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadCustomers();
-    });
-  }
-
-  void _loadCustomers() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-    
-    final businessId = profileProvider.selectedBusiness?.id;
-    if (businessId != null) {
-      crmProvider.loadAllCustomers(businessId);
-    }
-  }
+  // Данные уже загружены на рут-странице CRM (crm_page.dart)
+  // Не делаем запросы при открытии страницы
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +72,10 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
-                  if (crmProvider.isLoading && 
-                      crmProvider.getCustomersByStage(SalesFunnelStage.unprocessed).isEmpty) {
+                  // Показываем индикатор загрузки только если данные еще не загружены
+                  final isLoadingFirstStage = crmProvider.isLoadingCustomersStage(SalesFunnelStage.unprocessed);
+                  final hasData = crmProvider.getCustomersByStage(SalesFunnelStage.unprocessed).isNotEmpty;
+                  if (isLoadingFirstStage && !hasData) {
                     return const Center(
                       child: CircularProgressIndicator(),
                     );

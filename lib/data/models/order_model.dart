@@ -72,12 +72,18 @@ class OrderModel extends Order implements Model {
       business = BusinessModel.fromJson(json['business'] as Map<String, dynamic>).toEntity();
     }
 
+    // Парсинг orderNumber - может быть числом или строкой
+    String? orderNumber;
+    if (json['orderNumber'] != null) {
+      orderNumber = json['orderNumber'].toString();
+    }
+
     return OrderModel(
       id: json['id'] as String,
       businessId: json['businessId'] as String,
       customerId: json['customerId'] as String,
       stage: _parseOrderFunnelStage(json['stage'] as String),
-      orderNumber: json['orderNumber'] as String?,
+      orderNumber: orderNumber,
       description: json['description'] as String?,
       returnReason: json['returnReason'] as String?,
       totalAmount: (json['totalAmount'] as num).toDouble(),

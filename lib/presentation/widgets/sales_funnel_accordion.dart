@@ -64,11 +64,7 @@ class _SalesFunnelAccordionState extends State<SalesFunnelAccordion> {
               setState(() {
                 _isExpanded = !_isExpanded;
               });
-              
-              // Загружаем клиентов при первом открытии
-              if (_isExpanded && customers.isEmpty && !isLoading) {
-                crmProvider.loadCustomersForStage(businessId, widget.stage);
-              }
+              // Данные уже загружены на рут-странице CRM, не делаем запросы при открытии
             },
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -155,7 +151,7 @@ class _SalesFunnelAccordionState extends State<SalesFunnelAccordion> {
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
-                crmProvider.loadCustomersForStage(businessId, widget.stage);
+                crmProvider.refreshCustomersStage(businessId, widget.stage);
               },
               child: const Text('Повторить'),
             ),
