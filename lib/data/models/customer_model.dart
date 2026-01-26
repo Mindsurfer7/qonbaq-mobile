@@ -54,7 +54,7 @@ class CustomerModel extends Customer implements Model {
     super.observers,
   });
 
-  factory CustomerModel.fromJson(Map<String, dynamic> json) {
+  factory CustomerModel.fromJson(Map<String, dynamic> json, {String? businessId}) {
     // Парсинг responsible
     User? responsible;
     if (json['responsible'] != null) {
@@ -93,9 +93,18 @@ class CustomerModel extends Customer implements Model {
           .toList();
     }
 
+    // businessId может отсутствовать в JSON (например, когда customer парсится внутри order)
+    // Используем переданный businessId или берем из JSON
+    final businessIdValue = businessId ?? json['businessId'] as String?;
+    if (businessIdValue == null) {
+      throw FormatException(
+        'Поле businessId обязательно для Customer. JSON: $json',
+      );
+    }
+
     return CustomerModel(
       id: json['id'] as String,
-      businessId: json['businessId'] as String,
+      businessId: businessIdValue,
       customerType: _parseCustomerType(json['customerType'] as String? ?? 'LEGAL_ENTITY'),
       displayName: json['displayName'] as String?,
       name: json['name'] as String?,

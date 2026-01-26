@@ -171,13 +171,44 @@ class _FunnelAccordionState extends State<FunnelAccordion> {
     }
 
     if (error != null) {
+      // Улучшаем отображение ошибки: убираем длинные JSON и технические детали
+      String displayError = error;
+      
+      // Если ошибка содержит FormatException с большим JSON, упрощаем сообщение
+      if (displayError.contains('FormatException') && displayError.contains('data=')) {
+        // Извлекаем только основное сообщение об ошибке
+        final match = RegExp(r'FormatException: ([^;]+)').firstMatch(displayError);
+        if (match != null) {
+          displayError = 'Ошибка парсинга данных: ${match.group(1)}';
+        } else {
+          displayError = 'Ошибка при обработке данных';
+        }
+      } else if (displayError.contains('TypeError')) {
+        // Упрощаем сообщения TypeError
+        displayError = 'Ошибка типа данных при обработке ответа сервера';
+      } else if (displayError.length > 200) {
+        // Обрезаем слишком длинные сообщения
+        displayError = '${displayError.substring(0, 200)}...';
+      }
+      
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              error,
+              'Ошибка при получении заказов:',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              displayError,
               style: const TextStyle(color: Colors.red),
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
             TextButton(

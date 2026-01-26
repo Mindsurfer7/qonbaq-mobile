@@ -55,9 +55,12 @@ class OrderModel extends Order implements Model {
     }
 
     // Парсинг customer
+    // businessId может отсутствовать в customer JSON, используем businessId из order
     Customer? customer;
     if (json['customer'] != null) {
-      customer = CustomerModel.fromJson(json['customer'] as Map<String, dynamic>).toEntity();
+      final customerJson = json['customer'] as Map<String, dynamic>;
+      final orderBusinessId = json['businessId'] as String;
+      customer = CustomerModel.fromJson(customerJson, businessId: orderBusinessId).toEntity();
     }
 
     // Парсинг observers
