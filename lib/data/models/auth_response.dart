@@ -1,5 +1,6 @@
 import '../../domain/entities/auth_user.dart';
 import '../../domain/entities/approval_permission.dart';
+import '../../domain/entities/department.dart';
 import '../models/model.dart';
 
 /// Модель ответа аутентификации
@@ -54,26 +55,72 @@ class AuthResponse implements Model {
 class ManagedDepartmentModel implements Model {
   final String id;
   final String name;
+  final DepartmentCode? code;
 
   ManagedDepartmentModel({
     required this.id,
     required this.name,
+    this.code,
   });
 
   factory ManagedDepartmentModel.fromJson(Map<String, dynamic> json) {
+    // Парсим code
+    DepartmentCode? code;
+    if (json['code'] != null) {
+      code = _parseDepartmentCode(json['code'] as String);
+    }
+
     return ManagedDepartmentModel(
       id: json['id'] as String,
       name: json['name'] as String,
+      code: code,
     );
+  }
+
+  static DepartmentCode? _parseDepartmentCode(String codeStr) {
+    switch (codeStr.toUpperCase()) {
+      case 'ADMINISTRATION':
+        return DepartmentCode.administration;
+      case 'SALES':
+        return DepartmentCode.sales;
+      case 'ACCOUNTING':
+        return DepartmentCode.accounting;
+      case 'PRODUCTION':
+        return DepartmentCode.production;
+      case 'CUSTOM':
+        return DepartmentCode.custom;
+      default:
+        return null;
+    }
   }
 
   @override
   Map<String, dynamic> toJson() {
-    return {'id': id, 'name': name};
+    return {
+      'id': id,
+      'name': name,
+      if (code != null) 'code': _departmentCodeToString(code),
+    };
+  }
+
+  static String? _departmentCodeToString(DepartmentCode? code) {
+    if (code == null) return null;
+    switch (code) {
+      case DepartmentCode.administration:
+        return 'ADMINISTRATION';
+      case DepartmentCode.sales:
+        return 'SALES';
+      case DepartmentCode.accounting:
+        return 'ACCOUNTING';
+      case DepartmentCode.production:
+        return 'PRODUCTION';
+      case DepartmentCode.custom:
+        return 'CUSTOM';
+    }
   }
 
   ManagedDepartment toEntity() {
-    return ManagedDepartment(id: id, name: name);
+    return ManagedDepartment(id: id, name: name, code: code);
   }
 }
 

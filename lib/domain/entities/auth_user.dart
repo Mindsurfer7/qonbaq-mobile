@@ -1,5 +1,6 @@
 import '../entities/entity.dart';
 import 'approval_permission.dart';
+import 'department.dart';
 
 /// Доменная сущность аутентифицированного пользователя
 class AuthUser extends Entity {
@@ -37,6 +38,44 @@ class AuthUser extends Entity {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Проверка, является ли пользователь руководителем отдела продаж (РОП) в конкретном бизнесе
+  /// РОП - это менеджер департамента с кодом SALES
+  /// Если код еще не приходит с бэкенда, проверяем по имени департамента
+  bool isSalesDepartmentHead(String businessId) {
+    final permission = getPermissionsForBusiness(businessId);
+    if (permission == null || !permission.isDepartmentManager) {
+      return false;
+    }
+
+    // Проверяем, есть ли среди управляемых департаментов департамент с кодом SALES
+    final hasSalesCode = permission.managedDepartments.any(
+      (dept) => dept.code == DepartmentCode.sales,
+    );
+    
+    if (hasSalesCode) {
+      return true;
+    }
+
+    // Fallback: проверяем по имени департамента, если код еще не приходит
+    // Ищем департаменты с названиями, содержащими "продаж" или "sales"
+    final salesDepartmentNames = [
+      'отдел продаж',
+      'отдел продаж и маркетинга',
+      'отдел продаж и сбыта',
+      'продажи',
+      'sales',
+    ];
+    
+    return permission.managedDepartments.any(
+      (dept) {
+        final deptNameLower = dept.name.toLowerCase();
+        return salesDepartmentNames.any(
+          (salesName) => deptNameLower.contains(salesName.toLowerCase()),
+        );
+      },
+    );
   }
 
   @override

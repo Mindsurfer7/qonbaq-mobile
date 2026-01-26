@@ -4,6 +4,7 @@ import '../../domain/entities/customer.dart';
 import '../../domain/entities/order.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 
 /// Страница CRM
 class CrmPage extends StatefulWidget {
@@ -24,13 +25,34 @@ class _CrmPageState extends State<CrmPage> {
 
   void _loadCrmData() {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     
     final businessId = profileProvider.selectedBusiness?.id;
     if (businessId != null) {
-      final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-      crmProvider.loadAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
+      final shouldShowAll = _shouldShowAll(authProvider, businessId);
+      crmProvider.loadAllCrmData(businessId, showAll: shouldShowAll);
     }
+  }
+
+  /// Определяет, нужно ли передавать showAll=true
+  /// showAll=true для гендиректора или РОПа (руководителя отдела продаж)
+  bool? _shouldShowAll(AuthProvider authProvider, String businessId) {
+    final user = authProvider.user;
+    if (user == null) return null;
+
+    // Проверяем, является ли пользователь гендиректором
+    final permission = user.getPermissionsForBusiness(businessId);
+    if (permission?.isGeneralDirector ?? false) {
+      return true;
+    }
+
+    // Проверяем, является ли пользователь РОПом (руководителем отдела продаж)
+    if (user.isSalesDepartmentHead(businessId)) {
+      return true;
+    }
+
+    return null;
   }
 
   @override
@@ -50,9 +72,10 @@ class _CrmPageState extends State<CrmPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               if (businessId != null) {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                crmProvider.refreshAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
+                final shouldShowAll = _shouldShowAll(authProvider, businessId);
+                crmProvider.refreshAllCrmData(businessId, showAll: shouldShowAll);
               }
             },
             tooltip: 'Обновить',
@@ -71,9 +94,10 @@ class _CrmPageState extends State<CrmPage> {
             )
           : RefreshIndicator(
               onRefresh: () async {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                await crmProvider.refreshAllCrmData(businessId, showAll: isGeneralDirector ? true : null);
+                final shouldShowAll = _shouldShowAll(authProvider, businessId);
+                await crmProvider.refreshAllCrmData(businessId, showAll: shouldShowAll);
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {

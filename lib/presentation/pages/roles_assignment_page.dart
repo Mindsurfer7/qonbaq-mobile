@@ -154,12 +154,22 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
                                   final success = await rolesProvider
                                       .updateRoles(_roleChanges);
                                   if (success && mounted) {
+                                    // Проверяем, есть ли назначения менеджеров департаментов
+                                    final employments = rolesProvider.employments;
+                                    final managerAssignments = employments
+                                        ?.where((emp) =>
+                                            emp.departmentAssignment?.becameManager ==
+                                            true)
+                                        .toList();
+
                                     setState(() {
                                       _roleChanges.clear();
                                     });
+
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
                                           if (mounted) {
+                                            // Показываем основное уведомление об успехе
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -170,6 +180,22 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
                                                 backgroundColor: Colors.green,
                                               ),
                                             );
+
+                                            // Если есть назначения менеджеров, показываем дополнительное уведомление
+                                            if (managerAssignments != null &&
+                                                managerAssignments.isNotEmpty) {
+                                              Future.delayed(
+                                                const Duration(milliseconds: 500),
+                                                () {
+                                                  if (mounted) {
+                                                    _showManagerAssignmentNotification(
+                                                      context,
+                                                      managerAssignments,
+                                                    );
+                                                  }
+                                                },
+                                              );
+                                            }
                                           }
                                         });
                                   }
@@ -193,6 +219,82 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
         },
       ),
     );
+  }
+
+  /// Показать уведомление о назначении менеджером департамента
+  void _showManagerAssignmentNotification(
+    BuildContext context,
+    List<EmploymentWithRole> managerAssignments,
+  ) {
+    if (managerAssignments.isEmpty) return;
+
+    // Если назначен один менеджер
+    if (managerAssignments.length == 1) {
+      final assignment = managerAssignments.first.departmentAssignment!;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Руководитель департамента назначен'),
+            ],
+          ),
+          content: Text(
+            'Вы назначили руководителя департамента "${assignment.departmentName}". '
+            'Если хотите изменить руководителя, зайдите в организационную структуру.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Понятно'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushNamed('/organizational_structure');
+              },
+              child: const Text('Открыть структуру'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Если назначено несколько менеджеров
+      final departments = managerAssignments
+          .map((emp) => emp.departmentAssignment!.departmentName)
+          .join(', ');
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Руководители департаментов назначены'),
+            ],
+          ),
+          content: Text(
+            'Вы назначили руководителей департаментов: $departments. '
+            'Если хотите изменить руководителей, зайдите в организационную структуру.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Понятно'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushNamed('/organizational_structure');
+              },
+              child: const Text('Открыть структуру'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 

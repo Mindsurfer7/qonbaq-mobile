@@ -1,13 +1,16 @@
 import '../entities/entity.dart';
+import 'department.dart';
 
 /// Департамент, которым управляет пользователь
 class ManagedDepartment extends Entity {
   final String id;
   final String name;
+  final DepartmentCode? code; // Код типа департамента
 
   const ManagedDepartment({
     required this.id,
     required this.name,
+    this.code,
   });
 
   @override
@@ -16,13 +19,14 @@ class ManagedDepartment extends Entity {
       other is ManagedDepartment &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          name == other.name;
+          name == other.name &&
+          code == other.code;
 
   @override
-  int get hashCode => id.hashCode ^ name.hashCode;
+  int get hashCode => id.hashCode ^ name.hashCode ^ (code?.hashCode ?? 0);
 
   @override
-  String toString() => 'ManagedDepartment(id: $id, name: $name)';
+  String toString() => 'ManagedDepartment(id: $id, name: $name, code: $code)';
 }
 
 /// Права пользователя на согласование в конкретном бизнесе

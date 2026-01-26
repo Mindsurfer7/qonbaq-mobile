@@ -211,6 +211,7 @@ import 'package:qonbaq/domain/usecases/get_customers.dart';
 import 'package:qonbaq/domain/usecases/create_customer.dart';
 import 'package:qonbaq/domain/usecases/get_customer.dart';
 import 'package:qonbaq/domain/usecases/get_customer_contacts.dart';
+import 'package:qonbaq/domain/usecases/assign_customer_responsible.dart';
 import 'package:qonbaq/presentation/providers/crm_provider.dart';
 import 'package:qonbaq/data/datasources/order_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/order_repository_impl.dart';
@@ -562,6 +563,7 @@ class MyApp extends StatelessWidget {
     final createCustomer = CreateCustomer(customerRepository);
     final getCustomer = GetCustomer(customerRepository);
     final getCustomerContacts = GetCustomerContacts(customerRepository);
+    final assignCustomerResponsible = AssignCustomerResponsible(customerRepository);
 
     // Инициализация зависимостей для заказов
     final orderRemoteDataSource = OrderRemoteDataSourceImpl(
@@ -650,6 +652,7 @@ class MyApp extends StatelessWidget {
         Provider<ArchiveFixedAsset>(create: (_) => archiveFixedAsset),
         Provider<GetCustomer>(create: (_) => getCustomer),
         Provider<GetCustomerContacts>(create: (_) => getCustomerContacts),
+        Provider<AssignCustomerResponsible>(create: (_) => assignCustomerResponsible),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),

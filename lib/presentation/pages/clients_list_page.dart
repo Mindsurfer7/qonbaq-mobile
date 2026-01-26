@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../../domain/entities/customer.dart';
 import 'customer_detail_page.dart';
 
@@ -14,29 +15,71 @@ class ClientsListPage extends StatefulWidget {
 }
 
 class _ClientsListPageState extends State<ClientsListPage> {
+  bool? _showAllFilter; // Состояние фильтра "Показать всех"
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeFilter();
       _loadCustomers();
     });
   }
 
-  void _loadCustomers() {
+  /// Инициализирует фильтр на основе прав пользователя
+  void _initializeFilter() {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final businessId = profileProvider.selectedBusiness?.id;
+    
+    if (businessId != null) {
+      // Если пользователь может видеть всех, по умолчанию показываем всех
+      _showAllFilter = _shouldShowAll(authProvider, businessId) == true ? true : null;
+    }
+  }
+
+  Future<void> _loadCustomers({bool? forceShowAll}) async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final crmProvider = Provider.of<CrmProvider>(context, listen: false);
     
     final businessId = profileProvider.selectedBusiness?.id;
     if (businessId != null) {
-      final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-      crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
+      // Используем переданное значение или состояние фильтра
+      // Если forceShowAll не передан, используем состояние фильтра или определяем автоматически
+      final showAll = forceShowAll ?? 
+          _showAllFilter ?? 
+          _shouldShowAll(authProvider, businessId);
+      await crmProvider.loadAllCustomersList(businessId, showAll: showAll);
     }
+  }
+
+  /// Определяет, нужно ли передавать showAll=true
+  /// showAll=true для гендиректора или РОПа (руководителя отдела продаж)
+  bool? _shouldShowAll(AuthProvider authProvider, String businessId) {
+    final user = authProvider.user;
+    if (user == null) return null;
+
+    // Проверяем, является ли пользователь гендиректором
+    final permission = user.getPermissionsForBusiness(businessId);
+    if (permission?.isGeneralDirector ?? false) {
+      return true;
+    }
+
+    // Проверяем, является ли пользователь РОПом (руководителем отдела продаж)
+    if (user.isSalesDepartmentHead(businessId)) {
+      return true;
+    }
+
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final businessId = profileProvider.selectedBusiness?.id;
+    final canShowAllFilter = businessId != null && _shouldShowAll(authProvider, businessId) == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -50,9 +93,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               if (businessId != null) {
-                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
+                _loadCustomers();
               }
             },
             tooltip: 'Обновить',
@@ -69,13 +110,50 @@ class _ClientsListPageState extends State<ClientsListPage> {
           ? const Center(
               child: Text('Выберите бизнес для просмотра списка клиентов'),
             )
-          : RefreshIndicator(
-              onRefresh: () async {
-                final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                await crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
-              },
-              child: Consumer<CrmProvider>(
+          : Column(
+              children: [
+                // Фильтр "Показать всех" для гендира/РОПа
+                if (canShowAllFilter)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.filter_list, size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Показать всех клиентов',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        Switch(
+                          value: _showAllFilter ?? true,
+                          onChanged: (value) {
+                            setState(() {
+                              _showAllFilter = value;
+                            });
+                            _loadCustomers(forceShowAll: value);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                // Список клиентов
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await _loadCustomers();
+                    },
+                    child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
                   if (crmProvider.isLoadingAllCustomers && crmProvider.allCustomers.isEmpty) {
                     return const Center(
@@ -98,8 +176,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
-                              final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                              crmProvider.loadAllCustomersList(businessId, showAll: isGeneralDirector ? true : null);
+                              _loadCustomers();
                             },
                             child: const Text('Повторить'),
                           ),
@@ -130,16 +207,19 @@ class _ClientsListPageState extends State<ClientsListPage> {
                     );
                   }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: crmProvider.allCustomers.length,
-                    itemBuilder: (context, index) {
-                      final customer = crmProvider.allCustomers[index];
-                      return _buildCustomerCard(context, customer);
-                    },
-                  );
-                },
-              ),
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: crmProvider.allCustomers.length,
+                      itemBuilder: (context, index) {
+                        final customer = crmProvider.allCustomers[index];
+                        return _buildCustomerCard(context, customer);
+                      },
+                    );
+                  },
+                    ),
+                  ),
+                ),
+              ],
             ),
     );
   }

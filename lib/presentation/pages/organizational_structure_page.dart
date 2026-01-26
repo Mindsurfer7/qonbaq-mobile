@@ -7,6 +7,7 @@ import '../../core/error/failures.dart';
 import '../providers/department_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/project_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/department_tree_graph.dart';
 import 'create_department_dialog.dart';
@@ -814,7 +815,14 @@ class _OrganizationalStructurePageState
     if (business == null) return const SizedBox.shrink();
 
     // Проверяем, является ли пользователь гендиректором
-    final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
+    // Используем AuthProvider для более надежной проверки
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    if (user == null) return const SizedBox.shrink();
+
+    final permission = user.getPermissionsForBusiness(businessId);
+    final isGeneralDirector = permission?.isGeneralDirector ?? false;
+    
     if (!isGeneralDirector) return const SizedBox.shrink();
 
     return _AutoAssignWidget(businessId: businessId);

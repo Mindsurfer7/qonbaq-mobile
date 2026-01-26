@@ -5,10 +5,12 @@ import '../../domain/entities/customer_contact.dart';
 import '../../domain/usecases/get_customer.dart';
 import '../../domain/usecases/get_customer_contacts.dart';
 import '../../domain/usecases/create_task.dart';
+import '../../domain/usecases/assign_customer_responsible.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/create_task_form.dart';
+import '../widgets/user_selector_widget.dart';
 import '../../domain/repositories/user_repository.dart';
 
 /// Страница детальной информации о клиенте
@@ -308,6 +310,42 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     );
   }
 
+  void _showAssignResponsibleDialog() {
+    if (_customer == null) return;
+
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final businessId = profileProvider.selectedBusiness?.id;
+    if (businessId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Бизнес не выбран'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final assignResponsibleUseCase = Provider.of<AssignCustomerResponsible>(
+      context,
+      listen: false,
+    );
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => _AssignResponsibleDialog(
+        businessId: businessId,
+        customerId: _customer!.id,
+        currentResponsibleId: _customer!.responsibleId,
+        userRepository: userRepository,
+        assignResponsibleUseCase: assignResponsibleUseCase,
+        onAssigned: () {
+          _loadCustomer(); // Перезагружаем данные клиента
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -544,32 +582,56 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             ],
 
                             // Ответственные
-                            if (_customer!.responsible != null ||
-                                _customer!.responsibleId != null) ...[
-                              const SizedBox(height: 24),
-                              const Divider(),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Ответственные',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                            const SizedBox(height: 24),
+                            const Divider(),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Ответственные',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => _showAssignResponsibleDialog(),
+                                  tooltip: 'Изменить ответственного',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (_customer!.responsible != null)
+                              _buildInfoRow(
+                                'Ответственный',
+                                '${_customer!.responsible!.name} (${_customer!.responsible!.email})',
+                                Icons.person,
+                              )
+                            else if (_customer!.responsibleId != null)
+                              _buildInfoRow(
+                                'Ответственный ID',
+                                _customer!.responsibleId,
+                                Icons.person,
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.person, size: 20, color: Colors.grey),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Ответственный не назначен',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              if (_customer!.responsible != null)
-                                _buildInfoRow(
-                                  'Ответственный',
-                                  '${_customer!.responsible!.name} (${_customer!.responsible!.email})',
-                                  Icons.person,
-                                )
-                              else
-                                _buildInfoRow(
-                                  'Ответственный ID',
-                                  _customer!.responsibleId,
-                                  Icons.person,
-                                ),
-                            ],
 
                             // Казахстан-специфичные поля
                             if (_customer!.kbe != null ||
@@ -938,6 +1000,177 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                   );
                 },
                 onCancel: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Диалог назначения ответственного за клиента
+class _AssignResponsibleDialog extends StatefulWidget {
+  final String businessId;
+  final String customerId;
+  final String? currentResponsibleId;
+  final UserRepository userRepository;
+  final AssignCustomerResponsible assignResponsibleUseCase;
+  final VoidCallback onAssigned;
+
+  const _AssignResponsibleDialog({
+    required this.businessId,
+    required this.customerId,
+    this.currentResponsibleId,
+    required this.userRepository,
+    required this.assignResponsibleUseCase,
+    required this.onAssigned,
+  });
+
+  @override
+  State<_AssignResponsibleDialog> createState() => _AssignResponsibleDialogState();
+}
+
+class _AssignResponsibleDialogState extends State<_AssignResponsibleDialog> {
+  String? _selectedUserId;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedUserId = widget.currentResponsibleId;
+  }
+
+  Future<void> _assignResponsible() async {
+    if (_selectedUserId == null) {
+      setState(() {
+        _error = 'Выберите ответственного';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final result = await widget.assignResponsibleUseCase.call(
+      AssignCustomerResponsibleParams(
+        customerId: widget.customerId,
+        businessId: widget.businessId,
+        responsibleId: _selectedUserId!,
+      ),
+    );
+
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoading = false;
+          _error = _getErrorMessage(failure);
+        });
+      },
+      (customer) {
+        setState(() {
+          _isLoading = false;
+        });
+        Navigator.of(context).pop();
+        widget.onAssigned();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ответственный успешно назначен'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      },
+    );
+  }
+
+  String _getErrorMessage(Failure failure) {
+    if (failure is ServerFailure) {
+      return failure.message;
+    } else if (failure is NetworkFailure) {
+      return failure.message;
+    }
+    return 'Произошла ошибка';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: const Text('Назначить ответственного'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  UserSelectorWidget(
+                    businessId: widget.businessId,
+                    userRepository: widget.userRepository,
+                    selectedUserId: _selectedUserId,
+                    onUserSelected: (userId) {
+                      setState(() {
+                        _selectedUserId = userId;
+                        _error = null;
+                      });
+                    },
+                    label: 'Ответственный',
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: const Text('Отмена'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _assignResponsible,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Назначить'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/sales_funnel_accordion.dart';
 import '../widgets/create_customer_dialog.dart';
 
@@ -17,6 +18,26 @@ class SalesFunnelPage extends StatefulWidget {
 class _SalesFunnelPageState extends State<SalesFunnelPage> {
   // Данные уже загружены на рут-странице CRM (crm_page.dart)
   // Не делаем запросы при открытии страницы
+
+  /// Определяет, нужно ли передавать showAll=true
+  /// showAll=true для гендиректора или РОПа (руководителя отдела продаж)
+  bool? _shouldShowAll(AuthProvider authProvider, String businessId) {
+    final user = authProvider.user;
+    if (user == null) return null;
+
+    // Проверяем, является ли пользователь гендиректором
+    final permission = user.getPermissionsForBusiness(businessId);
+    if (permission?.isGeneralDirector ?? false) {
+      return true;
+    }
+
+    // Проверяем, является ли пользователь РОПом (руководителем отдела продаж)
+    if (user.isSalesDepartmentHead(businessId)) {
+      return true;
+    }
+
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +68,10 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               if (businessId != null) {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                crmProvider.refreshAllCustomers(businessId, showAll: isGeneralDirector ? true : null);
+                final shouldShowAll = _shouldShowAll(authProvider, businessId);
+                crmProvider.refreshAllCustomers(businessId, showAll: shouldShowAll);
               }
             },
             tooltip: 'Обновить',
@@ -68,9 +90,10 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
             )
           : RefreshIndicator(
               onRefresh: () async {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                final isGeneralDirector = profileProvider.profile?.orgStructure.isGeneralDirector ?? false;
-                await crmProvider.refreshAllCustomers(businessId, showAll: isGeneralDirector ? true : null);
+                final shouldShowAll = _shouldShowAll(authProvider, businessId);
+                await crmProvider.refreshAllCustomers(businessId, showAll: shouldShowAll);
               },
               child: Consumer<CrmProvider>(
                 builder: (context, crmProvider, child) {
