@@ -63,13 +63,34 @@ class FunnelAccordion extends StatefulWidget {
   State<FunnelAccordion> createState() => _FunnelAccordionState();
 }
 
-class _FunnelAccordionState extends State<FunnelAccordion> {
+class _FunnelAccordionState extends State<FunnelAccordion> with SingleTickerProviderStateMixin {
   late bool _isExpanded;
+  late AnimationController _animationController;
+  late Animation<double> _expandAnimation;
+  late Animation<double> _iconRotationAnimation;
 
   @override
   void initState() {
     super.initState();
     _isExpanded = widget.isExpanded;
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _iconRotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(_expandAnimation);
+    if (_isExpanded) {
+      _animationController.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -100,6 +121,11 @@ class _FunnelAccordionState extends State<FunnelAccordion> {
             onTap: () {
               setState(() {
                 _isExpanded = !_isExpanded;
+                if (_isExpanded) {
+                  _animationController.forward();
+                } else {
+                  _animationController.reverse();
+                }
               });
               // Данные уже загружены на рут-странице CRM, не делаем запросы при открытии
             },
@@ -135,26 +161,29 @@ class _FunnelAccordionState extends State<FunnelAccordion> {
                       ],
                     ),
                   ),
-                  // Иконка раскрытия
-                  Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  // Иконка раскрытия с анимацией
+                  RotationTransition(
+                    turns: _iconRotationAnimation,
+                    child: Icon(
+                      Icons.expand_less,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
           // Контент аккордеона
-          if (_isExpanded)
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxHeight: 400, // Максимальная высота для скролла
-                ),
-                child: _buildContent(isLoading, error),
+          SizeTransition(
+            sizeFactor: _expandAnimation,
+            axisAlignment: -1.0,
+            child: Container(
+              constraints: const BoxConstraints(
+                maxHeight: 400, // Максимальная высота для скролла
               ),
+              child: _buildContent(isLoading, error),
             ),
+          ),
         ],
       ),
     );
