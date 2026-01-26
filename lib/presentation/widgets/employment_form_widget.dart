@@ -192,9 +192,10 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Поле position (должность или роль)
             TextFormField(
@@ -219,38 +220,39 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
                   border: OutlineInputBorder(),
                   helperText: 'Обязательное поле для бизнеса',
                 ),
+                isExpanded: true,
                 items: const [
                   DropdownMenuItem(
                     value: 'ACCOUNTANT',
-                    child: Text('Бухгалтер'),
+                    child: Text('Бухгалтер', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'LAWYER',
-                    child: Text('Юрист'),
+                    child: Text('Юрист', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'SALES_MANAGER',
-                    child: Text('Менеджер продаж'),
+                    child: Text('Менеджер продаж', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'PURCHASE_MANAGER',
-                    child: Text('Менеджер закупа'),
+                    child: Text('Менеджер закупа', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'SECRETARY',
-                    child: Text('Секретарь'),
+                    child: Text('Секретарь', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'MARKETER',
-                    child: Text('Маркетолог'),
+                    child: Text('Маркетолог', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'FINANCE_MANAGER',
-                    child: Text('Менеджер по финансам'),
+                    child: Text('Менеджер по финансам', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'LOGISTICIAN',
-                    child: Text('Логист'),
+                    child: Text('Логист', overflow: TextOverflow.ellipsis),
                   ),
                 ],
                 onChanged: (value) {
@@ -306,6 +308,7 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
             ),
+            const SizedBox(height: 24),
             // // Поле workExperience
             // TextFormField(
             //   controller: _workExperienceController,
