@@ -6,12 +6,16 @@ class RegisterRequest implements Model {
   final String username;
   final String password;
   final String? inviteCode;
+  final String? firstName;
+  final String? lastName;
 
   RegisterRequest({
     required this.email,
     required this.username,
     required this.password,
     this.inviteCode,
+    this.firstName,
+    this.lastName,
   });
 
   @override
@@ -23,6 +27,12 @@ class RegisterRequest implements Model {
     };
     if (inviteCode != null && inviteCode!.isNotEmpty) {
       json['inviteCode'] = inviteCode!;
+    }
+    if (firstName != null && firstName!.isNotEmpty) {
+      json['firstName'] = firstName!;
+    }
+    if (lastName != null && lastName!.isNotEmpty) {
+      json['lastName'] = lastName!;
     }
     return json;
   }

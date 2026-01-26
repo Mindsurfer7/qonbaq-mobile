@@ -10,12 +10,16 @@ class RegisterParams {
   final String username;
   final String password;
   final String? inviteCode;
+  final String? firstName;
+  final String? lastName;
 
   RegisterParams({
     required this.email,
     required this.username,
     required this.password,
     this.inviteCode,
+    this.firstName,
+    this.lastName,
   });
 }
 
@@ -32,6 +36,8 @@ class RegisterUser implements UseCase<AuthUser, RegisterParams> {
       username: params.username,
       password: params.password,
       inviteCode: params.inviteCode,
+      firstName: params.firstName,
+      lastName: params.lastName,
     );
   }
 }

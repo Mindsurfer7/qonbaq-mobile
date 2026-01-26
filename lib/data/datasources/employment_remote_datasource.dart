@@ -22,4 +22,20 @@ abstract class EmploymentRemoteDataSource {
   Future<List<EmploymentWithRoleModel>> updateEmploymentsRoles(
     Map<String, String?> employmentsRoles,
   );
+
+  /// Обновить employment
+  /// Если employmentId == null, обновляется текущее employment через /me
+  Future<EmploymentWithRoleModel> updateEmployment({
+    String? employmentId,
+    String? position,
+    String? positionType,
+    String? orgPosition,
+    String? workPhone,
+    int? workExperience,
+    String? accountability,
+    String? personnelNumber,
+    DateTime? hireDate,
+    String? roleCode,
+    String? businessId,
+  });
 }

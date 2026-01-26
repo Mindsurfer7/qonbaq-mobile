@@ -272,4 +272,75 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
       throw Exception('Ошибка сети: $e');
     }
   }
+
+  @override
+  Future<EmploymentWithRoleModel> updateEmployment({
+    String? employmentId,
+    String? position,
+    String? positionType,
+    String? orgPosition,
+    String? workPhone,
+    int? workExperience,
+    String? accountability,
+    String? personnelNumber,
+    DateTime? hireDate,
+    String? roleCode,
+    String? businessId,
+  }) async {
+    try {
+      // Формируем body запроса
+      final body = <String, dynamic>{};
+      if (position != null) body['position'] = position;
+      if (positionType != null) body['positionType'] = positionType;
+      if (orgPosition != null) body['orgPosition'] = orgPosition;
+      if (workPhone != null) body['workPhone'] = workPhone;
+      if (workExperience != null) body['workExperience'] = workExperience;
+      if (accountability != null) body['accountability'] = accountability;
+      if (personnelNumber != null) body['personnelNumber'] = personnelNumber;
+      if (hireDate != null) body['hireDate'] = hireDate.toIso8601String();
+      if (roleCode != null) body['roleCode'] = roleCode;
+      if (businessId != null) body['businessId'] = businessId;
+
+      // Определяем endpoint
+      final endpoint = employmentId != null
+          ? '/api/employments/$employmentId'
+          : '/api/employments/me';
+
+      final response = await apiClient.patch(
+        endpoint,
+        headers: _getAuthHeaders(),
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => EmploymentWithRoleModel.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 'Ошибка валидации';
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        throw Exception('Нет доступа');
+      } else if (response.statusCode == 404) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 'Трудоустройство не найдено';
+        throw Exception(errorMessage);
+      } else {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
 }

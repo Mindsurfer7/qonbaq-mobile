@@ -11,6 +11,8 @@ abstract class AuthRepository extends Repository {
     required String username,
     required String password,
     String? inviteCode,
+    String? firstName,
+    String? lastName,
   });
 
   /// Вход пользователя

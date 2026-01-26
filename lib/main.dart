@@ -190,6 +190,7 @@ import 'package:qonbaq/data/repositories/employment_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/employment_repository.dart';
 import 'package:qonbaq/domain/usecases/get_business_employments_with_roles.dart';
 import 'package:qonbaq/domain/usecases/update_employments_roles.dart';
+import 'package:qonbaq/domain/usecases/update_employment.dart';
 import 'package:qonbaq/presentation/providers/roles_provider.dart';
 import 'package:qonbaq/data/datasources/fixed_asset_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/fixed_asset_repository_impl.dart';
@@ -296,6 +297,8 @@ class MyApp extends StatelessWidget {
     final getBusinessEmploymentsWithRoles = GetBusinessEmploymentsWithRoles(
       employmentRepository,
     );
+    final updateEmploymentsRoles = UpdateEmploymentsRoles(employmentRepository);
+    final updateEmployment = UpdateEmployment(employmentRepository);
     
     final profileProvider = ProfileProvider(
       getUserBusinesses: getUserBusinesses,
@@ -527,8 +530,7 @@ class MyApp extends StatelessWidget {
       remoteDataSource: timeSlotRemoteDataSource,
     );
 
-    // employmentRepository и getBusinessEmploymentsWithRoles уже созданы выше для ProfileProvider
-    final updateEmploymentsRoles = UpdateEmploymentsRoles(employmentRepository);
+    // employmentRepository, getBusinessEmploymentsWithRoles и updateEmploymentsRoles уже созданы выше для ProfileProvider
     final rolesProvider = RolesProvider(
       getBusinessEmploymentsWithRoles: getBusinessEmploymentsWithRoles,
       updateEmploymentsRoles: updateEmploymentsRoles,
@@ -608,6 +610,8 @@ class MyApp extends StatelessWidget {
         Provider<UpdateTaskComment>(create: (_) => updateTaskComment),
         Provider<DeleteTaskComment>(create: (_) => deleteTaskComment),
         Provider<UserRepository>(create: (_) => userRepository),
+        Provider<EmploymentRepository>(create: (_) => employmentRepository),
+        Provider<UpdateEmployment>(create: (_) => updateEmployment),
         Provider<ChatRepository>(create: (_) => chatRepository),
         Provider<StartWorkDay>(create: (_) => startWorkDay),
         Provider<EndWorkDay>(create: (_) => endWorkDay),

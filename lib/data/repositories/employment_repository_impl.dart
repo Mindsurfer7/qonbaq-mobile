@@ -63,4 +63,39 @@ class EmploymentRepositoryImpl extends RepositoryImpl implements EmploymentRepos
       return Left(ServerFailure('Ошибка при обновлении ролей: $e'));
     }
   }
+
+  @override
+  Future<Either<Failure, EmploymentWithRole>> updateEmployment({
+    String? employmentId,
+    String? position,
+    String? positionType,
+    String? orgPosition,
+    String? workPhone,
+    int? workExperience,
+    String? accountability,
+    String? personnelNumber,
+    DateTime? hireDate,
+    String? roleCode,
+    String? businessId,
+  }) async {
+    try {
+      final model = await remoteDataSource.updateEmployment(
+        employmentId: employmentId,
+        position: position,
+        positionType: positionType,
+        orgPosition: orgPosition,
+        workPhone: workPhone,
+        workExperience: workExperience,
+        accountability: accountability,
+        personnelNumber: personnelNumber,
+        hireDate: hireDate,
+        roleCode: roleCode,
+        businessId: businessId,
+      );
+      final entity = model.toEntity();
+      return Right(entity);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при обновлении трудоустройства: $e'));
+    }
+  }
 }

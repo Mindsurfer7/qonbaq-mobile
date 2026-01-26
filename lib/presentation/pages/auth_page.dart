@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../../core/utils/credentials_storage.dart';
 import '../../core/utils/deep_link_service.dart';
+import '../widgets/registration_stepper_widget.dart';
 
 /// Страница аутентификации с табами (логин/регистрация)
 class AuthPage extends StatefulWidget {
@@ -59,7 +60,7 @@ class _AuthPageState extends State<AuthPage>
         controller: _tabController,
         children: [
           const LoginTab(),
-          RegisterTab(
+          RegistrationStepperWidget(
             inviteCode: widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode,
           ),
         ],
@@ -323,7 +324,7 @@ class _RegisterTabState extends State<RegisterTab> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/business');
+      Navigator.of(context).pushReplacementNamed('/workspace-selector');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Регистрация успешна!')));

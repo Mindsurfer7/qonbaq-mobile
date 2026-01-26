@@ -40,6 +40,8 @@ class AuthProvider with ChangeNotifier {
     required String username,
     required String password,
     String? inviteCode,
+    String? firstName,
+    String? lastName,
   }) async {
     _isLoading = true;
     _error = null;
@@ -51,6 +53,8 @@ class AuthProvider with ChangeNotifier {
         username: username,
         password: password,
         inviteCode: inviteCode,
+        firstName: firstName,
+        lastName: lastName,
       ),
     );
 

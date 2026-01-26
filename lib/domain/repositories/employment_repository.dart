@@ -24,4 +24,20 @@ abstract class EmploymentRepository {
   Future<Either<Failure, List<EmploymentWithRole>>> updateEmploymentsRoles(
     Map<String, String?> employmentsRoles,
   );
+
+  /// Обновить employment
+  /// Если employmentId == null, обновляется текущее employment через /me
+  Future<Either<Failure, EmploymentWithRole>> updateEmployment({
+    String? employmentId,
+    String? position,
+    String? positionType,
+    String? orgPosition,
+    String? workPhone,
+    int? workExperience,
+    String? accountability,
+    String? personnelNumber,
+    DateTime? hireDate,
+    String? roleCode,
+    String? businessId,
+  });
 }

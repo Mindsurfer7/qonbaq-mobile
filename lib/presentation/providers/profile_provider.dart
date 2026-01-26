@@ -175,6 +175,20 @@ class ProfileProvider with ChangeNotifier {
       },
       (profile) {
         _profile = profile;
+        // Обновляем выбранный бизнес из профиля, чтобы получить актуальные данные (включая autoAssignDepartments)
+        if (_selectedBusiness?.id == profile.business.id) {
+          _selectedBusiness = profile.business;
+        }
+        if (_selectedWorkspace?.id == profile.business.id) {
+          _selectedWorkspace = profile.business;
+        }
+        // Обновляем бизнес в списке, если он там есть
+        if (_businesses != null) {
+          final index = _businesses!.indexWhere((b) => b.id == profile.business.id);
+          if (index != -1) {
+            _businesses![index] = profile.business;
+          }
+        }
         _isLoading = false;
         _error = null;
         notifyListeners();
