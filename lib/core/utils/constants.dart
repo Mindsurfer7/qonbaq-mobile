@@ -11,9 +11,16 @@ class AppConstants {
   // Версия API (если нужно)
   static const String apiVersion = 'v1';
 
-  // Базовый URL API (читается из .env файла)
-  static String get apiBaseUrl =>
-      dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000';
+  // Базовый URL API (приоритет: --dart-define > .env > дефолт)
+  static String get apiBaseUrl {
+    // Сначала проверяем --dart-define (для production деплоя)
+    const dartDefineUrl = String.fromEnvironment('API_BASE_URL');
+    if (dartDefineUrl.isNotEmpty) {
+      return dartDefineUrl;
+    }
+    // Если не задано через --dart-define, используем .env
+    return dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000';
+  }
 
   // Базовый URL фронтенда (для формирования ссылок инвайтов)
   static String get frontendBaseUrl {
