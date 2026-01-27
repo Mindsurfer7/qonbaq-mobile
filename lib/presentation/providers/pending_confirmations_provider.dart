@@ -39,14 +39,16 @@ class PendingConfirmationsProvider with ChangeNotifier {
   int get awaitingPaymentDetailsCount => _awaitingPaymentDetailsIds.length;
 
   /// Общее количество оповещений (для навигационного бара)
-  int get totalCount => _pendingConfirmations.length + _awaitingPaymentDetailsIds.length;
+  int get totalCount =>
+      _pendingConfirmations.length + _awaitingPaymentDetailsIds.length;
 
   /// Количество pending confirmations (для обратной совместимости)
   @Deprecated('Используйте pendingConfirmationsCount')
   int get count => _pendingConfirmations.length;
 
   /// Есть ли pending confirmations или awaiting payment details
-  bool get hasPending => _pendingConfirmations.isNotEmpty || _awaitingPaymentDetailsIds.isNotEmpty;
+  bool get hasPending =>
+      _pendingConfirmations.isNotEmpty || _awaitingPaymentDetailsIds.isNotEmpty;
 
   /// Статус загрузки
   bool get isLoading => _isLoading;
@@ -56,7 +58,9 @@ class PendingConfirmationsProvider with ChangeNotifier {
 
   /// Загрузить список pending confirmations
   Future<void> loadPendingConfirmations({String? businessId}) async {
-    debugPrint('🔄 PendingConfirmationsProvider: Загрузка pending confirmations для businessId: $businessId');
+    debugPrint(
+      '🔄 PendingConfirmationsProvider: Загрузка pending confirmations для businessId: $businessId',
+    );
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -69,10 +73,13 @@ class PendingConfirmationsProvider with ChangeNotifier {
       (failure) {
         final errorMessage = _getErrorMessage(failure);
         final hasErrorChanged = _error != errorMessage;
+        final wasLoading = _isLoading;
         _error = errorMessage;
         _isLoading = false;
-        // Уведомляем только если ошибка изменилась
-        if (hasErrorChanged) {
+        // Уведомляем если:
+        // 1. Ошибка изменилась
+        // 2. Или изменился статус загрузки (была загрузка, стала нет)
+        if (hasErrorChanged || wasLoading) {
           notifyListeners();
         }
       },
@@ -80,31 +87,39 @@ class PendingConfirmationsProvider with ChangeNotifier {
         // Проверяем, изменились ли данные
         final oldCount = _pendingConfirmations.length;
         final newCount = confirmations.length;
-        final hasDataChanged = oldCount != newCount ||
+        final hasDataChanged =
+            oldCount != newCount ||
             !_areConfirmationsEqual(_pendingConfirmations, confirmations);
-        
+
         _pendingConfirmations = confirmations;
         final wasLoading = _isLoading;
         _isLoading = false;
         _error = null;
-        
+
         // Уведомляем если:
         // 1. Данные изменились
         // 2. Или изменился статус загрузки (была загрузка, стала нет)
         if (hasDataChanged || wasLoading) {
           if (hasDataChanged) {
-            debugPrint('✅ PendingConfirmationsProvider: Загружено ${confirmations.length} pending confirmations');
+            debugPrint(
+              '✅ PendingConfirmationsProvider: Загружено ${confirmations.length} pending confirmations',
+            );
           } else {
-            debugPrint('✅ PendingConfirmationsProvider: Данные не изменились (${confirmations.length} pending confirmations)');
+            debugPrint(
+              '✅ PendingConfirmationsProvider: Данные не изменились (${confirmations.length} pending confirmations)',
+            );
           }
           notifyListeners();
         }
       },
     );
   }
-  
+
   /// Проверяет, равны ли два списка подтверждений
-  bool _areConfirmationsEqual(List<PendingConfirmation> list1, List<PendingConfirmation> list2) {
+  bool _areConfirmationsEqual(
+    List<PendingConfirmation> list1,
+    List<PendingConfirmation> list2,
+  ) {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
       if (list1[i].approval.id != list2[i].approval.id) return false;
@@ -124,8 +139,10 @@ class PendingConfirmationsProvider with ChangeNotifier {
       return;
     }
 
-    debugPrint('🔄 PendingConfirmationsProvider: Загрузка awaiting payment details для businessId: $businessId');
-    
+    debugPrint(
+      '🔄 PendingConfirmationsProvider: Загрузка awaiting payment details для businessId: $businessId',
+    );
+
     final result = await getNotifications.call(
       GetNotificationsParams(businessId: businessId),
     );
@@ -133,7 +150,9 @@ class PendingConfirmationsProvider with ChangeNotifier {
     result.fold(
       (failure) {
         // Игнорируем ошибки загрузки уведомлений, чтобы не блокировать основной список
-        debugPrint('⚠️ PendingConfirmationsProvider: Ошибка загрузки notifications: ${_getErrorMessage(failure)}');
+        debugPrint(
+          '⚠️ PendingConfirmationsProvider: Ошибка загрузки notifications: ${_getErrorMessage(failure)}',
+        );
         final hadIds = _awaitingPaymentDetailsIds.isNotEmpty;
         _awaitingPaymentDetailsIds = [];
         // Уведомляем только если были ID
@@ -146,23 +165,28 @@ class PendingConfirmationsProvider with ChangeNotifier {
         final awaitingPaymentDetails =
             notifications.accountant?.awaitingPaymentDetails ?? {};
         final newIds = awaitingPaymentDetails.keys.toList();
-        
+
         // Проверяем, изменились ли данные
-        final hasDataChanged = !_areStringListsEqual(_awaitingPaymentDetailsIds, newIds);
-        
+        final hasDataChanged =
+            !_areStringListsEqual(_awaitingPaymentDetailsIds, newIds);
+
         _awaitingPaymentDetailsIds = newIds;
-        
+
         // Уведомляем только если данные изменились
         if (hasDataChanged) {
-          debugPrint('✅ PendingConfirmationsProvider: Загружено ${_awaitingPaymentDetailsIds.length} awaiting payment details');
+          debugPrint(
+            '✅ PendingConfirmationsProvider: Загружено ${_awaitingPaymentDetailsIds.length} awaiting payment details',
+          );
           notifyListeners();
         } else {
-          debugPrint('✅ PendingConfirmationsProvider: Данные не изменились (${_awaitingPaymentDetailsIds.length} awaiting payment details)');
+          debugPrint(
+            '✅ PendingConfirmationsProvider: Данные не изменились (${_awaitingPaymentDetailsIds.length} awaiting payment details)',
+          );
         }
       },
     );
   }
-  
+
   /// Проверяет, равны ли два списка строк
   bool _areStringListsEqual(List<String> list1, List<String> list2) {
     if (list1.length != list2.length) return false;
@@ -216,16 +240,14 @@ class PendingConfirmationsProvider with ChangeNotifier {
           notifyListeners();
           return true;
         }
-        
+
         _error = errorMessage;
         notifyListeners();
         return false;
       },
       (updatedApproval) {
         // Удаляем подтвержденное согласование из списка
-        _pendingConfirmations.removeWhere(
-          (pc) => pc.approval.id == approvalId,
-        );
+        _pendingConfirmations.removeWhere((pc) => pc.approval.id == approvalId);
         _error = null;
         notifyListeners();
         return true;
@@ -244,13 +266,15 @@ class PendingConfirmationsProvider with ChangeNotifier {
     // Проверяем, был ли уже запущен polling с тем же businessId
     final wasRunning = _pollingTimer != null;
     final businessIdChanged = _currentBusinessId != businessId;
-    
+
     // Останавливаем предыдущий таймер, если есть
     stopPolling();
 
     // Обновляем businessId ПЕРЕД запуском таймера
     _currentBusinessId = businessId;
-    debugPrint('🚀 PendingConfirmationsProvider: Запуск polling для businessId: $_currentBusinessId');
+    debugPrint(
+      '🚀 PendingConfirmationsProvider: Запуск polling для businessId: $_currentBusinessId',
+    );
 
     // Загружаем сразу все оповещения только если:
     // 1. Polling еще не был запущен (первый запуск)
@@ -260,13 +284,10 @@ class PendingConfirmationsProvider with ChangeNotifier {
     }
 
     // Запускаем периодические запросы каждые 2 минуты
-    _pollingTimer = Timer.periodic(
-      const Duration(minutes: 2),
-      (timer) {
-        // Используем актуальное значение _currentBusinessId
-        loadAll(businessId: _currentBusinessId);
-      },
-    );
+    _pollingTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
+      // Используем актуальное значение _currentBusinessId
+      loadAll(businessId: _currentBusinessId);
+    });
   }
 
   /// Остановить периодические запросы
@@ -278,7 +299,9 @@ class PendingConfirmationsProvider with ChangeNotifier {
   /// Обновить businessId и перезапустить polling
   void updateBusinessId(String? businessId) {
     if (_currentBusinessId != businessId) {
-      debugPrint('🔄 PendingConfirmationsProvider: Обновляем businessId с $_currentBusinessId на $businessId');
+      debugPrint(
+        '🔄 PendingConfirmationsProvider: Обновляем businessId с $_currentBusinessId на $businessId',
+      );
       startPolling(businessId: businessId);
     }
   }

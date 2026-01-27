@@ -23,10 +23,13 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
     // Загружаем компании при инициализации страницы
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       // Загружаем компании, если они еще не загружены
       if (profileProvider.businesses == null && !profileProvider.isLoading) {
         await profileProvider.loadBusinesses();
@@ -47,10 +50,15 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
       }
 
       // Запускаем polling для pending confirmations
-      final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+      final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+        context,
+        listen: false,
+      );
       final businessId = profileProvider.selectedBusiness?.id;
       _lastBusinessId = businessId;
-      debugPrint('🚀 BusinessMainPage: Запускаем polling для businessId: $businessId');
+      debugPrint(
+        '🚀 BusinessMainPage: Запускаем polling для businessId: $businessId',
+      );
       pendingProvider.startPolling(businessId: businessId);
     });
   }
@@ -59,13 +67,21 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Обновляем polling при смене бизнеса
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    );
     final businessId = profileProvider.selectedBusiness?.id;
-    
+
     // Обновляем только если businessId изменился
     if (_lastBusinessId != businessId) {
-      debugPrint('🔄 BusinessMainPage: Обновляем polling для нового businessId: $businessId (было: $_lastBusinessId)');
+      debugPrint(
+        '🔄 BusinessMainPage: Обновляем polling для нового businessId: $businessId (было: $_lastBusinessId)',
+      );
       _lastBusinessId = businessId;
       pendingProvider.updateBusinessId(businessId);
     }
@@ -74,14 +90,16 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   @override
   void dispose() {
     // Останавливаем polling при закрытии страницы
-    final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    );
     pendingProvider.stopPolling();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: Selector<ProfileProvider, String>(
@@ -92,7 +110,10 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             return '$workspaceId|$familyBusinessId';
           },
           builder: (context, key, child) {
-            final provider = Provider.of<ProfileProvider>(context, listen: false);
+            final provider = Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            );
             // Показываем "Семья" если выбран первый бизнес (семья), иначе "Бизнес"
             final isFamily =
                 provider.selectedWorkspace != null &&
@@ -270,7 +291,10 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
       return Selector<PendingConfirmationsProvider, int>(
         selector: (context, provider) => provider.totalCount,
         builder: (context, totalCount, child) {
-          final provider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+          final provider = Provider.of<PendingConfirmationsProvider>(
+            context,
+            listen: false,
+          );
           return InkWell(
             onTap: () => Navigator.of(context).pushNamed(route),
             child: Column(
