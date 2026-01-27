@@ -14,6 +14,7 @@ class BusinessModel extends Business implements Model {
     super.createdAt,
     super.type,
     super.autoAssignDepartments = true,
+    super.slug,
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +53,7 @@ class BusinessModel extends Business implements Model {
               : null,
       type: type,
       autoAssignDepartments: json['autoAssignDepartments'] as bool? ?? true,
+      slug: json['slug'] as String?,
     );
   }
 
@@ -68,6 +70,7 @@ class BusinessModel extends Business implements Model {
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (type != null) 'type': type == BusinessType.family ? 'Family' : 'Business',
       'autoAssignDepartments': autoAssignDepartments,
+      if (slug != null) 'slug': slug,
     };
   }
 
@@ -92,6 +95,7 @@ class BusinessModel extends Business implements Model {
       createdAt: createdAt,
       type: type,
       autoAssignDepartments: autoAssignDepartments,
+      slug: slug,
     );
   }
 
@@ -107,6 +111,7 @@ class BusinessModel extends Business implements Model {
       createdAt: business.createdAt,
       type: business.type,
       autoAssignDepartments: business.autoAssignDepartments,
+      slug: business.slug,
     );
   }
 
@@ -116,6 +121,7 @@ class BusinessModel extends Business implements Model {
       if (name.isNotEmpty) 'name': name,
       if (description != null) 'description': description,
       'autoAssignDepartments': autoAssignDepartments,
+      'slug': slug, // slug может быть null для удаления
     };
   }
 }

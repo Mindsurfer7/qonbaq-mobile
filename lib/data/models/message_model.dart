@@ -7,8 +7,9 @@ import 'user_model.dart';
 class MessageModel extends Message implements Model {
   const MessageModel({
     required super.id,
+    super.chatId,
     required super.text,
-    required super.sender,
+    super.sender,
     required super.createdAt,
     required super.updatedAt,
     super.taskId,
@@ -24,34 +25,37 @@ class MessageModel extends Message implements Model {
 
   /// Создание модели из JSON
   factory MessageModel.fromJson(Map<String, dynamic> json) {
-    // Парсинг отправителя
-    final senderJson = json['sender'] as Map<String, dynamic>;
-    // API возвращает структуру с firstName, lastName, patronymic, username
-    // Формируем имя из этих полей или используем username
-    String name = '';
-    if (senderJson['firstName'] != null || senderJson['lastName'] != null) {
-      final parts = <String>[];
-      if (senderJson['lastName'] != null) {
-        parts.add(senderJson['lastName'] as String);
+    // Парсинг отправителя (может быть null для анонимных сообщений)
+    User? sender;
+    if (json['sender'] != null && json['senderId'] != null) {
+      final senderJson = json['sender'] as Map<String, dynamic>;
+      // API возвращает структуру с firstName, lastName, patronymic, username
+      // Формируем имя из этих полей или используем username
+      String name = '';
+      if (senderJson['firstName'] != null || senderJson['lastName'] != null) {
+        final parts = <String>[];
+        if (senderJson['lastName'] != null) {
+          parts.add(senderJson['lastName'] as String);
+        }
+        if (senderJson['firstName'] != null) {
+          parts.add(senderJson['firstName'] as String);
+        }
+        if (senderJson['patronymic'] != null) {
+          parts.add(senderJson['patronymic'] as String);
+        }
+        name = parts.join(' ');
+      } else if (senderJson['username'] != null) {
+        name = senderJson['username'] as String;
+      } else {
+        name = senderJson['email'] as String? ?? '';
       }
-      if (senderJson['firstName'] != null) {
-        parts.add(senderJson['firstName'] as String);
-      }
-      if (senderJson['patronymic'] != null) {
-        parts.add(senderJson['patronymic'] as String);
-      }
-      name = parts.join(' ');
-    } else if (senderJson['username'] != null) {
-      name = senderJson['username'] as String;
-    } else {
-      name = senderJson['email'] as String? ?? '';
-    }
 
-    final sender = User(
-      id: senderJson['id'] as String,
-      name: name,
-      email: senderJson['email'] as String? ?? '',
-    );
+      sender = User(
+        id: senderJson['id'] as String,
+        name: name,
+        email: senderJson['email'] as String? ?? '',
+      );
+    }
 
     // Парсинг задачи (если есть)
     MessageTask? task;
@@ -107,6 +111,7 @@ class MessageModel extends Message implements Model {
 
     return MessageModel(
       id: json['id'] as String,
+      chatId: json['chatId'] as String?,
       text: json['text'] as String,
       sender: sender,
       // В некоторых ответах (например, вложенные/упрощенные DTO) createdAt/updatedAt могут отсутствовать.
@@ -134,8 +139,9 @@ class MessageModel extends Message implements Model {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      if (chatId != null) 'chatId': chatId,
       'text': text,
-      'sender': UserModel.fromEntity(sender).toJson(),
+      if (sender != null) 'sender': UserModel.fromEntity(sender!).toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (taskId != null) 'taskId': taskId,
@@ -192,6 +198,7 @@ class MessageModel extends Message implements Model {
   Message toEntity() {
     return Message(
       id: id,
+      chatId: chatId,
       text: text,
       sender: sender,
       createdAt: createdAt,
@@ -212,6 +219,7 @@ class MessageModel extends Message implements Model {
   factory MessageModel.fromEntity(Message message) {
     return MessageModel(
       id: message.id,
+      chatId: message.chatId,
       text: message.text,
       sender: message.sender,
       createdAt: message.createdAt,

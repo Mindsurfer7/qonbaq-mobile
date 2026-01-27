@@ -63,8 +63,9 @@ class ReplyToMessage extends Entity {
 /// Доменная сущность сообщения чата
 class Message extends Entity {
   final String id;
+  final String? chatId;
   final String text;
-  final User sender;
+  final User? sender; // null для анонимных сообщений
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -85,8 +86,9 @@ class Message extends Entity {
 
   const Message({
     required this.id,
+    this.chatId,
     required this.text,
-    required this.sender,
+    this.sender,
     required this.createdAt,
     required this.updatedAt,
     this.taskId,
@@ -100,6 +102,12 @@ class Message extends Entity {
     this.replyToMessage,
   });
 
+  /// Проверка, является ли сообщение анонимным
+  bool get isAnonymous => sender == null;
+
+  /// Проверка, является ли сообщение от бизнеса
+  bool get isFromBusiness => sender != null;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -110,5 +118,5 @@ class Message extends Entity {
 
   @override
   String toString() =>
-      'Message(id: $id, text: ${text.length > 30 ? text.substring(0, 30) : text}..., isTaskComment: $isTaskComment, isApprovalComment: $isApprovalComment)';
+      'Message(id: $id, text: ${text.length > 30 ? text.substring(0, 30) : text}..., isAnonymous: $isAnonymous, isTaskComment: $isTaskComment, isApprovalComment: $isApprovalComment)';
 }

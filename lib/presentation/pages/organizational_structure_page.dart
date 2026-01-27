@@ -13,6 +13,7 @@ import '../widgets/department_tree_graph.dart';
 import 'create_department_dialog.dart';
 import 'create_project_dialog.dart';
 import 'edit_project_dialog.dart';
+import 'edit_business_slug_dialog.dart';
 
 /// Страница организационной структуры
 class OrganizationalStructurePage extends StatefulWidget {
@@ -241,6 +242,14 @@ class _OrganizationalStructurePageState
                   ),
                   // Секция настроек автоматического распределения
                   _buildAutoAssignSection(profileProvider, selectedBusiness.id),
+                  // Разделитель
+                  Container(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  // Секция внешней ссылки для клиентов
+                  _buildBusinessSlugSection(profileProvider, selectedBusiness),
                   // Разделитель
                   Container(
                     height: 1,
@@ -898,6 +907,99 @@ class _OrganizationalStructurePageState
 
     return _AutoAssignWidget(businessId: businessId);
   }
+
+  Widget _buildBusinessSlugSection(ProfileProvider profileProvider, Business business) {
+    // Проверяем, является ли пользователь гендиректором
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    if (user == null) return const SizedBox.shrink();
+
+    final permission = user.getPermissionsForBusiness(business.id);
+    final isGeneralDirector = permission?.isGeneralDirector ?? false;
+    
+    if (!isGeneralDirector) return const SizedBox.shrink();
+
+    final slug = business.slug;
+    final linkText = slug != null && slug.isNotEmpty
+        ? 'qonbaq.com/business/$slug'
+        : 'qonbaq.com/business/slug';
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Внешняя ссылка для клиентов',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Text(
+                        linkText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: slug != null && slug.isNotEmpty
+                              ? Colors.blue.shade700
+                              : Colors.grey.shade600,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _showEditSlugDialog(context, business),
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('Изменить'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (slug == null || slug.isEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Пример того, как будет выглядеть ссылка',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditSlugDialog(BuildContext context, Business business) {
+    showDialog(
+      context: context,
+      builder: (context) => EditBusinessSlugDialog(business: business),
+    );
+  }
 }
 
 /// Виджет для управления автоматическим распределением сотрудников
@@ -987,6 +1089,7 @@ class _AutoAssignWidgetState extends State<_AutoAssignWidget> {
                                 createdAt: currentBusiness.createdAt,
                                 type: currentBusiness.type,
                                 autoAssignDepartments: value,
+                                slug: currentBusiness.slug,
                               );
 
                               final result = await provider.updateBusinessCall(

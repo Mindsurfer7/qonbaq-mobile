@@ -59,6 +59,56 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
   }
 
   @override
+  Future<List<ChatModel>> getAnonymousChats(
+    String businessId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '/api/chats/business/$businessId/anonymous-chats?page=$page&limit=$limit',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) {
+            final chatsList = data as List<dynamic>;
+            return chatsList
+                .map((item) =>
+                    ChatModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          },
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        throw Exception('Нет доступа к этому бизнесу');
+      } else {
+        final errorMessage = _extractErrorMessage(response.body);
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  String _extractErrorMessage(String responseBody) {
+    try {
+      final json = jsonDecode(responseBody) as Map<String, dynamic>;
+      return json['error'] as String? ?? 'Ошибка сервера';
+    } catch (_) {
+      return 'Ошибка сервера';
+    }
+  }
+
+  @override
   Future<ChatModel> getOrCreateChatWithUser(
     String userId, {
     String? currentUserId,

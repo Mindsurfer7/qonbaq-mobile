@@ -7,6 +7,13 @@ abstract class ChatRemoteDataSource extends DataSource {
   /// Получить список чатов с последним сообщением и информацией о задаче
   Future<List<ChatModel>> getChats();
 
+  /// Получить список анонимных чатов бизнеса
+  Future<List<ChatModel>> getAnonymousChats(
+    String businessId, {
+    int page = 1,
+    int limit = 20,
+  });
+
   /// Получить/создать чат с пользователем
   Future<ChatModel> getOrCreateChatWithUser(
     String userId, {

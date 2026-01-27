@@ -132,14 +132,25 @@ class ApiMeta {
               .toList();
     }
 
+    // Вспомогательная функция для конвертации значения в int?
+    int? _parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        return parsed;
+      }
+      return null;
+    }
+
     return ApiMeta(
-      total: json['total'] as int?,
-      page: json['page'] as int?,
-      limit: json['limit'] as int?,
-      totalPages: json['totalPages'] as int?,
-      count: json['count'] as int?,
+      total: _parseInt(json['total']),
+      page: _parseInt(json['page']),
+      limit: _parseInt(json['limit']),
+      totalPages: _parseInt(json['totalPages']),
+      count: _parseInt(json['count']),
       missingRoles: missingRoles,
-      totalMissing: json['totalMissing'] as int?,
+      totalMissing: _parseInt(json['totalMissing']),
       unassignedRoles: unassignedRoles,
       message: json['message'] as String?,
     );

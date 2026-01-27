@@ -10,6 +10,13 @@ abstract class ChatRepository extends Repository {
   /// Получить список чатов
   Future<Either<Failure, List<Chat>>> getChats();
 
+  /// Получить список анонимных чатов бизнеса
+  Future<Either<Failure, List<Chat>>> getAnonymousChats(
+    String businessId, {
+    int page = 1,
+    int limit = 20,
+  });
+
   /// Получить/создать чат с пользователем
   Future<Either<Failure, Chat>> getOrCreateChatWithUser(
     String userId, {

@@ -1,12 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../domain/repositories/chat_repository.dart';
 import 'employees_list_page.dart';
+import 'anonymous_chats_list_page.dart';
 
 /// Страница чатов, почты и телефонии
-class ChatsEmailPage extends StatelessWidget {
+class ChatsEmailPage extends StatefulWidget {
   const ChatsEmailPage({super.key});
 
   @override
+  State<ChatsEmailPage> createState() => _ChatsEmailPageState();
+}
+
+class _ChatsEmailPageState extends State<ChatsEmailPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final chatRepository = Provider.of<ChatRepository>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Чаты, почта, телефония'),
@@ -22,40 +47,30 @@ class ChatsEmailPage extends StatelessWidget {
             },
           ),
         ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const EmployeesListPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.chat),
-              label: const Text('Чаты'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.people),
+              text: 'Сотрудники',
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'Почта и телефония\nбудут доступны позже',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
-              ),
+            Tab(
+              icon: Icon(Icons.person_outline),
+              text: 'Клиенты',
             ),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Таб с чатами сотрудников
+          const EmployeesListPage(),
+          // Таб с анонимными чатами
+          AnonymousChatsListPage(
+            chatRepository: chatRepository,
+          ),
+        ],
       ),
     );
   }

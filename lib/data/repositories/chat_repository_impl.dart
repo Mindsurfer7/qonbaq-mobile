@@ -30,6 +30,24 @@ class ChatRepositoryImpl extends RepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<Either<Failure, List<Chat>>> getAnonymousChats(
+    String businessId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final chats = await remoteDataSource.getAnonymousChats(
+        businessId,
+        page: page,
+        limit: limit,
+      );
+      return Right(chats.map((model) => model.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении анонимных чатов: $e'));
+    }
+  }
+
+  @override
   Future<Either<Failure, Chat>> getOrCreateChatWithUser(
     String userId, {
     String? currentUserId,

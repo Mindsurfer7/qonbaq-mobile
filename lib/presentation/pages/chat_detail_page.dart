@@ -10,18 +10,27 @@ import '../widgets/voice_record_widget.dart';
 import '../../core/services/audio_recording_service.dart';
 import 'approval_detail_page.dart';
 
-/// Страница детального чата с конкретным пользователем
+/// Страница детального чата с конкретным пользователем или анонимным клиентом
 class ChatDetailPage extends StatefulWidget {
-  final String interlocutorName;
-  final String interlocutorId;
   final ChatRepository chatRepository;
+  
+  // Для user-to-user чатов
+  final String? interlocutorName;
+  final String? interlocutorId;
+  
+  // Для анонимных чатов (если передан chat, используется он)
+  final Chat? chat;
 
   const ChatDetailPage({
     super.key,
-    required this.interlocutorName,
-    required this.interlocutorId,
     required this.chatRepository,
-  });
+    this.interlocutorName,
+    this.interlocutorId,
+    this.chat,
+  }) : assert(
+          (chat != null) || (interlocutorName != null && interlocutorId != null),
+          'Необходимо передать либо chat, либо interlocutorName и interlocutorId',
+        );
 
   @override
   State<ChatDetailPage> createState() => _ChatDetailPageState();
@@ -65,34 +74,52 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       return;
     }
 
-    // Получаем или создаем чат
-    final chatResult = await widget.chatRepository.getOrCreateChatWithUser(
-      widget.interlocutorId,
-      currentUserId: _currentUserId,
-      currentUserName: authProvider.user?.username ?? '',
-    );
+    // Если чат уже передан (для анонимных чатов), используем его
+    if (widget.chat != null) {
+      setState(() {
+        _chat = widget.chat;
+      });
 
-    chatResult.fold(
-      (failure) {
-        setState(() {
-          _error = failure.message;
-          _isLoading = false;
-        });
-      },
-      (chat) async {
-        setState(() {
-          _chat = chat;
-        });
+      // Загружаем сообщения
+      await _loadMessages(widget.chat!.id);
 
-        // Загружаем сообщения
-        await _loadMessages(chat.id);
+      // Подключаемся к WebSocket после загрузки сообщений
+      if (_useWebSocket) {
+        await _connectWebSocket(widget.chat!.id);
+      }
+      return;
+    }
 
-        // Подключаемся к WebSocket после загрузки сообщений
-        if (_useWebSocket) {
-          await _connectWebSocket(chat.id);
-        }
-      },
-    );
+    // Для user-to-user чатов получаем или создаем чат
+    if (widget.interlocutorId != null) {
+      final chatResult = await widget.chatRepository.getOrCreateChatWithUser(
+        widget.interlocutorId!,
+        currentUserId: _currentUserId,
+        currentUserName: authProvider.user?.username ?? '',
+      );
+
+      chatResult.fold(
+        (failure) {
+          setState(() {
+            _error = failure.message;
+            _isLoading = false;
+          });
+        },
+        (chat) async {
+          setState(() {
+            _chat = chat;
+          });
+
+          // Загружаем сообщения
+          await _loadMessages(chat.id);
+
+          // Подключаемся к WebSocket после загрузки сообщений
+          if (_useWebSocket) {
+            await _connectWebSocket(chat.id);
+          }
+        },
+      );
+    }
   }
 
   Future<void> _loadMessages(String chatId) async {
@@ -326,7 +353,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   void _showMessageContextMenu(BuildContext context, Message message) {
-    final isMyMessage = message.sender.id == _currentUserId;
+    final isMyMessage = message.sender != null && message.sender!.id == _currentUserId;
 
     showModalBottomSheet(
       context: context,
@@ -371,16 +398,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           backgroundColor: Theme.of(
                             context,
                           ).colorScheme.primary.withOpacity(0.3),
-                          child: Text(
-                            message.sender.name.isNotEmpty
-                                ? message.sender.name[0].toUpperCase()
-                                : '?',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
+                          child: message.sender != null
+                              ? Text(
+                                  message.sender!.name.isNotEmpty
+                                      ? message.sender!.name[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.person_outline,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -388,9 +421,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                message.sender.name.isNotEmpty
-                                    ? message.sender.name
-                                    : 'Пользователь',
+                                _getSenderDisplayName(message),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -472,9 +503,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
-                widget.interlocutorName.isNotEmpty
-                    ? widget.interlocutorName[0].toUpperCase()
-                    : '?',
+                _getChatTitle()[0].toUpperCase(),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimary,
                   fontWeight: FontWeight.bold,
@@ -484,7 +513,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                widget.interlocutorName,
+                _getChatTitle(),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
@@ -531,11 +560,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _replyToMessage!.sender.id == _currentUserId
-                              ? 'Вы'
-                              : _replyToMessage!.sender.name.isNotEmpty
-                              ? _replyToMessage!.sender.name
-                              : 'Пользователь',
+                          _replyToMessage!.sender != null
+                              ? (_replyToMessage!.sender!.id == _currentUserId
+                                  ? 'Вы'
+                                  : _replyToMessage!.sender!.name.isNotEmpty
+                                      ? _replyToMessage!.sender!.name
+                                      : 'Пользователь')
+                              : 'Анонимный пользователь',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -606,10 +637,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
-                        final isMyMessage = message.sender.id == _currentUserId;
-                        final showAvatar =
+                        final isMyMessage = message.sender != null && 
+                            message.sender!.id == _currentUserId;
+                        final showAvatar = !isMyMessage && (
                             index == 0 ||
-                            _messages[index - 1].sender.id != message.sender.id;
+                            _messages[index - 1].sender?.id != message.sender?.id);
 
                         return GestureDetector(
                           onLongPress:
@@ -772,16 +804,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               backgroundColor: Theme.of(
                 context,
               ).colorScheme.primary.withOpacity(0.3),
-              child: Text(
-                message.sender.name.isNotEmpty
-                    ? message.sender.name[0].toUpperCase()
-                    : '?',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
+              child: message.isAnonymous
+                  ? Icon(
+                      Icons.person_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : Text(
+                      message.sender != null && message.sender!.name.isNotEmpty
+                          ? message.sender!.name[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
             ),
             const SizedBox(width: 8),
           ] else if (!isMyMessage) ...[
@@ -1159,5 +1197,24 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       // Более недели назад
       return '${timestamp.day}.${timestamp.month}.${timestamp.year} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
     }
+  }
+
+  String _getChatTitle() {
+    if (_chat != null && _chat!.isAnonymous) {
+      return 'Чат с клиентом';
+    }
+    return widget.interlocutorName ?? 'Чат';
+  }
+
+  String _getSenderDisplayName(Message message) {
+    if (message.isAnonymous) {
+      return 'Анонимный пользователь';
+    }
+    if (message.sender != null) {
+      return message.sender!.name.isNotEmpty 
+          ? message.sender!.name 
+          : 'Пользователь';
+    }
+    return 'Неизвестный';
   }
 }

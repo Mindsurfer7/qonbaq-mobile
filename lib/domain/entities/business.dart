@@ -18,6 +18,7 @@ class Business extends Entity {
   final DateTime? createdAt;
   final BusinessType? type;
   final bool autoAssignDepartments; // Автоматическое распределение сотрудников по департаментам
+  final String? slug; // Персональная ссылка для бизнеса
 
   const Business({
     required this.id,
@@ -30,6 +31,7 @@ class Business extends Entity {
     this.createdAt,
     this.type,
     this.autoAssignDepartments = true, // По умолчанию true
+    this.slug,
   });
 
   @override

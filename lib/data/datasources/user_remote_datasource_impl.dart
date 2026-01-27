@@ -226,6 +226,12 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
+      } else if (response.statusCode == 409) {
+        final errorMessage = ErrorHandler.getErrorMessage(
+          response.statusCode,
+          response.body,
+        );
+        throw Exception(errorMessage);
       } else {
         final errorMessage = ErrorHandler.getErrorMessage(
           response.statusCode,
