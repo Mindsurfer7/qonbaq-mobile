@@ -33,33 +33,44 @@ class HomePage extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
-                onPressed: () {
-                  // Очищаем все провайдеры перед выходом
-                  final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
-                  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-                  final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
-                  final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-                  final financialProvider = Provider.of<FinancialProvider>(context, listen: false);
-                  final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
-                  final crmProvider = Provider.of<CrmProvider>(context, listen: false);
-                  final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-                  final rolesProvider = Provider.of<RolesProvider>(context, listen: false);
-                  
-                  pendingProvider.clear();
-                  profileProvider.clear();
-                  departmentProvider.clear();
-                  projectProvider.clear();
-                  financialProvider.clear();
-                  inboxProvider.clear();
-                  crmProvider.clearCache();
-                  ordersProvider.clearCache();
-                  rolesProvider.clear();
-                  
-                  authProvider.logout();
-                  Navigator.of(context).pushReplacementNamed('/auth');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Вы вышли из системы')),
-                  );
+                onPressed: () async {
+                  try {
+                    // Очищаем все провайдеры перед выходом
+                    final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+                    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                    final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
+                    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+                    final financialProvider = Provider.of<FinancialProvider>(context, listen: false);
+                    final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+                    final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+                    final rolesProvider = Provider.of<RolesProvider>(context, listen: false);
+                    
+                    pendingProvider.clear();
+                    profileProvider.clear();
+                    departmentProvider.clear();
+                    projectProvider.clear();
+                    financialProvider.clear();
+                    inboxProvider.clear();
+                    crmProvider.clearCache();
+                    ordersProvider.clearCache();
+                    rolesProvider.clear();
+                    
+                    await authProvider.logout();
+                    
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacementNamed('/auth');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Вы вышли из системы')),
+                      );
+                    }
+                  } catch (e) {
+                    // Если что-то пошло не так, все равно выполняем логаут
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacementNamed('/auth');
+                    }
+                  }
                 },
               ),
             ],

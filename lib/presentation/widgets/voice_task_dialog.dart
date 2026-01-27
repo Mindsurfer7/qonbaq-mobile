@@ -85,7 +85,7 @@ class _VoiceTaskDialogState extends State<VoiceTaskDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Создать задачу голосом',
+                    'Создать задачу',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

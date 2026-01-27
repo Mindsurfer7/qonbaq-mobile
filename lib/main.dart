@@ -577,6 +577,12 @@ class MyApp extends StatelessWidget {
     final getOrders = GetOrders(orderRepository);
     final createOrder = CreateOrder(orderRepository);
 
+    // Провайдер для заказов (воронка заказов)
+    final ordersProvider = OrdersProvider(
+      getOrders: getOrders,
+      createOrder: createOrder,
+    );
+
     // Объединенный CRM провайдер
     final crmProvider = CrmProvider(
       getCustomers: getCustomers,
@@ -602,6 +608,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => rolesProvider),
         ChangeNotifierProvider(create: (_) => pendingConfirmationsProvider),
         ChangeNotifierProvider(create: (_) => crmProvider),
+        ChangeNotifierProvider(create: (_) => ordersProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),

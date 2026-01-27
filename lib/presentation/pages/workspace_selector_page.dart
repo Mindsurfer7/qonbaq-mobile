@@ -569,7 +569,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Создать задачу голосом',
+              'Создать задачу',
               style: TextStyle(
                 color: isFamily ? Colors.green.shade700 : Colors.blue.shade700,
                 fontSize: 14,
