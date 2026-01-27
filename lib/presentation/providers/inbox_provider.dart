@@ -262,6 +262,15 @@ class InboxProvider with ChangeNotifier {
     );
   }
 
+  /// Очистить все данные
+  void clear() {
+    debugPrint('🧹 InboxProvider: Очистка данных');
+    _items = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
       return failure.message;

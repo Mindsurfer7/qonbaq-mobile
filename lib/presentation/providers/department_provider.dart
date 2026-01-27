@@ -488,6 +488,18 @@ class DepartmentProvider with ChangeNotifier {
     );
   }
 
+  /// Очистить все данные
+  void clear() {
+    debugPrint('🧹 DepartmentProvider: Очистка данных');
+    _departments = null;
+    _departmentsTree = null;
+    _currentDepartment = null;
+    _currentDepartmentEmployees = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   /// Получить сообщение об ошибке
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {

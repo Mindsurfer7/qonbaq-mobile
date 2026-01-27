@@ -202,6 +202,16 @@ class ProjectProvider with ChangeNotifier {
     );
   }
 
+  /// Очистить все данные
+  void clear() {
+    debugPrint('🧹 ProjectProvider: Очистка данных');
+    _projects = null;
+    _currentProject = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   /// Получить сообщение об ошибке
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {

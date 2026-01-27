@@ -227,6 +227,19 @@ class FinancialProvider with ChangeNotifier {
     );
   }
 
+  /// Очистить все данные
+  void clear() {
+    debugPrint('🧹 FinancialProvider: Очистка данных');
+    _incomeCategories = [];
+    _accounts = [];
+    _report = null;
+    _selectedProject = null;
+    _selectedAccount = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
       return failure.message;

@@ -6,6 +6,13 @@ import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/models/auth_response.dart';
 import '../../presentation/providers/pending_confirmations_provider.dart';
 import '../../presentation/providers/profile_provider.dart';
+import '../../presentation/providers/department_provider.dart';
+import '../../presentation/providers/project_provider.dart';
+import '../../presentation/providers/financial_provider.dart';
+import '../../presentation/providers/inbox_provider.dart';
+import '../../presentation/providers/crm_provider.dart';
+import '../../presentation/providers/orders_provider.dart';
+import '../../presentation/providers/roles_provider.dart';
 
 /// Интерсептор для автоматической обработки 401 ошибок и обновления токенов
 class AuthInterceptor {
@@ -106,7 +113,7 @@ class AuthInterceptor {
         final context = navigatorKey?.currentContext;
         if (context != null) {
           try {
-            // Очищаем провайдеры, если они доступны
+            // Очищаем все провайдеры, если они доступны
             final pendingProvider = Provider.of<PendingConfirmationsProvider>(
               context,
               listen: false,
@@ -115,9 +122,44 @@ class AuthInterceptor {
               context,
               listen: false,
             );
+            final departmentProvider = Provider.of<DepartmentProvider>(
+              context,
+              listen: false,
+            );
+            final projectProvider = Provider.of<ProjectProvider>(
+              context,
+              listen: false,
+            );
+            final financialProvider = Provider.of<FinancialProvider>(
+              context,
+              listen: false,
+            );
+            final inboxProvider = Provider.of<InboxProvider>(
+              context,
+              listen: false,
+            );
+            final crmProvider = Provider.of<CrmProvider>(
+              context,
+              listen: false,
+            );
+            final ordersProvider = Provider.of<OrdersProvider>(
+              context,
+              listen: false,
+            );
+            final rolesProvider = Provider.of<RolesProvider>(
+              context,
+              listen: false,
+            );
             
             pendingProvider.clear();
             profileProvider.clear();
+            departmentProvider.clear();
+            projectProvider.clear();
+            financialProvider.clear();
+            inboxProvider.clear();
+            crmProvider.clearCache();
+            ordersProvider.clearCache();
+            rolesProvider.clear();
           } catch (e) {
             // Игнорируем ошибки, если провайдеры недоступны
             // (например, если контекст еще не инициализирован)

@@ -4,6 +4,13 @@ import '../../core/theme/theme_extensions.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pending_confirmations_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/department_provider.dart';
+import '../providers/project_provider.dart';
+import '../providers/financial_provider.dart';
+import '../providers/inbox_provider.dart';
+import '../providers/crm_provider.dart';
+import '../providers/orders_provider.dart';
+import '../providers/roles_provider.dart';
 
 /// Главная страница приложения
 class HomePage extends StatelessWidget {
@@ -27,12 +34,26 @@ class HomePage extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () {
-                  // Очищаем провайдеры перед выходом
+                  // Очищаем все провайдеры перед выходом
                   final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
                   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                  final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
+                  final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+                  final financialProvider = Provider.of<FinancialProvider>(context, listen: false);
+                  final inboxProvider = Provider.of<InboxProvider>(context, listen: false);
+                  final crmProvider = Provider.of<CrmProvider>(context, listen: false);
+                  final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+                  final rolesProvider = Provider.of<RolesProvider>(context, listen: false);
                   
                   pendingProvider.clear();
                   profileProvider.clear();
+                  departmentProvider.clear();
+                  projectProvider.clear();
+                  financialProvider.clear();
+                  inboxProvider.clear();
+                  crmProvider.clearCache();
+                  ordersProvider.clearCache();
+                  rolesProvider.clear();
                   
                   authProvider.logout();
                   Navigator.of(context).pushReplacementNamed('/auth');
