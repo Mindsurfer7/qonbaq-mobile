@@ -84,8 +84,15 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Consumer<ProfileProvider>(
-          builder: (context, provider, child) {
+        title: Selector<ProfileProvider, String>(
+          selector: (context, provider) {
+            // Создаем ключ для пересоздания только при изменении workspace или familyBusiness
+            final workspaceId = provider.selectedWorkspace?.id ?? '';
+            final familyBusinessId = provider.familyBusiness?.id ?? '';
+            return '$workspaceId|$familyBusinessId';
+          },
+          builder: (context, key, child) {
+            final provider = Provider.of<ProfileProvider>(context, listen: false);
             // Показываем "Семья" если выбран первый бизнес (семья), иначе "Бизнес"
             final isFamily =
                 provider.selectedWorkspace != null &&
@@ -260,8 +267,10 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
   ) {
     // Для иконки согласований показываем специальный виджет с индикатором
     if (route == '/approvals') {
-      return Consumer<PendingConfirmationsProvider>(
-        builder: (context, provider, child) {
+      return Selector<PendingConfirmationsProvider, int>(
+        selector: (context, provider) => provider.totalCount,
+        builder: (context, totalCount, child) {
+          final provider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
           return InkWell(
             onTap: () => Navigator.of(context).pushNamed(route),
             child: Column(
@@ -287,7 +296,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
                           ),
                           child: Center(
                             child: Text(
-                              provider.totalCount > 99 ? '99+' : '${provider.totalCount}',
+                              totalCount > 99 ? '99+' : '$totalCount',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
