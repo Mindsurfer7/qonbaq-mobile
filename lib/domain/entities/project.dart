@@ -31,6 +31,8 @@ class Project extends Entity {
   final String? city;
   final String? country;
   final String? address;
+  final String? phone;
+  final String? workingHours;
   final bool isActive;
   final int? accountsCount;
   final int? transactionsCount;
@@ -46,6 +48,8 @@ class Project extends Entity {
     this.city,
     this.country,
     this.address,
+    this.phone,
+    this.workingHours,
     this.isActive = true,
     this.accountsCount,
     this.transactionsCount,

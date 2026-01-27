@@ -12,6 +12,8 @@ class ProjectModel extends Project implements Model {
     super.city,
     super.country,
     super.address,
+    super.phone,
+    super.workingHours,
     super.isActive,
     super.accountsCount,
     super.transactionsCount,
@@ -59,6 +61,8 @@ class ProjectModel extends Project implements Model {
       city: json['city'] as String?,
       country: json['country'] as String?,
       address: json['address'] as String?,
+      phone: json['phone'] as String?,
+      workingHours: json['workingHours'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       accountsCount: json['accountsCount'] as int?,
       transactionsCount: json['transactionsCount'] as int?,
@@ -82,6 +86,8 @@ class ProjectModel extends Project implements Model {
       if (city != null) 'city': city,
       if (country != null) 'country': country,
       if (address != null) 'address': address,
+      if (phone != null) 'phone': phone,
+      if (workingHours != null) 'workingHours': workingHours,
       'isActive': isActive,
       if (accountsCount != null) 'accountsCount': accountsCount,
       if (transactionsCount != null) 'transactionsCount': transactionsCount,
@@ -99,6 +105,8 @@ class ProjectModel extends Project implements Model {
       if (city != null) 'city': city,
       if (country != null) 'country': country,
       if (address != null) 'address': address,
+      if (phone != null) 'phone': phone,
+      if (workingHours != null) 'workingHours': workingHours,
     };
   }
 
@@ -110,6 +118,8 @@ class ProjectModel extends Project implements Model {
       if (city != null) 'city': city,
       if (country != null) 'country': country,
       if (address != null) 'address': address,
+      if (phone != null) 'phone': phone,
+      if (workingHours != null) 'workingHours': workingHours,
       'isActive': isActive,
     };
   }
@@ -124,6 +134,8 @@ class ProjectModel extends Project implements Model {
       city: city,
       country: country,
       address: address,
+      phone: phone,
+      workingHours: workingHours,
       isActive: isActive,
       accountsCount: accountsCount,
       transactionsCount: transactionsCount,
@@ -142,6 +154,8 @@ class ProjectModel extends Project implements Model {
       city: project.city,
       country: project.country,
       address: project.address,
+      phone: project.phone,
+      workingHours: project.workingHours,
       isActive: project.isActive,
       accountsCount: project.accountsCount,
       transactionsCount: project.transactionsCount,

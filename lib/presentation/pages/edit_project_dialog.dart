@@ -3,30 +3,46 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/project.dart';
 import '../providers/project_provider.dart';
 
-/// Диалог для создания проекта
-class CreateProjectDialog extends StatefulWidget {
-  final String businessId;
-  final VoidCallback onProjectCreated;
+/// Диалог для редактирования проекта
+class EditProjectDialog extends StatefulWidget {
+  final Project project;
+  final VoidCallback onProjectUpdated;
 
-  const CreateProjectDialog({
+  const EditProjectDialog({
     super.key,
-    required this.businessId,
-    required this.onProjectCreated,
+    required this.project,
+    required this.onProjectUpdated,
   });
 
   @override
-  State<CreateProjectDialog> createState() => _CreateProjectDialogState();
+  State<EditProjectDialog> createState() => _EditProjectDialogState();
 }
 
-class _CreateProjectDialogState extends State<CreateProjectDialog> {
+class _EditProjectDialogState extends State<EditProjectDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _countryController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _workingHoursController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _countryController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _workingHoursController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.project.name);
+    _descriptionController = TextEditingController(
+      text: widget.project.description ?? '',
+    );
+    _cityController = TextEditingController(text: widget.project.city ?? '');
+    _countryController = TextEditingController(text: widget.project.country ?? '');
+    _addressController = TextEditingController(text: widget.project.address ?? '');
+    _phoneController = TextEditingController(text: widget.project.phone ?? '');
+    _workingHoursController = TextEditingController(
+      text: widget.project.workingHours ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -43,7 +59,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Создать проект'),
+      title: const Text('Редактировать проект'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -149,14 +165,14 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
             return ElevatedButton(
               onPressed: provider.isLoading
                   ? null
-                  : () => _createProject(provider),
+                  : () => _updateProject(provider),
               child: provider.isLoading
                   ? const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Создать'),
+                  : const Text('Сохранить'),
             );
           },
         ),
@@ -164,18 +180,19 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     );
   }
 
-  Future<void> _createProject(ProjectProvider provider) async {
+  Future<void> _updateProject(ProjectProvider provider) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final project = Project(
-      id: '', // Будет присвоен сервером
+    final updatedProject = Project(
+      id: widget.project.id,
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim().isEmpty
           ? null
           : _descriptionController.text.trim(),
-      businessId: widget.businessId,
+      businessId: widget.project.businessId,
+      business: widget.project.business,
       city: _cityController.text.trim().isEmpty
           ? null
           : _cityController.text.trim(),
@@ -191,21 +208,26 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       workingHours: _workingHoursController.text.trim().isEmpty
           ? null
           : _workingHoursController.text.trim(),
-      isActive: true,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      isActive: widget.project.isActive,
+      accountsCount: widget.project.accountsCount,
+      transactionsCount: widget.project.transactionsCount,
+      createdAt: widget.project.createdAt,
+      updatedAt: widget.project.updatedAt,
     );
 
-    final success = await provider.createNewProject(project);
+    final success = await provider.updateExistingProject(
+      widget.project.id,
+      updatedProject,
+    );
 
     if (!mounted) return;
 
     if (success) {
       Navigator.of(context).pop();
-      widget.onProjectCreated();
+      widget.onProjectUpdated();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Проект успешно создан'),
+          content: Text('Проект успешно обновлен'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -213,7 +235,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.error ?? 'Ошибка при создании проекта',
+            provider.error ?? 'Ошибка при обновлении проекта',
           ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
@@ -222,6 +244,3 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     }
   }
 }
-
-
-

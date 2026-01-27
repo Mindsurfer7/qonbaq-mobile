@@ -12,6 +12,7 @@ import '../widgets/business_selector_widget.dart';
 import '../widgets/department_tree_graph.dart';
 import 'create_department_dialog.dart';
 import 'create_project_dialog.dart';
+import 'edit_project_dialog.dart';
 
 /// Страница организационной структуры
 class OrganizationalStructurePage extends StatefulWidget {
@@ -640,6 +641,40 @@ class _OrganizationalStructurePageState
                   ),
                 ),
               ),
+            if (project.phone != null && project.phone!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      project.phone!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (project.workingHours != null && project.workingHours!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      project.workingHours!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         onTap: () {
@@ -656,7 +691,14 @@ class _OrganizationalStructurePageState
 
             return PopupMenuButton<String>(
               onSelected: (value) {
-                if (value == 'delete') {
+                if (value == 'edit') {
+                  _showEditProjectDialog(
+                    context,
+                    project,
+                    provider,
+                    businessId,
+                  );
+                } else if (value == 'delete') {
                   _showDeleteProjectConfirmation(
                     context,
                     project,
@@ -666,6 +708,16 @@ class _OrganizationalStructurePageState
                 }
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Редактировать'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'delete',
                   child: Row(
@@ -682,7 +734,26 @@ class _OrganizationalStructurePageState
         ),
         isThreeLine: (project.description != null &&
                 project.description!.isNotEmpty) ||
-            (project.city != null || project.country != null),
+            (project.city != null || project.country != null) ||
+            (project.phone != null && project.phone!.isNotEmpty) ||
+            (project.workingHours != null && project.workingHours!.isNotEmpty),
+      ),
+    );
+  }
+
+  void _showEditProjectDialog(
+    BuildContext context,
+    Project project,
+    ProjectProvider provider,
+    String businessId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => EditProjectDialog(
+        project: project,
+        onProjectUpdated: () {
+          provider.loadProjects(businessId);
+        },
       ),
     );
   }
