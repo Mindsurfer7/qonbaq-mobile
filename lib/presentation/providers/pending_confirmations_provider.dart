@@ -186,7 +186,9 @@ class PendingConfirmationsProvider with ChangeNotifier {
     // Останавливаем предыдущий таймер, если есть
     stopPolling();
 
+    // Обновляем businessId ПЕРЕД запуском таймера
     _currentBusinessId = businessId;
+    debugPrint('🚀 PendingConfirmationsProvider: Запуск polling для businessId: $_currentBusinessId');
 
     // Загружаем сразу все оповещения
     loadAll(businessId: businessId);
@@ -195,6 +197,7 @@ class PendingConfirmationsProvider with ChangeNotifier {
     _pollingTimer = Timer.periodic(
       const Duration(minutes: 2),
       (timer) {
+        // Используем актуальное значение _currentBusinessId
         loadAll(businessId: _currentBusinessId);
       },
     );
@@ -209,8 +212,21 @@ class PendingConfirmationsProvider with ChangeNotifier {
   /// Обновить businessId и перезапустить polling
   void updateBusinessId(String? businessId) {
     if (_currentBusinessId != businessId) {
+      debugPrint('🔄 PendingConfirmationsProvider: Обновляем businessId с $_currentBusinessId на $businessId');
       startPolling(businessId: businessId);
     }
+  }
+
+  /// Очистить все данные и остановить polling
+  void clear() {
+    debugPrint('🧹 PendingConfirmationsProvider: Очистка данных');
+    stopPolling();
+    _pendingConfirmations = [];
+    _awaitingPaymentDetailsIds = [];
+    _currentBusinessId = null;
+    _error = null;
+    _isLoading = false;
+    notifyListeners();
   }
 
   @override

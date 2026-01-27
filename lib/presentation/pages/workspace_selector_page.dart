@@ -5,10 +5,10 @@ import '../providers/invite_provider.dart';
 import '../../domain/entities/business.dart';
 import '../widgets/create_business_dialog.dart';
 import '../widgets/business_choice_dialog.dart';
+import '../widgets/voice_task_dialog.dart';
 import '../../core/utils/constants.dart';
-// Временно закомментировано
-// import '../widgets/voice_record_widget.dart';
-// import '../../core/services/voice_context.dart';
+import '../../domain/repositories/user_repository.dart';
+import '../../domain/usecases/create_task.dart';
 import 'package:flutter/services.dart';
 
 /// Страница выбора workspace (семья или бизнес)
@@ -319,14 +319,34 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Row(
                     children: [
-                      // Индикаторы семьи
-                      Expanded(child: _buildIndicatorsColumn(isFamily: true)),
-                      const SizedBox(width: 12),
-                      // Индикаторы бизнеса
+                      // Индикаторы семьи с микрофоном
                       Expanded(
-                        child: _buildIndicatorsColumn(
-                          isFamily: false,
-                          businessList: businessList,
+                        child: Column(
+                          children: [
+                            _buildIndicatorsColumn(isFamily: true),
+                            const SizedBox(height: 12),
+                            _buildVoiceMicrophoneButton(
+                              isFamily: true,
+                              familyBusiness: familyBusiness,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Индикаторы бизнеса с микрофоном
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildIndicatorsColumn(
+                              isFamily: false,
+                              businessList: businessList,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildVoiceMicrophoneButton(
+                              isFamily: false,
+                              businessList: businessList,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -517,6 +537,98 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage> {
           _buildShowAllButton(businessList),
         ],
       ],
+    );
+  }
+
+  /// Кнопка микрофона для голосового создания задачи
+  Widget _buildVoiceMicrophoneButton({
+    required bool isFamily,
+    Business? familyBusiness,
+    List<Business>? businessList,
+  }) {
+    return InkWell(
+      onTap: () => _showVoiceTaskDialog(isFamily, familyBusiness, businessList),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isFamily ? Colors.green.shade50 : Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isFamily ? Colors.green.shade200 : Colors.blue.shade200,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.mic,
+              color: isFamily ? Colors.green.shade700 : Colors.blue.shade700,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Создать задачу голосом',
+              style: TextStyle(
+                color: isFamily ? Colors.green.shade700 : Colors.blue.shade700,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Показывает диалог голосового создания задачи
+  void _showVoiceTaskDialog(
+    bool isFamily,
+    Business? familyBusiness,
+    List<Business>? businessList,
+  ) {
+    // Определяем businessId в зависимости от типа
+    String? businessId;
+    
+    if (isFamily) {
+      // Для семьи используем familyBusiness
+      if (familyBusiness == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Сначала создайте семью'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      businessId = familyBusiness.id;
+    } else {
+      // Для бизнеса используем первый бизнес из списка
+      if (businessList == null || businessList.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Сначала создайте бизнес'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      businessId = businessList.first.id;
+    }
+
+    // Получаем зависимости из провайдеров
+    final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+
+    // Показываем диалог
+    showDialog(
+      context: context,
+      builder: (context) => VoiceTaskDialog(
+        businessId: businessId!,
+        userRepository: userRepository,
+        createTaskUseCase: createTaskUseCase,
+      ),
     );
   }
 

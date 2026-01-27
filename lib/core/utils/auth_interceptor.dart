@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'token_storage.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/models/auth_response.dart';
+import '../../presentation/providers/pending_confirmations_provider.dart';
+import '../../presentation/providers/profile_provider.dart';
 
 /// Интерсептор для автоматической обработки 401 ошибок и обновления токенов
 class AuthInterceptor {
@@ -97,11 +100,31 @@ class AuthInterceptor {
     // Очищаем токены
     TokenStorage.instance.clearTokens();
     
-    // Перенаправляем на страницу логина
+    // Очищаем провайдеры перед перенаправлением
     if (navigatorKey?.currentContext != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (navigatorKey?.currentContext != null) {
-          Navigator.of(navigatorKey!.currentContext!).pushNamedAndRemoveUntil(
+        final context = navigatorKey?.currentContext;
+        if (context != null) {
+          try {
+            // Очищаем провайдеры, если они доступны
+            final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+              context,
+              listen: false,
+            );
+            final profileProvider = Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            );
+            
+            pendingProvider.clear();
+            profileProvider.clear();
+          } catch (e) {
+            // Игнорируем ошибки, если провайдеры недоступны
+            // (например, если контекст еще не инициализирован)
+          }
+          
+          // Перенаправляем на страницу логина
+          Navigator.of(context).pushNamedAndRemoveUntil(
             '/auth',
             (route) => false,
           );

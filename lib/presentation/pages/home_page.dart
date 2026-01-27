@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pending_confirmations_provider.dart';
+import '../providers/profile_provider.dart';
 
 /// Главная страница приложения
 class HomePage extends StatelessWidget {
@@ -25,6 +27,13 @@ class HomePage extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () {
+                  // Очищаем провайдеры перед выходом
+                  final pendingProvider = Provider.of<PendingConfirmationsProvider>(context, listen: false);
+                  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                  
+                  pendingProvider.clear();
+                  profileProvider.clear();
+                  
                   authProvider.logout();
                   Navigator.of(context).pushReplacementNamed('/auth');
                   ScaffoldMessenger.of(context).showSnackBar(

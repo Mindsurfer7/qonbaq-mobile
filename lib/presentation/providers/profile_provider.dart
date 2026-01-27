@@ -378,6 +378,20 @@ class ProfileProvider with ChangeNotifier {
     return result;
   }
 
+  /// Очистить все данные профиля
+  void clear() {
+    debugPrint('🧹 ProfileProvider: Очистка данных');
+    _businesses = null;
+    _profile = null;
+    _selectedBusiness = null;
+    _selectedWorkspace = null;
+    _employeesByBusiness = {};
+    _currentUserEmployment = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   /// Получить сообщение об ошибке
   String _getErrorMessage(Failure failure) {
     if (failure is ServerFailure) {
