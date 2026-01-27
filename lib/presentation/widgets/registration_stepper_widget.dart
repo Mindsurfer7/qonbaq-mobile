@@ -26,12 +26,34 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
   String? _error;
   InviteType? _inviteType;
   Business? _currentBusiness;
+  
+  // Контроллеры формы регистрации
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
     // После регистрации нужно определить тип invite
     // Пока что будем определять по типу бизнеса после загрузки
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _usernameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   Future<void> _determineInviteType() async {
@@ -82,7 +104,16 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
     if (!mounted) return;
 
     if (success) {
-      // Определяем тип invite по типу бизнеса
+      // Если нет invite кода, сразу переходим на workspace selector
+      if (widget.inviteCode == null || widget.inviteCode!.isEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        _navigateToWorkspaceSelector();
+        return;
+      }
+
+      // Если есть invite код, определяем тип invite по типу бизнеса
       await _determineInviteType();
       
       if (!mounted) return;
@@ -130,20 +161,19 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
   Widget build(BuildContext context) {
     // Всегда создаем 2 шага, чтобы избежать ошибки изменения количества шагов
     // Второй шаг будет скрыт, если тип не business
-    final maxSteps = 2;
     final shouldShowSecondStep = _inviteType == InviteType.business;
     
-    return Stepper(
-      currentStep: _currentStep,
-      onStepContinue: _currentStep < maxSteps - 1 && shouldShowSecondStep ? () {
-        // Переход на следующий шаг обрабатывается автоматически
-      } : null,
-      onStepCancel: _currentStep > 0 ? () {
-        setState(() {
-          _currentStep = 0;
-        });
-      } : null,
-      steps: [
+    return PopScope(
+      canPop: _currentStep == 0, // Можно вернуться назад только на первом шаге
+      child: Stepper(
+        currentStep: _currentStep,
+        onStepContinue: null, // Убираем кнопку Continue
+        onStepCancel: null, // Убираем кнопку Cancel
+        controlsBuilder: (context, details) {
+          // Не показываем стандартные кнопки управления шагами
+          return const SizedBox.shrink();
+        },
+        steps: [
         // Шаг 1: Регистрация
         Step(
           title: const Text('Регистрация'),
@@ -163,242 +193,229 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
               : StepState.disabled,
         ),
       ],
+      ),
     );
   }
 
   Widget _buildRegistrationStep() {
-    final _formKey = GlobalKey<FormState>();
-    final _emailController = TextEditingController();
-    final _usernameController = TextEditingController();
-    final _firstNameController = TextEditingController();
-    final _lastNameController = TextEditingController();
-    final _passwordController = TextEditingController();
-    final _confirmPasswordController = TextEditingController();
-    bool _obscurePassword = true;
-    bool _obscureConfirmPassword = true;
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.inviteCode != null && widget.inviteCode!.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.card_giftcard, color: Colors.green.shade700),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Вы регистрируетесь по приглашению',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.inviteCode != null && widget.inviteCode!.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.card_giftcard, color: Colors.green.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Вы регистрируетесь по приглашению',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Введите email';
-                  }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                    return 'Неверный формат email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Имя пользователя',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                  helperText: 'От 3 до 30 символов',
-                ),
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Введите имя пользователя';
-                  }
-                  if (value.length < 3 || value.length > 30) {
-                    return 'Имя пользователя должно быть от 3 до 30 символов';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Имя',
-                  prefixIcon: Icon(Icons.badge),
-                  border: OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && value.trim().isEmpty) {
-                    return 'Имя не может состоять только из пробелов';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Фамилия',
-                  prefixIcon: Icon(Icons.badge),
-                  border: OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && value.trim().isEmpty) {
-                    return 'Фамилия не может состоять только из пробелов';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Пароль',
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
                   ),
-                  border: const OutlineInputBorder(),
-                  helperText: 'От 6 до 100 символов',
-                ),
-                obscureText: _obscurePassword,
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Введите пароль';
-                  }
-                  if (value.length < 6 || value.length > 100) {
-                    return 'Пароль должен быть от 6 до 100 символов';
-                  }
-                  return null;
-                },
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Подтвердите пароль',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
-                  ),
-                  border: const OutlineInputBorder(),
-                ),
-                obscureText: _obscureConfirmPassword,
-                textInputAction: TextInputAction.done,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Подтвердите пароль';
-                  }
-                  if (value != _passwordController.text) {
-                    return 'Пароли не совпадают';
-                  }
-                  return null;
-                },
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red.shade700),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _error!,
-                          style: TextStyle(color: Colors.red.shade700),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : () {
-                  if (_formKey.currentState!.validate()) {
-                    _handleRegistration(
-                      email: _emailController.text.trim(),
-                      username: _usernameController.text.trim(),
-                      password: _passwordController.text,
-                      firstName: _firstNameController.text.trim().isNotEmpty
-                          ? _firstNameController.text.trim()
-                          : null,
-                      lastName: _lastNameController.text.trim().isNotEmpty
-                          ? _lastNameController.text.trim()
-                          : null,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Зарегистрироваться'),
-              ),
-            ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          TextFormField(
+            controller: _emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.email),
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Введите email';
+              }
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                return 'Неверный формат email';
+              }
+              return null;
+            },
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Имя пользователя',
+              prefixIcon: Icon(Icons.person),
+              border: OutlineInputBorder(),
+              helperText: 'От 3 до 30 символов',
+            ),
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Введите имя пользователя';
+              }
+              if (value.length < 3 || value.length > 30) {
+                return 'Имя пользователя должно быть от 3 до 30 символов';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _firstNameController,
+            decoration: const InputDecoration(
+              labelText: 'Имя',
+              prefixIcon: Icon(Icons.badge),
+              border: OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (value) {
+              if (value != null && value.isNotEmpty && value.trim().isEmpty) {
+                return 'Имя не может состоять только из пробелов';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _lastNameController,
+            decoration: const InputDecoration(
+              labelText: 'Фамилия',
+              prefixIcon: Icon(Icons.badge),
+              border: OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (value) {
+              if (value != null && value.isNotEmpty && value.trim().isEmpty) {
+                return 'Фамилия не может состоять только из пробелов';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(
+              labelText: 'Пароль',
+              prefixIcon: const Icon(Icons.lock),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              border: const OutlineInputBorder(),
+              helperText: 'От 6 до 100 символов',
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Введите пароль';
+              }
+              if (value.length < 6 || value.length > 100) {
+                return 'Пароль должен быть от 6 до 100 символов';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _confirmPasswordController,
+            decoration: InputDecoration(
+              labelText: 'Подтвердите пароль',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                },
+              ),
+              border: const OutlineInputBorder(),
+            ),
+            obscureText: _obscureConfirmPassword,
+            textInputAction: TextInputAction.done,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Подтвердите пароль';
+              }
+              if (value != _passwordController.text) {
+                return 'Пароли не совпадают';
+              }
+              return null;
+            },
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isLoading ? null : () {
+              if (_formKey.currentState!.validate()) {
+                _handleRegistration(
+                  email: _emailController.text.trim(),
+                  username: _usernameController.text.trim(),
+                  password: _passwordController.text,
+                  firstName: _firstNameController.text.trim().isNotEmpty
+                      ? _firstNameController.text.trim()
+                      : null,
+                  lastName: _lastNameController.text.trim().isNotEmpty
+                      ? _lastNameController.text.trim()
+                      : null,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Зарегистрироваться'),
+          ),
+        ],
+      ),
     );
   }
 
