@@ -56,7 +56,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
-  bool _dontForget = false;
+  // bool _dontForget = false;
   String? _assignedToId;
   String? _assignedById;
   // Храним ошибки валидации для отображения в полях
@@ -124,9 +124,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (widget.initialDescription != null) {
       _descriptionController.text = widget.initialDescription!;
     }
-    // Загружаем имя текущего пользователя
+    // Загружаем имя текущего пользователя и устанавливаем его как инициатора
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCurrentUserName();
+      _setCurrentUserAsInitiator();
     });
     // Применяем предзаполненные данные задачи, если есть
     if (widget.initialTaskData != null) {
@@ -204,6 +205,22 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     }
   }
 
+  /// Устанавливает текущего пользователя как инициатора
+  void _setCurrentUserAsInitiator() {
+    if (!mounted || _formKey.currentState == null) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.user?.id;
+
+    // Всегда устанавливаем текущего пользователя как инициатора
+    if (currentUserId != null) {
+      setState(() {
+        _assignedById = currentUserId;
+      });
+      _formKey.currentState?.fields['assignedBy']?.didChange(currentUserId);
+    }
+  }
+
   /// Проверяет, может ли пользователь изменять исполнителя задачи (назначать на других)
   bool _canChangeAssignee() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -243,10 +260,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       // По умолчанию задача на текущего пользователя
       _setCurrentUserAsAssignee();
     }
-    if (taskData.assignedBy != null && taskData.assignedBy!.isNotEmpty) {
-      _assignedById = taskData.assignedBy;
-      formState.fields['assignedBy']?.didChange(taskData.assignedBy);
-    }
+    // Инициатор всегда устанавливается автоматически как текущий пользователь
+    _setCurrentUserAsInitiator();
     // assignmentDate не обрабатываем, так как оно всегда устанавливается автоматически
     if (taskData.deadline != null) {
       formState.fields['deadline']?.didChange(taskData.deadline);
@@ -269,12 +284,12 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       });
       formState.fields['hasControlPoint']?.didChange(true);
     }
-    if (taskData.dontForget) {
-      setState(() {
-        _dontForget = true;
-      });
-      formState.fields['dontForget']?.didChange(true);
-    }
+    // if (taskData.dontForget) {
+    //   setState(() {
+    //     _dontForget = true;
+    //   });
+    //   formState.fields['dontForget']?.didChange(true);
+    // }
 
     setState(() {});
   }
@@ -432,12 +447,15 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 context.appTheme.borderRadius,
               ),
               selectedItemBuilder: (BuildContext context) {
-                return TaskStatus.values.map<Widget>((TaskStatus status) {
+                return TaskStatus.values
+                    .where((status) => status != TaskStatus.pending)
+                    .map<Widget>((TaskStatus status) {
                   return Text(_getStatusText(status));
                 }).toList();
               },
               items:
                   TaskStatus.values
+                      .where((status) => status != TaskStatus.pending)
                       .map(
                         (status) => createStyledDropdownItem<TaskStatus>(
                           context: context,
@@ -477,40 +495,11 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   ),
             const SizedBox(height: 16),
 
-            // Поручитель
-            UserSelectorWidget(
-              businessId: widget.businessId,
-              userRepository: widget.userRepository,
-              selectedUserId: _assignedById,
-              onUserSelected: (userId) {
-                setState(() {
-                  _assignedById = userId;
-                });
-                _formKey.currentState?.fields['assignedBy']?.didChange(userId);
-              },
-              label: 'Поручитель',
-            ),
-            const SizedBox(height: 16),
-
-            // Дата поручения (readonly, автоматически устанавливается при создании)
-            TextFormField(
-              initialValue: _formatDateTime(DateTime.now()),
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: 'Дата поручения',
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.calendar_today),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Дедлайн
+            // Крайний срок
             FormBuilderDateTimePicker(
               name: 'deadline',
               decoration: InputDecoration(
-                labelText: 'Дедлайн',
+                labelText: 'Крайний срок',
                 border: const OutlineInputBorder(),
                 suffixIcon: const Icon(Icons.event),
                 errorText: _fieldErrors['deadline'],
@@ -557,18 +546,32 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 });
               },
             ),
-            const SizedBox(height: 8),
+            // const SizedBox(height: 8),
 
-            // Не забыть выполнить
-            FormBuilderCheckbox(
-              name: 'dontForget',
-              title: const Text('Заметки на ходу'),
-              initialValue: _dontForget,
-              onChanged: (value) {
-                setState(() {
-                  _dontForget = value ?? false;
-                });
-              },
+            // // Не забыть выполнить
+            // FormBuilderCheckbox(
+            //   name: 'dontForget',
+            //   title: const Text('Заметки на ходу'),
+            //   initialValue: _dontForget,
+            //   onChanged: (value) {
+            //     setState(() {
+            //       _dontForget = value ?? false;
+            //     });
+            //   },
+            // ),
+            const SizedBox(height: 24),
+
+            // Инициатор (автоматически устанавливается текущий пользователь)
+            TextFormField(
+              initialValue: _currentUserFullName ?? 'Загрузка...',
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Инициатор',
+                border: const OutlineInputBorder(),
+                suffixIcon: const Icon(Icons.person),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -609,6 +612,9 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       }
     }
 
+    // Всегда устанавливаем текущего пользователя как инициатора
+    _setCurrentUserAsInitiator();
+
     // Сохраняем значения из UserSelectorWidget
     _formKey.currentState?.fields['assignedTo']?.didChange(_assignedToId);
     _formKey.currentState?.fields['assignedBy']?.didChange(_assignedById);
@@ -631,7 +637,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         isImportant: formData['isImportant'] as bool? ?? false,
         isRecurring: formData['isRecurring'] as bool? ?? false,
         hasControlPoint: formData['hasControlPoint'] as bool? ?? false,
-        dontForget: formData['dontForget'] as bool? ?? false,
+        dontForget: false, // Поле закомментировано
         customerId: widget.customerId,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -661,9 +667,5 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       case TaskStatus.cancelled:
         return 'Отменена';
     }
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
