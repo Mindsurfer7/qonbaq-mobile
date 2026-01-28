@@ -21,7 +21,8 @@ class ProfileProvider with ChangeNotifier {
   final UpdateBusiness updateBusiness;
   final UserRepository userRepository;
   final GetBusinessEmploymentsWithRoles getBusinessEmploymentsWithRoles;
-  final String? currentUserId; // ID текущего пользователя для поиска его employment
+  final String?
+  currentUserId; // ID текущего пользователя для поиска его employment
 
   ProfileProvider({
     required this.getUserBusinesses,
@@ -39,7 +40,8 @@ class ProfileProvider with ChangeNotifier {
   Business? _selectedWorkspace; // Выбранный workspace (семья или бизнес)
   Map<String, List<Employee>> _employeesByBusiness =
       {}; // Кэш сотрудников по businessId
-  EmploymentWithRole? _currentUserEmployment; // Employment текущего пользователя в выбранном бизнесе
+  EmploymentWithRole?
+  _currentUserEmployment; // Employment текущего пользователя в выбранном бизнесе
   bool _isLoading = false;
   String? _error;
 
@@ -141,12 +143,10 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// Получить список бизнесов (только с типом Business)
+  /// Получить список бизнесов (все кроме Family)
   List<Business> get businessList {
     if (_businesses == null || _businesses!.isEmpty) return [];
-    return _businesses!
-        .where((b) => b.type == BusinessType.business)
-        .toList();
+    return _businesses!.where((b) => b.type != BusinessType.family).toList();
   }
 
   /// Установить ID текущего пользователя (вызывается при авторизации)
@@ -184,7 +184,9 @@ class ProfileProvider with ChangeNotifier {
         }
         // Обновляем бизнес в списке, если он там есть
         if (_businesses != null) {
-          final index = _businesses!.indexWhere((b) => b.id == profile.business.id);
+          final index = _businesses!.indexWhere(
+            (b) => b.id == profile.business.id,
+          );
           if (index != -1) {
             _businesses![index] = profile.business;
           }
@@ -192,7 +194,7 @@ class ProfileProvider with ChangeNotifier {
         _isLoading = false;
         _error = null;
         notifyListeners();
-        
+
         // Загружаем employment текущего пользователя
         // Используем userId из параметра или из профиля
         final userIdToUse = userId ?? currentUserId ?? profile.user.id;
@@ -202,7 +204,10 @@ class ProfileProvider with ChangeNotifier {
   }
 
   /// Загрузить employment текущего пользователя для бизнеса
-  Future<void> loadCurrentUserEmployment(String businessId, String userId) async {
+  Future<void> loadCurrentUserEmployment(
+    String businessId,
+    String userId,
+  ) async {
     try {
       final result = await getBusinessEmploymentsWithRoles.call(
         GetBusinessEmploymentsWithRolesParams(businessId: businessId),
@@ -324,7 +329,9 @@ class ProfileProvider with ChangeNotifier {
       (updatedBusiness) {
         // Обновляем бизнес в списке
         if (_businesses != null) {
-          final index = _businesses!.indexWhere((b) => b.id == updatedBusiness.id);
+          final index = _businesses!.indexWhere(
+            (b) => b.id == updatedBusiness.id,
+          );
           if (index != -1) {
             _businesses![index] = updatedBusiness;
           }

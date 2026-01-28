@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../domain/entities/business.dart';
 import '../models/model.dart';
 
@@ -29,11 +30,17 @@ class BusinessModel extends Business implements Model {
         typeStr = typeValue.toString().toLowerCase();
       }
       
+      debugPrint('🔍 BusinessModel.fromJson: парсим тип "$typeStr" из значения "$typeValue"');
+      
       if (typeStr == 'family') {
         type = BusinessType.family;
       } else if (typeStr == 'business') {
         type = BusinessType.business;
+      } else {
+        debugPrint('⚠️ BusinessModel.fromJson: неизвестный тип "$typeStr", оставляем null');
       }
+    } else {
+      debugPrint('⚠️ BusinessModel.fromJson: поле "type" отсутствует в JSON для бизнеса "${json['name']}"');
     }
 
     return BusinessModel(
