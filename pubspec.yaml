@@ -74,6 +74,9 @@ dependencies:
   
   # Share API для мобильных платформ
   share_plus: ^10.1.2
+  
+  # Выбор файлов
+  file_picker: ^8.1.4
 
 dev_dependencies:
   flutter_test:

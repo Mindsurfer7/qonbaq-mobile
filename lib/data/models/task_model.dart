@@ -28,6 +28,7 @@ class TaskModel extends Task implements Model {
     super.dontForget,
     super.voiceNoteUrl,
     super.resultText,
+    super.resultFileId,
     required super.createdAt,
     required super.updatedAt,
     super.observerIds,
@@ -273,6 +274,7 @@ class TaskModel extends Task implements Model {
       dontForget: json['dontForget'] as bool? ?? false,
       voiceNoteUrl: json['voiceNoteUrl'] as String?,
       resultText: json['resultText'] as String?,
+      resultFileId: json['resultFileId'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       observerIds: observerIds,
@@ -494,6 +496,10 @@ class TaskModel extends Task implements Model {
         'customerId': customerId,
       if (voiceNoteUrl != null && voiceNoteUrl!.isNotEmpty)
         'voiceNoteUrl': voiceNoteUrl,
+      if (resultText != null && resultText!.isNotEmpty)
+        'resultText': resultText,
+      if (resultFileId != null && resultFileId!.isNotEmpty)
+        'resultFileId': resultFileId,
       if (observerIds != null && observerIds!.isNotEmpty)
         'observerIds': observerIds,
       if (recurrence != null)
@@ -528,6 +534,7 @@ class TaskModel extends Task implements Model {
       dontForget: dontForget,
       voiceNoteUrl: voiceNoteUrl,
       resultText: resultText,
+      resultFileId: resultFileId,
       createdAt: createdAt,
       updatedAt: updatedAt,
       observerIds: observerIds,
@@ -562,6 +569,7 @@ class TaskModel extends Task implements Model {
       dontForget: task.dontForget,
       voiceNoteUrl: task.voiceNoteUrl,
       resultText: task.resultText,
+      resultFileId: task.resultFileId,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       observerIds: task.observerIds,

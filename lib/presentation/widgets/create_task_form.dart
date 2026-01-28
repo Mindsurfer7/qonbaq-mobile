@@ -56,6 +56,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   bool _isImportant = false;
   bool _isRecurring = false;
   bool _hasControlPoint = false;
+  bool _isMeAssignee = false; // Checkbox "Я исполнитель в задаче"
   // bool _dontForget = false;
   String? _assignedToId;
   String? _assignedById;
@@ -134,12 +135,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyInitialTaskData(widget.initialTaskData!);
       });
-    } else {
-      // Если нет предзаполненных данных, устанавливаем текущего пользователя как исполнителя
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _setCurrentUserAsAssignee();
-      });
     }
+    // Больше не устанавливаем исполнителя автоматически - пользователь должен выбрать через checkbox
     // Применяем ошибки валидации после первой отрисовки, если они есть
     if (widget.validationErrors != null &&
         widget.validationErrors!.isNotEmpty) {
@@ -196,12 +193,37 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserId = authProvider.user?.id;
 
-    // Устанавливаем текущего пользователя как исполнителя, если он не установлен
-    if (currentUserId != null && _assignedToId == null) {
+    // Устанавливаем текущего пользователя как исполнителя
+    if (currentUserId != null) {
       setState(() {
         _assignedToId = currentUserId;
       });
       _formKey.currentState?.fields['assignedTo']?.didChange(currentUserId);
+    }
+  }
+
+  /// Очищает поле исполнителя
+  void _clearAssignee() {
+    if (!mounted || _formKey.currentState == null) return;
+
+    setState(() {
+      _assignedToId = null;
+    });
+    _formKey.currentState?.fields['assignedTo']?.didChange(null);
+  }
+
+  /// Обработчик изменения checkbox "Я исполнитель"
+  void _onMeAssigneeChanged(bool? value) {
+    setState(() {
+      _isMeAssignee = value ?? false;
+    });
+
+    if (_isMeAssignee) {
+      // Если checkbox включен, устанавливаем текущего пользователя как исполнителя
+      _setCurrentUserAsAssignee();
+    } else {
+      // Если checkbox выключен, очищаем поле исполнителя
+      _clearAssignee();
     }
   }
 
@@ -252,14 +274,19 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     formState.fields['status']?.didChange(taskData.status);
     
     // Если пользователь может изменять исполнителя и в предзаполненных данных есть исполнитель, используем его
-    // Иначе всегда устанавливаем текущего пользователя (по умолчанию задача на себя)
     if (_canChangeAssignee() && taskData.assignedTo != null && taskData.assignedTo!.isNotEmpty) {
       _assignedToId = taskData.assignedTo;
       formState.fields['assignedTo']?.didChange(taskData.assignedTo);
-    } else {
-      // По умолчанию задача на текущего пользователя
-      _setCurrentUserAsAssignee();
+      // Проверяем, является ли исполнитель текущим пользователем
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentUserId = authProvider.user?.id;
+      if (currentUserId != null && taskData.assignedTo == currentUserId) {
+        setState(() {
+          _isMeAssignee = true;
+        });
+      }
     }
+    // Больше не устанавливаем исполнителя автоматически
     // Инициатор всегда устанавливается автоматически как текущий пользователь
     _setCurrentUserAsInitiator();
     // assignmentDate не обрабатываем, так как оно всегда устанавливается автоматически
@@ -467,6 +494,15 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ),
             const SizedBox(height: 16),
 
+            // Checkbox "Я исполнитель в задаче"
+            FormBuilderCheckbox(
+              name: 'isMeAssignee',
+              title: const Text('Я исполнитель в задаче'),
+              initialValue: _isMeAssignee,
+              onChanged: _onMeAssigneeChanged,
+            ),
+            const SizedBox(height: 8),
+
             // Исполнитель
             _canChangeAssignee()
                 ? UserSelectorWidget(
@@ -476,13 +512,19 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                     onUserSelected: (userId) {
                       setState(() {
                         _assignedToId = userId;
+                        // Обновляем checkbox в зависимости от выбранного пользователя
+                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                        final currentUserId = authProvider.user?.id;
+                        _isMeAssignee = (currentUserId != null && userId == currentUserId);
                       });
                       _formKey.currentState?.fields['assignedTo']?.didChange(userId);
                     },
                     label: 'Исполнитель',
                   )
                 : TextFormField(
-                    initialValue: _currentUserFullName ?? 'Загрузка...',
+                    initialValue: _assignedToId != null 
+                        ? (_currentUserFullName ?? 'Загрузка...')
+                        : '',
                     readOnly: true,
                     decoration: InputDecoration(
                       labelText: 'Исполнитель',
@@ -490,7 +532,9 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                       suffixIcon: const Icon(Icons.person),
                       filled: true,
                       fillColor: Colors.grey.shade100,
-                      helperText: 'Задача будет назначена на вас',
+                      helperText: _assignedToId != null 
+                          ? 'Задача будет назначена на вас'
+                          : 'Выберите "Я исполнитель в задаче" для назначения на себя',
                     ),
                   ),
             const SizedBox(height: 16),
@@ -602,9 +646,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
       _fieldErrors.clear();
     });
 
-    // Если пользователь не может изменять исполнителя, принудительно устанавливаем текущего пользователя
-    // (на случай, если кто-то попытается изменить значение программно)
-    if (!_canChangeAssignee()) {
+    // Если пользователь не может изменять исполнителя и checkbox включен, устанавливаем текущего пользователя
+    if (!_canChangeAssignee() && _isMeAssignee) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final currentUserId = authProvider.user?.id;
       if (currentUserId != null) {

@@ -129,6 +129,7 @@ class Task extends Entity {
   final bool dontForget;
   final String? voiceNoteUrl;
   final String? resultText;
+  final String? resultFileId; // ID файла результата из storage
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String>? observerIds; // ID наблюдателей (для списка задач)
@@ -164,6 +165,7 @@ class Task extends Entity {
     this.dontForget = false,
     this.voiceNoteUrl,
     this.resultText,
+    this.resultFileId,
     required this.createdAt,
     required this.updatedAt,
     this.observerIds,

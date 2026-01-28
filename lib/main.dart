@@ -84,6 +84,10 @@ import 'package:qonbaq/domain/usecases/update_task.dart';
 import 'package:qonbaq/domain/usecases/create_task_comment.dart';
 import 'package:qonbaq/domain/usecases/update_task_comment.dart';
 import 'package:qonbaq/domain/usecases/delete_task_comment.dart';
+import 'package:qonbaq/data/datasources/storage_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/storage_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/storage_repository.dart';
+import 'package:qonbaq/domain/usecases/upload_file.dart';
 import 'package:qonbaq/data/datasources/invite_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/invite_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/invite_repository.dart';
@@ -322,6 +326,13 @@ class MyApp extends StatelessWidget {
     final createTaskComment = CreateTaskComment(taskRepository);
     final updateTaskComment = UpdateTaskComment(taskRepository);
     final deleteTaskComment = DeleteTaskComment(taskRepository);
+
+    // Инициализация зависимостей для storage
+    final storageRemoteDataSource = StorageRemoteDataSourceImpl(apiClient: apiClient);
+    final StorageRepository storageRepository = StorageRepositoryImpl(
+      remoteDataSource: storageRemoteDataSource,
+    );
+    final uploadFile = UploadFile(storageRepository);
 
     // Инициализация зависимостей для приглашений
     final inviteRemoteDataSource = InviteRemoteDataSourceImpl(
@@ -616,6 +627,7 @@ class MyApp extends StatelessWidget {
         Provider<CreateTaskComment>(create: (_) => createTaskComment),
         Provider<UpdateTaskComment>(create: (_) => updateTaskComment),
         Provider<DeleteTaskComment>(create: (_) => deleteTaskComment),
+        Provider<UploadFile>(create: (_) => uploadFile),
         Provider<UserRepository>(create: (_) => userRepository),
         Provider<EmploymentRepository>(create: (_) => employmentRepository),
         Provider<UpdateEmployment>(create: (_) => updateEmployment),

@@ -15,6 +15,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/create_task_form.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/voice_record_widget.dart';
+import '../widgets/task_completion_dialog.dart';
 
 /// Тип фильтра задач
 enum TaskFilter {
@@ -982,6 +983,23 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
 
   /// Отмечает задачу как выполненную с анимацией
   Future<void> _completeTask(Task task) async {
+    // Показываем диалог для ввода результата и загрузки файла
+    final completionResult = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TaskCompletionDialog(
+        taskTitle: task.title,
+      ),
+    );
+
+    // Если пользователь отменил диалог, ничего не делаем
+    if (completionResult == null) {
+      return;
+    }
+
+    final resultText = completionResult['resultText'] as String;
+    final resultFileId = completionResult['resultFileId'] as String?;
+
     final updateTaskUseCase = Provider.of<UpdateTask>(context, listen: false);
     final profileProvider = Provider.of<ProfileProvider>(
       context,
@@ -1015,7 +1033,8 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
       hasControlPoint: task.hasControlPoint,
       dontForget: task.dontForget,
       voiceNoteUrl: task.voiceNoteUrl,
-      resultText: task.resultText,
+      resultText: resultText,
+      resultFileId: resultFileId,
       createdAt: task.createdAt,
       updatedAt: DateTime.now(),
       observerIds: task.observerIds,
