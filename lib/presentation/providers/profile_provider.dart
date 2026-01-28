@@ -141,11 +141,11 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// Получить список бизнесов (только с типом Business или без типа)
+  /// Получить список бизнесов (только с типом Business)
   List<Business> get businessList {
     if (_businesses == null || _businesses!.isEmpty) return [];
     return _businesses!
-        .where((b) => b.type == null || b.type == BusinessType.business)
+        .where((b) => b.type == BusinessType.business)
         .toList();
   }
 
