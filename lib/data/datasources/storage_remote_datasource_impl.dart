@@ -6,6 +6,7 @@ import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
 import '../datasources/storage_remote_datasource.dart';
 import '../models/storage_upload_response.dart';
+import '../models/storage_url_response.dart';
 import '../models/api_response.dart';
 
 /// Реализация удаленного источника данных для storage
@@ -95,6 +96,59 @@ class StorageRemoteDataSourceImpl extends StorageRemoteDataSource {
       } else {
         final json = jsonDecode(responseBody) as Map<String, dynamic>;
         final error = json['error'] as String? ?? 'Ошибка сервера: ${streamedResponse.statusCode}';
+        throw Exception(error);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<StorageUrlResponse> getFileUrl({
+    required String fileId,
+    required String module,
+    int expiresIn = 3600,
+    String? extension,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'module': module,
+        'expiresIn': expiresIn.toString(),
+      };
+      if (extension != null) {
+        queryParams['extension'] = extension;
+      }
+
+      final queryString = queryParams.entries
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+
+      final response = await apiClient.get(
+        '/api/storage/$fileId/url?$queryString',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => StorageUrlResponse.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = json['error'] as String? ?? 'Ошибка получения URL файла';
+        throw Exception(error);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 404) {
+        throw Exception('Файл не найден');
+      } else {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
         throw Exception(error);
       }
     } catch (e) {

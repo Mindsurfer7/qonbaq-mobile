@@ -3,6 +3,7 @@ import '../../core/error/failures.dart';
 import '../../domain/repositories/storage_repository.dart';
 import '../datasources/storage_remote_datasource.dart';
 import '../models/storage_upload_response.dart';
+import '../models/storage_url_response.dart';
 import '../repositories/repository_impl.dart';
 
 /// Реализация репозитория для работы с storage
@@ -30,6 +31,26 @@ class StorageRepositoryImpl extends RepositoryImpl implements StorageRepository 
       return Right(result);
     } catch (e) {
       return Left(ServerFailure('Ошибка при загрузке файла: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, StorageUrlResponse>> getFileUrl({
+    required String fileId,
+    required String module,
+    int expiresIn = 3600,
+    String? extension,
+  }) async {
+    try {
+      final result = await remoteDataSource.getFileUrl(
+        fileId: fileId,
+        module: module,
+        expiresIn: expiresIn,
+        extension: extension,
+      );
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении URL файла: $e'));
     }
   }
 }

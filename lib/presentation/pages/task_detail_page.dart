@@ -17,7 +17,8 @@ import '../widgets/comment_section.dart';
 import '../widgets/comment_item.dart';
 import '../widgets/user_info_row.dart';
 import '../../domain/repositories/chat_repository.dart';
-import 'package:dartz/dartz.dart' hide State, Task;
+import '../../domain/usecases/get_file_url.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Детальная страница задачи
 class TaskDetailPage extends StatefulWidget {
@@ -741,7 +742,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
                                   // Результат
                                   if (_task!.resultText != null &&
-                                      _task!.resultText!.isNotEmpty)
+                                      _task!.resultText!.isNotEmpty ||
+                                      _task!.resultFileId != null)
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -754,20 +756,30 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.shade50,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: Colors.green.shade200),
+                                        if (_task!.resultText != null &&
+                                            _task!.resultText!.isNotEmpty)
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                  color: Colors.green.shade200),
+                                            ),
+                                            child: Text(
+                                              _task!.resultText!,
+                                              style: const TextStyle(fontSize: 16),
+                                            ),
                                           ),
-                                          child: Text(
-                                            _task!.resultText!,
-                                            style: const TextStyle(fontSize: 16),
+                                        if (_task!.resultFileId != null) ...[
+                                          if (_task!.resultText != null &&
+                                              _task!.resultText!.isNotEmpty)
+                                            const SizedBox(height: 12),
+                                          _ResultFileWidget(
+                                            fileId: _task!.resultFileId!,
                                           ),
-                                        ),
+                                        ],
                                         const SizedBox(height: 16),
                                       ],
                                     ),
@@ -856,6 +868,154 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       ),
     );
   }
+}
 
+/// Виджет для отображения файла результата выполнения задачи
+class _ResultFileWidget extends StatefulWidget {
+  final String fileId;
+
+  const _ResultFileWidget({
+    required this.fileId,
+  });
+
+  @override
+  State<_ResultFileWidget> createState() => _ResultFileWidgetState();
+}
+
+class _ResultFileWidgetState extends State<_ResultFileWidget> {
+  bool _isLoading = false;
+  String? _error;
+  String? _fileUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFileUrl();
+  }
+
+  Future<void> _loadFileUrl() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final getFileUrlUseCase = Provider.of<GetFileUrl>(context, listen: false);
+      final result = await getFileUrlUseCase.call(
+        GetFileUrlParams(
+          fileId: widget.fileId,
+          module: 'attachments',
+          expiresIn: 3600,
+        ),
+      );
+
+      result.fold(
+        (failure) {
+          setState(() {
+            _error = failure.message;
+            _isLoading = false;
+          });
+        },
+        (urlResponse) {
+          setState(() {
+            _fileUrl = urlResponse.url;
+            _isLoading = false;
+          });
+        },
+      );
+    } catch (e) {
+      setState(() {
+        _error = 'Ошибка загрузки файла: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _openFile() async {
+    if (_fileUrl == null) return;
+
+    final uri = Uri.parse(_fileUrl!);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть файл'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.attach_file, color: Colors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Файл результата',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                else
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Нажмите для просмотра',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (_fileUrl != null && !_isLoading)
+            IconButton(
+              icon: const Icon(Icons.open_in_new, color: Colors.blue),
+              onPressed: _openFile,
+              tooltip: 'Открыть файл',
+            ),
+        ],
+      ),
+    );
+  }
 }
 

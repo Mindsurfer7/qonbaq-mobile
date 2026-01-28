@@ -60,6 +60,9 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   // bool _dontForget = false;
   String? _assignedToId;
   String? _assignedById;
+  // Параметры регулярности
+  RecurrenceFrequency? _recurrenceFrequency;
+  int? _recurrenceDayOfMonth; // Для monthly: день месяца (1-31)
   // Храним ошибки валидации для отображения в полях
   final Map<String, String> _fieldErrors = {};
   String? _currentUserFullName; // Полное имя текущего пользователя для отображения
@@ -310,6 +313,19 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         _hasControlPoint = true;
       });
       formState.fields['hasControlPoint']?.didChange(true);
+    }
+    // Обработка регулярности
+    if (taskData.isRecurring && taskData.recurrence != null) {
+      setState(() {
+        _isRecurring = true;
+        _recurrenceFrequency = taskData.recurrence!.frequency;
+        _recurrenceDayOfMonth = taskData.recurrence!.dayOfMonth;
+      });
+      formState.fields['isRecurring']?.didChange(true);
+      formState.fields['recurrenceFrequency']?.didChange(taskData.recurrence!.frequency);
+      if (taskData.recurrence!.dayOfMonth != null) {
+        formState.fields['recurrenceDayOfMonth']?.didChange(taskData.recurrence!.dayOfMonth);
+      }
     }
     // if (taskData.dontForget) {
     //   setState(() {
@@ -574,9 +590,113 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
               onChanged: (value) {
                 setState(() {
                   _isRecurring = value ?? false;
+                  // Очищаем параметры регулярности при выключении
+                  if (!_isRecurring) {
+                    _recurrenceFrequency = null;
+                    _recurrenceDayOfMonth = null;
+                    _formKey.currentState?.fields['recurrenceFrequency']?.didChange(null);
+                    _formKey.currentState?.fields['recurrenceDayOfMonth']?.didChange(null);
+                  }
                 });
               },
             ),
+            // Поля для настройки регулярности (показываются только если задача регулярная)
+            if (_isRecurring) ...[
+              const SizedBox(height: 16),
+              // Тип регулярности
+              FormBuilderDropdown<RecurrenceFrequency>(
+                name: 'recurrenceFrequency',
+                decoration: InputDecoration(
+                  labelText: 'Тип регулярности *',
+                  border: const OutlineInputBorder(),
+                  errorText: _fieldErrors['recurrenceFrequency'],
+                  errorMaxLines: 2,
+                ),
+                initialValue: _recurrenceFrequency,
+                dropdownColor: context.appTheme.backgroundSurface,
+                borderRadius: BorderRadius.circular(
+                  context.appTheme.borderRadius,
+                ),
+                selectedItemBuilder: (BuildContext context) {
+                  return [
+                    RecurrenceFrequency.daily,
+                    RecurrenceFrequency.weekly,
+                    RecurrenceFrequency.monthly,
+                  ]
+                      .map<Widget>((RecurrenceFrequency frequency) {
+                    return Text(_getRecurrenceFrequencyText(frequency));
+                  }).toList();
+                },
+                items: [
+                  RecurrenceFrequency.daily,
+                  RecurrenceFrequency.weekly,
+                  RecurrenceFrequency.monthly,
+                ]
+                    .map(
+                      (frequency) => createStyledDropdownItem<RecurrenceFrequency>(
+                        context: context,
+                        value: frequency,
+                        child: Text(_getRecurrenceFrequencyText(frequency)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _recurrenceFrequency = value;
+                    // Очищаем dayOfMonth при смене типа регулярности
+                    if (value != RecurrenceFrequency.monthly) {
+                      _recurrenceDayOfMonth = null;
+                      _formKey.currentState?.fields['recurrenceDayOfMonth']?.didChange(null);
+                    }
+                  });
+                },
+                validator: FormBuilderValidators.required(
+                  errorText: 'Выберите тип регулярности',
+                ),
+              ),
+              // Поле для выбора дня месяца (только для monthly)
+              if (_recurrenceFrequency == RecurrenceFrequency.monthly) ...[
+                const SizedBox(height: 16),
+                FormBuilderDropdown<int>(
+                  name: 'recurrenceDayOfMonth',
+                  decoration: InputDecoration(
+                    labelText: 'День месяца *',
+                    border: const OutlineInputBorder(),
+                    helperText: 'Например, каждое 5 число',
+                    errorText: _fieldErrors['recurrenceDayOfMonth'],
+                    errorMaxLines: 2,
+                  ),
+                  initialValue: _recurrenceDayOfMonth,
+                  dropdownColor: context.appTheme.backgroundSurface,
+                  borderRadius: BorderRadius.circular(
+                    context.appTheme.borderRadius,
+                  ),
+                  selectedItemBuilder: (BuildContext context) {
+                    return List.generate(31, (index) => index + 1)
+                        .map<Widget>((int day) {
+                      return Text('$day число');
+                    }).toList();
+                  },
+                  items: List.generate(31, (index) => index + 1)
+                      .map(
+                        (day) => createStyledDropdownItem<int>(
+                          context: context,
+                          value: day,
+                          child: Text('$day число'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceDayOfMonth = value;
+                    });
+                  },
+                  validator: FormBuilderValidators.required(
+                    errorText: 'Выберите день месяца',
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 8),
 
             // Задача с точкой контроля
@@ -606,16 +726,29 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             const SizedBox(height: 24),
 
             // Инициатор (автоматически устанавливается текущий пользователь)
-            TextFormField(
-              initialValue: _currentUserFullName ?? 'Загрузка...',
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: 'Инициатор',
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.person),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-              ),
+            // Используем UserSelectorWidget для единообразия и правильной загрузки сотрудников
+            Builder(
+              builder: (context) {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final currentUserId = authProvider.user?.id;
+                final initiatorId = _assignedById ?? currentUserId;
+                
+                return AbsorbPointer(
+                  // Блокируем взаимодействие, так как поле read-only
+                  child: Opacity(
+                    opacity: 0.7, // Визуально показываем, что поле неактивно
+                    child: UserSelectorWidget(
+                      businessId: widget.businessId,
+                      userRepository: widget.userRepository,
+                      selectedUserId: initiatorId,
+                      onUserSelected: (_) {
+                        // Игнорируем изменения, так как поле read-only
+                      },
+                      label: 'Инициатор',
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -665,6 +798,24 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
 
+      // Создаем recurrence, если задача регулярная
+      TaskRecurrence? recurrence;
+      if (_isRecurring && _recurrenceFrequency != null) {
+        // Для создания задачи используем временные id и taskId
+        // Они будут заменены на сервере
+        recurrence = TaskRecurrence(
+          id: '', // Будет присвоен на сервере
+          taskId: '', // Будет присвоен на сервере
+          frequency: _recurrenceFrequency!,
+          interval: 1, // По умолчанию интервал = 1
+          dayOfMonth: _recurrenceFrequency == RecurrenceFrequency.monthly
+              ? _recurrenceDayOfMonth
+              : null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }
+
       // Создаем задачу
       final task = Task(
         id: '', // Будет присвоен на сервере
@@ -682,6 +833,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         hasControlPoint: formData['hasControlPoint'] as bool? ?? false,
         dontForget: false, // Поле закомментировано
         customerId: widget.customerId,
+        recurrence: recurrence,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -709,6 +861,19 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         return 'Завершена';
       case TaskStatus.cancelled:
         return 'Отменена';
+    }
+  }
+
+  String _getRecurrenceFrequencyText(RecurrenceFrequency frequency) {
+    switch (frequency) {
+      case RecurrenceFrequency.daily:
+        return 'Ежедневно';
+      case RecurrenceFrequency.weekly:
+        return 'Еженедельно';
+      case RecurrenceFrequency.monthly:
+        return 'Ежемесячно';
+      case RecurrenceFrequency.yearly:
+        return 'Ежегодно';
     }
   }
 }
