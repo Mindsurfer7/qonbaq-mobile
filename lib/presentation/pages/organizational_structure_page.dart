@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../../domain/entities/project.dart';
@@ -921,8 +922,8 @@ class _OrganizationalStructurePageState
 
     final slug = business.slug;
     final linkText = slug != null && slug.isNotEmpty
-        ? 'qonbaq.com/business/$slug'
-        : 'qonbaq.com/business/slug';
+        ? 'booking.qonbaq.com/business/$slug'
+        : 'booking.qonbaq.com/business/slug';
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -943,21 +944,43 @@ class _OrganizationalStructurePageState
               Row(
                 children: [
                   Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12.0),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8.0),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        linkText,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: slug != null && slug.isNotEmpty
-                              ? Colors.blue.shade700
-                              : Colors.grey.shade600,
-                          fontFamily: 'monospace',
+                    child: InkWell(
+                      onTap: () async {
+                        final fullLink = 'https://$linkText';
+                        await Clipboard.setData(ClipboardData(text: fullLink));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text('Ссылка скопирована'),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          linkText,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: slug != null && slug.isNotEmpty
+                                ? Colors.blue.shade700
+                                : Colors.grey.shade600,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ),
                     ),
