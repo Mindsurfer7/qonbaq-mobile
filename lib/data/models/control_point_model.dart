@@ -118,19 +118,23 @@ class ControlPointModel extends ControlPoint implements Model {
     List<ControlPointMetric>? metrics;
     if (json['metrics'] != null) {
       final metricsList = json['metrics'] as List<dynamic>;
-      metrics = metricsList.map((m) {
-        return ControlPointMetric(
-          id: m['id'] as String,
-          controlPointId: m['controlPointId'] as String,
-          name: m['name'] as String,
-          targetValue: (m['targetValue'] as num).toDouble(),
-          unit: _parseMeasurementUnit(m['unit'] as String),
-          customUnit: m['customUnit'] as String?,
-          sortOrder: m['sortOrder'] as int? ?? 0,
-          createdAt: DateTime.parse(m['createdAt'] as String),
-          updatedAt: DateTime.parse(m['updatedAt'] as String),
-        );
-      }).toList();
+      if (metricsList.isNotEmpty) {
+        metrics = metricsList.map((m) {
+          return ControlPointMetric(
+            id: m['id'] as String,
+            controlPointId: m['controlPointId'] as String,
+            name: m['name'] as String,
+            targetValue: (m['targetValue'] as num).toDouble(),
+            unit: _parseMeasurementUnit(m['unit'] as String),
+            customUnit: m['customUnit'] as String?,
+            sortOrder: m['sortOrder'] as int? ?? 0,
+            createdAt: DateTime.parse(m['createdAt'] as String),
+            updatedAt: DateTime.parse(m['updatedAt'] as String),
+          );
+        }).toList();
+      } else {
+        metrics = [];
+      }
     }
 
     // Парсинг observerIds

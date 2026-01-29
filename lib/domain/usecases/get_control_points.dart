@@ -34,7 +34,15 @@ class GetControlPoints
   @override
   Future<Either<Failure, PaginatedResult<ControlPoint>>> call(
       GetControlPointsParams params) async {
-    return await repository.getControlPoints(
+    print('UseCase: Calling repository.getControlPoints with params:');
+    print('  businessId: ${params.businessId}');
+    print('  assignedTo: ${params.assignedTo}');
+    print('  isActive: ${params.isActive}');
+    print('  page: ${params.page}');
+    print('  limit: ${params.limit}');
+    print('  showAll: ${params.showAll}');
+    
+    final result = await repository.getControlPoints(
       businessId: params.businessId,
       assignedTo: params.assignedTo,
       isActive: params.isActive,
@@ -42,5 +50,16 @@ class GetControlPoints
       limit: params.limit,
       showAll: params.showAll,
     );
+    
+    result.fold(
+      (failure) {
+        print('UseCase: Repository returned Left (failure): ${failure.message}');
+      },
+      (success) {
+        print('UseCase: Repository returned Right (success): ${success.items.length} items');
+      },
+    );
+    
+    return result;
   }
 }

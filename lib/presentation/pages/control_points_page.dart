@@ -65,6 +65,14 @@ class _ControlPointsPageState extends State<ControlPointsPage> {
     final getControlPointsUseCase =
         Provider.of<GetControlPoints>(context, listen: false);
 
+    print('Page: Calling useCase with params:');
+    print('  businessId: ${selectedBusiness.id}');
+    print('  isGeneralDirector: $isGeneralDirector');
+    print('  showAll: ${isGeneralDirector ? true : null}');
+    print('  assignedTo: ${isGeneralDirector ? null : currentUser?.id}');
+    print('  page: $_page');
+    print('  limit: $_pageLimit');
+    
     final result = await getControlPointsUseCase.call(
       GetControlPointsParams(
         businessId: selectedBusiness.id,
@@ -77,6 +85,7 @@ class _ControlPointsPageState extends State<ControlPointsPage> {
       ),
     );
 
+    print('Page: UseCase returned result');
     result.fold(
       (failure) {
         setState(() {
@@ -93,6 +102,10 @@ class _ControlPointsPageState extends State<ControlPointsPage> {
         }
       },
       (paginatedResult) {
+        // Отладочная информация
+        print('ControlPoints loaded: ${paginatedResult.items.length} items');
+        print('Meta: ${paginatedResult.meta?.total} total, page ${paginatedResult.meta?.page}');
+        
         setState(() {
           _isLoading = false;
           if (refresh) {
@@ -102,6 +115,9 @@ class _ControlPointsPageState extends State<ControlPointsPage> {
           }
           _meta = paginatedResult.meta;
         });
+        
+        // Дополнительная отладочная информация
+        print('ControlPoints in state: ${_controlPoints.length} items');
       },
     );
   }

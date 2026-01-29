@@ -250,7 +250,12 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadControlPoints(String businessId) async {
-    if (_isLoadingControlPoints) return;
+    if (_isLoadingControlPoints) {
+      print('TasksPage: _loadControlPoints already loading, skipping');
+      return;
+    }
+
+    print('TasksPage: _loadControlPoints called with businessId: $businessId');
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final profileProvider = Provider.of<ProfileProvider>(
@@ -264,12 +269,21 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     final isGeneralDirector = currentUser?.isAdmin == true ||
         profile?.orgStructure.isGeneralDirector == true;
 
+    print('TasksPage: isGeneralDirector: $isGeneralDirector');
+    print('TasksPage: currentUser?.id: ${currentUser?.id}');
+
     setState(() {
       _isLoadingControlPoints = true;
     });
 
     final getControlPointsUseCase =
         Provider.of<GetControlPoints>(context, listen: false);
+
+    print('TasksPage: Calling useCase with params:');
+    print('  businessId: $businessId');
+    print('  showAll: ${isGeneralDirector ? true : null}');
+    print('  assignedTo: ${isGeneralDirector ? null : currentUser?.id}');
+    print('  isActive: true');
 
     final result = await getControlPointsUseCase.call(
       GetControlPointsParams(
@@ -286,16 +300,19 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
 
     result.fold(
       (failure) {
+        print('TasksPage: UseCase returned Left (failure): ${failure.message}');
         setState(() {
           _isLoadingControlPoints = false;
           // Ошибки точек контроля не критичны, просто не показываем их
         });
       },
       (paginatedResult) {
+        print('TasksPage: UseCase returned Right (success): ${paginatedResult.items.length} items');
         setState(() {
           _isLoadingControlPoints = false;
           _controlPoints = paginatedResult.items;
         });
+        print('TasksPage: ControlPoints in state: ${_controlPoints.length} items');
       },
     );
   }
@@ -714,7 +731,11 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
             ? employeeTasks.isNotEmpty
             : observedTasks.isNotEmpty);
 
-    if (!hasTasksToShow) {
+    // Проверяем, есть ли контрольные точки для отображения (только для текущих задач)
+    final hasControlPointsToShow = listType == TaskListType.current && _controlPoints.isNotEmpty;
+
+    // Если нет ни задач, ни контрольных точек, показываем пустой экран
+    if (!hasTasksToShow && !hasControlPointsToShow) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -817,6 +838,15 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
 
           // Секция "Точки контроля" (только для текущих задач)
           if (listType == TaskListType.current && _controlPoints.isNotEmpty) ...[
+            // Отладочная информация
+            Builder(
+              builder: (context) {
+                print('TasksPage: Building UI for current tasks');
+                print('TasksPage: _controlPoints.length: ${_controlPoints.length}');
+                print('TasksPage: _controlPoints.isNotEmpty: ${_controlPoints.isNotEmpty}');
+                return const SizedBox.shrink();
+              },
+            ),
             if (myTasks.isNotEmpty ||
                 (shouldShowAllTasks && employeeTasks.isNotEmpty) ||
                 (!shouldShowAllTasks && observedTasks.isNotEmpty))

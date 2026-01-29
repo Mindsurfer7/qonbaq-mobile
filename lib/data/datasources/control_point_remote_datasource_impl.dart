@@ -50,8 +50,20 @@ class ControlPointRemoteDataSourceImpl
         headers: _getAuthHeaders(),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Отладочная информация
+        print('ControlPoints API response: status=${response.statusCode}');
+        print('ControlPoints API response body keys: ${json.keys.toList()}');
+        if (json['data'] != null) {
+          final dataList = json['data'] as List<dynamic>;
+          print('ControlPoints API data count: ${dataList.length}');
+          if (dataList.isNotEmpty) {
+            print('ControlPoints API first item keys: ${(dataList[0] as Map<String, dynamic>).keys.toList()}');
+          }
+        }
+        
         final apiResponse = ApiResponse.fromJson(
           json,
           (data) => (data as List<dynamic>)
@@ -60,13 +72,21 @@ class ControlPointRemoteDataSourceImpl
                   ))
               .toList(),
         );
+        
+        print('ControlPoints parsed: ${apiResponse.data.length} items');
         return apiResponse;
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        throw Exception('Нет доступа');
       } else {
         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is FormatException) {
+        // Детальная информация об ошибке парсинга
+        throw Exception('Ошибка парсинга данных: ${e.message}');
+      }
       if (e is Exception) {
         rethrow;
       }
