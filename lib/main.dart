@@ -89,6 +89,7 @@ import 'package:qonbaq/data/repositories/storage_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/storage_repository.dart';
 import 'package:qonbaq/domain/usecases/upload_file.dart';
 import 'package:qonbaq/domain/usecases/get_file_url.dart';
+import 'package:qonbaq/domain/usecases/download_file.dart';
 import 'package:qonbaq/data/datasources/invite_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/invite_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/invite_repository.dart';
@@ -335,6 +336,7 @@ class MyApp extends StatelessWidget {
     );
     final uploadFile = UploadFile(storageRepository);
     final getFileUrl = GetFileUrl(storageRepository);
+    final downloadFile = DownloadFile(storageRepository);
 
     // Инициализация зависимостей для приглашений
     final inviteRemoteDataSource = InviteRemoteDataSourceImpl(
@@ -631,6 +633,7 @@ class MyApp extends StatelessWidget {
         Provider<DeleteTaskComment>(create: (_) => deleteTaskComment),
         Provider<UploadFile>(create: (_) => uploadFile),
         Provider<GetFileUrl>(create: (_) => getFileUrl),
+        Provider<DownloadFile>(create: (_) => downloadFile),
         Provider<UserRepository>(create: (_) => userRepository),
         Provider<EmploymentRepository>(create: (_) => employmentRepository),
         Provider<UpdateEmployment>(create: (_) => updateEmployment),

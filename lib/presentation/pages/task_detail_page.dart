@@ -18,7 +18,14 @@ import '../widgets/comment_item.dart';
 import '../widgets/user_info_row.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/usecases/get_file_url.dart';
+import '../../domain/usecases/download_file.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path/path.dart' as path;
 
 /// Детальная страница задачи
 class TaskDetailPage extends StatefulWidget {
@@ -723,18 +730,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                         ),
                                         const SizedBox(height: 8),
                                         ...(_task!.attachments!.map((att) =>
-                                            ListTile(
-                                              leading: const Icon(Icons.attach_file),
-                                              title: Text(att.fileName ??
-                                                  'Без имени'),
-                                              subtitle: Text(att.fileType ?? ''),
-                                              trailing: att.isResult
-                                                  ? const Chip(
-                                                      label: Text('Результат'),
-                                                      backgroundColor:
-                                                          Colors.green,
-                                                    )
-                                                  : null,
+                                            _AttachmentWidget(
+                                              attachment: att,
                                             ))),
                                         const SizedBox(height: 16),
                                       ],
@@ -1019,3 +1016,192 @@ class _ResultFileWidgetState extends State<_ResultFileWidget> {
   }
 }
 
+/// Виджет для отображения и скачивания вложения задачи
+class _AttachmentWidget extends StatefulWidget {
+  final TaskAttachment attachment;
+
+  const _AttachmentWidget({
+    required this.attachment,
+  });
+
+  @override
+  State<_AttachmentWidget> createState() => _AttachmentWidgetState();
+}
+
+class _AttachmentWidgetState extends State<_AttachmentWidget> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadFile() async {
+    if (_isDownloading) return;
+
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      // Определяем, является ли fileUrl ключом или fileId
+      // Если fileUrl выглядит как UUID или ID, используем как fileId
+      // Иначе используем как key
+      final fileUrl = widget.attachment.fileUrl;
+      final isLikelyFileId = fileUrl.length == 36 && 
+          fileUrl.contains('-') && 
+          !fileUrl.contains('/');
+
+      String? downloadUrl;
+
+      if (isLikelyFileId) {
+        // Используем fileId
+        final downloadFileUseCase = Provider.of<DownloadFile>(context, listen: false);
+        final result = await downloadFileUseCase.call(
+          DownloadFileParams(
+            fileId: fileUrl,
+            module: 'attachments',
+            extension: widget.attachment.fileType?.split('.').last,
+            expiresIn: 3600,
+          ),
+        );
+
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Ошибка получения URL: ${failure.message}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          (urlResponse) {
+            downloadUrl = urlResponse.url;
+          },
+        );
+      } else {
+        // Используем key
+        final downloadFileUseCase = Provider.of<DownloadFile>(context, listen: false);
+        final result = await downloadFileUseCase.call(
+          DownloadFileParams(
+            key: fileUrl,
+            module: 'attachments',
+            expiresIn: 3600,
+          ),
+        );
+
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Ошибка получения URL: ${failure.message}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          (urlResponse) {
+            downloadUrl = urlResponse.url;
+          },
+        );
+      }
+
+      if (downloadUrl == null) {
+        setState(() {
+          _isDownloading = false;
+        });
+        return;
+      }
+
+      // Скачиваем файл по полученной URL
+      final response = await http.get(Uri.parse(downloadUrl!));
+      
+      if (response.statusCode != 200) {
+        throw Exception('Ошибка скачивания файла: ${response.statusCode}');
+      }
+
+      if (kIsWeb) {
+        // Для веба открываем файл в новой вкладке
+        final uri = Uri.parse(downloadUrl!);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Не удалось открыть файл');
+        }
+      } else {
+        // Для мобильных платформ сохраняем файл и используем share
+        final fileName = widget.attachment.fileName ?? 
+            'file_${widget.attachment.id}${widget.attachment.fileType != null ? '.${widget.attachment.fileType!.split('.').last}' : ''}';
+        
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = path.join(directory.path, fileName);
+        final file = File(filePath);
+        
+        await file.writeAsBytes(response.bodyBytes);
+        
+        // Используем share для открытия файла
+        final xFile = XFile(filePath);
+        await Share.shareXFiles(
+          [xFile],
+          text: widget.attachment.fileName ?? 'Файл',
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Файл успешно скачан'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка скачивания файла: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.attach_file),
+      title: Text(widget.attachment.fileName ?? 'Без имени'),
+      subtitle: Text(widget.attachment.fileType ?? ''),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.attachment.isResult)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Chip(
+                label: Text('Результат'),
+                backgroundColor: Colors.green,
+              ),
+            ),
+          if (_isDownloading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.download),
+              onPressed: _downloadFile,
+              tooltip: 'Скачать файл',
+            ),
+        ],
+      ),
+    );
+  }
+}

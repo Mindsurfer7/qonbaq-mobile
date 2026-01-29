@@ -53,4 +53,22 @@ class StorageRepositoryImpl extends RepositoryImpl implements StorageRepository 
       return Left(ServerFailure('Ошибка при получении URL файла: $e'));
     }
   }
+
+  @override
+  Future<Either<Failure, StorageUrlResponse>> getFileUrlByKey({
+    required String key,
+    required String bucket,
+    int expiresIn = 3600,
+  }) async {
+    try {
+      final result = await remoteDataSource.getFileUrlByKey(
+        key: key,
+        bucket: bucket,
+        expiresIn: expiresIn,
+      );
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при получении URL файла: $e'));
+    }
+  }
 }

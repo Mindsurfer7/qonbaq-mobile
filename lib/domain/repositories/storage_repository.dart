@@ -32,4 +32,15 @@ abstract class StorageRepository extends Repository {
     int expiresIn = 3600,
     String? extension,
   });
+
+  /// Получить временную ссылку на файл по key
+  /// 
+  /// [key] - ключ файла в storage (bucket path)
+  /// [bucket] - название bucket: 'attachments', 'assets', или 'receipts'
+  /// [expiresIn] - время жизни ссылки в секундах (по умолчанию 3600)
+  Future<Either<Failure, StorageUrlResponse>> getFileUrlByKey({
+    required String key,
+    required String bucket,
+    int expiresIn = 3600,
+  });
 }

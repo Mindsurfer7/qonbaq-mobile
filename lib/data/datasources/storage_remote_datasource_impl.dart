@@ -159,6 +159,56 @@ class StorageRemoteDataSourceImpl extends StorageRemoteDataSource {
     }
   }
 
+  @override
+  Future<StorageUrlResponse> getFileUrlByKey({
+    required String key,
+    required String bucket,
+    int expiresIn = 3600,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'bucket': bucket,
+        'key': key,
+        'expiresIn': expiresIn.toString(),
+      };
+
+      final queryString = queryParams.entries
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+
+      final response = await apiClient.get(
+        '/api/storage/url?$queryString',
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiResponse = ApiResponse.fromJson(
+          json,
+          (data) => StorageUrlResponse.fromJson(data as Map<String, dynamic>),
+        );
+        return apiResponse.data;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = json['error'] as String? ?? 'Ошибка получения URL файла';
+        throw Exception(error);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 404) {
+        throw Exception('Файл не найден');
+      } else {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        throw Exception(error);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
   /// Получить максимальный размер файла для модуля (в байтах)
   int _getMaxSizeForModule(String module) {
     switch (module) {
