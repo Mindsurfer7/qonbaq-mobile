@@ -77,6 +77,11 @@ import 'package:qonbaq/domain/usecases/update_business.dart';
 import 'package:qonbaq/data/datasources/task_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
+import 'package:qonbaq/data/datasources/control_point_remote_datasource_impl.dart';
+import 'package:qonbaq/data/repositories/control_point_repository_impl.dart';
+import 'package:qonbaq/domain/repositories/control_point_repository.dart';
+import 'package:qonbaq/domain/usecases/get_control_points.dart';
+import 'package:qonbaq/domain/usecases/get_control_point.dart';
 import 'package:qonbaq/domain/usecases/create_task.dart';
 import 'package:qonbaq/domain/usecases/get_tasks.dart';
 import 'package:qonbaq/domain/usecases/get_task_by_id.dart';
@@ -328,6 +333,16 @@ class MyApp extends StatelessWidget {
     final createTaskComment = CreateTaskComment(taskRepository);
     final updateTaskComment = UpdateTaskComment(taskRepository);
     final deleteTaskComment = DeleteTaskComment(taskRepository);
+
+    // Инициализация зависимостей для точек контроля
+    final controlPointRemoteDataSource = ControlPointRemoteDataSourceImpl(
+      apiClient: apiClient,
+    );
+    final ControlPointRepository controlPointRepository = ControlPointRepositoryImpl(
+      remoteDataSource: controlPointRemoteDataSource,
+    );
+    final getControlPoints = GetControlPoints(controlPointRepository);
+    final getControlPoint = GetControlPoint(controlPointRepository);
 
     // Инициализация зависимостей для storage
     final storageRemoteDataSource = StorageRemoteDataSourceImpl(apiClient: apiClient);
@@ -682,6 +697,8 @@ class MyApp extends StatelessWidget {
         Provider<GetCustomer>(create: (_) => getCustomer),
         Provider<GetCustomerContacts>(create: (_) => getCustomerContacts),
         Provider<AssignCustomerResponsible>(create: (_) => assignCustomerResponsible),
+        Provider<GetControlPoints>(create: (_) => getControlPoints),
+        Provider<GetControlPoint>(create: (_) => getControlPoint),
         ChangeNotifierProvider<AudioRecordingService>(
           create: (_) => audioRecordingService,
         ),

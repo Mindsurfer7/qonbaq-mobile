@@ -11,6 +11,13 @@ import 'customer_model.dart';
 
 /// Модель задачи
 class TaskModel extends Task implements Model {
+  // Временные поля для создания задачи (не сохраняются в entity)
+  final String? _timeOfDay; // Время создания задачи в формате "HH:MM"
+  final DateTime? _startDate; // Дата начала создания задач
+  final int? _deadlineOffset; // Смещение дедлайна в часах
+  final List<Map<String, dynamic>>?
+  _controlPointMetrics; // Метрики для точки контроля
+
   const TaskModel({
     required super.id,
     required super.businessId,
@@ -44,7 +51,14 @@ class TaskModel extends Task implements Model {
     super.comments,
     super.approval,
     super.customer,
-  });
+    String? timeOfDay,
+    DateTime? startDate,
+    int? deadlineOffset,
+    List<Map<String, dynamic>>? controlPointMetrics,
+  }) : _timeOfDay = timeOfDay,
+       _startDate = startDate,
+       _deadlineOffset = deadlineOffset,
+       _controlPointMetrics = controlPointMetrics;
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     // Парсинг business
@@ -380,6 +394,31 @@ class TaskModel extends Task implements Model {
     }
   }
 
+  static String measurementUnitToString(MeasurementUnit unit) {
+    switch (unit) {
+      case MeasurementUnit.kilogram:
+        return 'KILOGRAM';
+      case MeasurementUnit.gram:
+        return 'GRAM';
+      case MeasurementUnit.ton:
+        return 'TON';
+      case MeasurementUnit.meter:
+        return 'METER';
+      case MeasurementUnit.kilometer:
+        return 'KILOMETER';
+      case MeasurementUnit.hour:
+        return 'HOUR';
+      case MeasurementUnit.minute:
+        return 'MINUTE';
+      case MeasurementUnit.piece:
+        return 'PIECE';
+      case MeasurementUnit.liter:
+        return 'LITER';
+      case MeasurementUnit.custom:
+        return 'CUSTOM';
+    }
+  }
+
   /// Форматирование даты в ISO8601 с указанием часового пояса UTC
   /// Формат: YYYY-MM-DDTHH:mm:ss.000Z (с миллисекундами и Z для UTC)
   /// Бэкенд ожидает полный формат ISO 8601 с указанием часового пояса
@@ -485,10 +524,10 @@ class TaskModel extends Task implements Model {
         'assignedBy': assignedBy,
       if (assignmentDate != null)
         'assignmentDate': _formatDateTime(assignmentDate!),
-      if (deadline != null) 'deadline': _formatDateTime(deadline!),
+      // Для обычных задач отправляем deadline
+      if (!isRecurring && !hasControlPoint && deadline != null)
+        'deadline': _formatDateTime(deadline!),
       if (isImportant) 'isImportant': isImportant,
-      if (isRecurring) 'isRecurring': isRecurring,
-      if (hasControlPoint) 'hasControlPoint': hasControlPoint,
       if (dontForget) 'dontForget': dontForget,
       if (approvalId != null && approvalId!.isNotEmpty)
         'approvalId': approvalId,
@@ -502,17 +541,30 @@ class TaskModel extends Task implements Model {
         'resultFileId': resultFileId,
       if (observerIds != null && observerIds!.isNotEmpty)
         'observerIds': observerIds,
-      if (recurrence != null)
-        'recurrence': {
+      // Флаги типа задачи
+      if (isRecurring) 'isRecurring': isRecurring,
+      if (hasControlPoint) 'isControlPoint': hasControlPoint,
+      // Поля для регулярных задач и точек контроля
+      if (isRecurring || hasControlPoint) ...{
+        if (recurrence != null)
           'frequency': _recurrenceFrequencyToString(recurrence!.frequency),
-          'interval': recurrence!.interval,
-          if (recurrence!.endDate != null)
-            'endDate': _formatDateTime(recurrence!.endDate!),
-          if (recurrence!.daysOfWeek != null)
-            'daysOfWeek': recurrence!.daysOfWeek,
-          if (recurrence!.dayOfMonth != null)
-            'dayOfMonth': recurrence!.dayOfMonth,
-        },
+        if (recurrence != null) 'interval': recurrence!.interval,
+        if (_timeOfDay != null && _timeOfDay.isNotEmpty)
+          'timeOfDay': _timeOfDay,
+        if (recurrence?.daysOfWeek != null)
+          'daysOfWeek': recurrence!.daysOfWeek,
+        if (recurrence?.dayOfMonth != null)
+          'dayOfMonth': recurrence!.dayOfMonth,
+        if (_startDate != null) 'startDate': _formatDateTime(_startDate),
+        if (recurrence?.endDate != null)
+          'endDate': _formatDateTime(recurrence!.endDate!),
+        if (_deadlineOffset != null) 'deadlineOffset': _deadlineOffset,
+      },
+      // Метрики для точек контроля
+      if (hasControlPoint &&
+          _controlPointMetrics != null &&
+          _controlPointMetrics.isNotEmpty)
+        'metrics': _controlPointMetrics,
     };
   }
 
@@ -551,7 +603,13 @@ class TaskModel extends Task implements Model {
     );
   }
 
-  factory TaskModel.fromEntity(Task task) {
+  factory TaskModel.fromEntity(
+    Task task, {
+    String? timeOfDay,
+    DateTime? startDate,
+    int? deadlineOffset,
+    List<Map<String, dynamic>>? controlPointMetrics,
+  }) {
     return TaskModel(
       id: task.id,
       businessId: task.businessId,
@@ -585,6 +643,10 @@ class TaskModel extends Task implements Model {
       comments: task.comments,
       approval: task.approval,
       customer: task.customer,
+      timeOfDay: timeOfDay,
+      startDate: startDate,
+      deadlineOffset: deadlineOffset,
+      controlPointMetrics: controlPointMetrics,
     );
   }
 }

@@ -117,9 +117,9 @@ class _RememberPageState extends State<RememberPage> {
                     child: CreateTaskForm(
                       businessId: selectedBusiness.id,
                       userRepository: userRepository,
-                      onSubmit: (task) async {
+                      onSubmit: (taskModel) async {
                         final result = await createTaskUseCase.call(
-                          CreateTaskParams(task: task, inboxItemId: item.id),
+                          CreateTaskParams(task: taskModel, inboxItemId: item.id),
                         );
 
                         result.fold(

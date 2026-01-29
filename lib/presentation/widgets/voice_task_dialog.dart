@@ -182,14 +182,14 @@ class _VoiceTaskDialogState extends State<VoiceTaskDialog> {
                     _error = error;
                   });
                 },
-                onSubmit: (task) async {
+                onSubmit: (taskModel) async {
                   setState(() {
                     _error = null;
                     _validationErrors = null;
                   });
 
                   final result = await widget.createTaskUseCase.call(
-                    CreateTaskParams(task: task),
+                    CreateTaskParams(task: taskModel),
                   );
 
                   result.fold(

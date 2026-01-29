@@ -29,6 +29,20 @@ enum RecurrenceFrequency {
   yearly,
 }
 
+/// Единица измерения для метрик точек контроля
+enum MeasurementUnit {
+  kilogram,
+  gram,
+  ton,
+  meter,
+  kilometer,
+  hour,
+  minute,
+  piece,
+  liter,
+  custom,
+}
+
 /// Параметры рекуррентности задачи
 class TaskRecurrence {
   final String id;

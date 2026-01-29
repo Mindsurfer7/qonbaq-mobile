@@ -20,7 +20,9 @@ class TaskRepositoryImpl extends RepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, Task>> createTask(Task task, {String? inboxItemId}) async {
     try {
-      final taskModel = TaskModel.fromEntity(task);
+      final taskModel = task is TaskModel 
+          ? task 
+          : TaskModel.fromEntity(task);
       final createdTask = await remoteDataSource.createTask(taskModel, inboxItemId: inboxItemId);
       return Right(createdTask.toEntity());
     } on ValidationException catch (e) {

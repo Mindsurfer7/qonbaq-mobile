@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/business.dart';
+import '../../domain/entities/user_profile.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/get_tasks.dart';
 import '../../domain/usecases/update_task.dart';
@@ -16,6 +17,9 @@ import '../widgets/create_task_form.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/voice_record_widget.dart';
 import '../widgets/task_completion_dialog.dart';
+import '../widgets/control_point_completion_dialog.dart';
+import '../../domain/entities/control_point.dart';
+import '../../domain/usecases/get_control_points.dart';
 
 /// Тип фильтра задач
 enum TaskFilter {
@@ -44,6 +48,10 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   TaskFilter _taskFilter = TaskFilter.myTasks; // По умолчанию "Мои задачи"
   late TabController _tabController;
   TaskListType _currentListType = TaskListType.current;
+
+  // Для точек контроля
+  bool _isLoadingControlPoints = false;
+  List<ControlPoint> _controlPoints = [];
 
   // Для анимации выполнения задач
   String? _animatingTaskId;
@@ -232,6 +240,61 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         setState(() {
           _isLoadingTasks = false;
           _tasks = tasks;
+        });
+        // Загружаем точки контроля после загрузки задач
+        if (businessId != null) {
+          _loadControlPoints(businessId);
+        }
+      },
+    );
+  }
+
+  Future<void> _loadControlPoints(String businessId) async {
+    if (_isLoadingControlPoints) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final currentUser = authProvider.user;
+    final profile = profileProvider.profile;
+
+    // Проверяем, является ли пользователь гендиректором
+    final isGeneralDirector = currentUser?.isAdmin == true ||
+        profile?.orgStructure.isGeneralDirector == true;
+
+    setState(() {
+      _isLoadingControlPoints = true;
+    });
+
+    final getControlPointsUseCase =
+        Provider.of<GetControlPoints>(context, listen: false);
+
+    final result = await getControlPointsUseCase.call(
+      GetControlPointsParams(
+        businessId: businessId,
+        // Для гендиректора передаем showAll=true, чтобы получить все точки контроля бизнеса
+        showAll: isGeneralDirector ? true : null,
+        // Для обычных пользователей показываем только их точки контроля
+        assignedTo: isGeneralDirector ? null : currentUser?.id,
+        isActive: true, // Показываем только активные точки контроля
+        page: 1,
+        limit: 50, // Загружаем достаточно для отображения
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLoadingControlPoints = false;
+          // Ошибки точек контроля не критичны, просто не показываем их
+        });
+      },
+      (paginatedResult) {
+        setState(() {
+          _isLoadingControlPoints = false;
+          _controlPoints = paginatedResult.items;
         });
       },
     );
@@ -675,6 +738,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     return RefreshIndicator(
       onRefresh: () async {
         await _loadTasks(getTasksUseCase, selectedBusiness.id);
+        await _loadControlPoints(selectedBusiness.id);
       },
       child: ListView(
         padding: const EdgeInsets.all(8),
@@ -749,6 +813,32 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
               ),
             ),
             ...observedTasks.map((task) => _buildTaskCard(task, listType)),
+          ],
+
+          // Секция "Точки контроля" (только для текущих задач)
+          if (listType == TaskListType.current && _controlPoints.isNotEmpty) ...[
+            if (myTasks.isNotEmpty ||
+                (shouldShowAllTasks && employeeTasks.isNotEmpty) ||
+                (!shouldShowAllTasks && observedTasks.isNotEmpty))
+              const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.assessment, size: 20, color: Colors.purple),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Точки контроля',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ..._controlPoints.map((controlPoint) => _buildControlPointCard(controlPoint)),
           ],
         ],
       ),
@@ -981,24 +1071,170 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     return card;
   }
 
-  /// Отмечает задачу как выполненную с анимацией
-  Future<void> _completeTask(Task task) async {
-    // Показываем диалог для ввода результата и загрузки файла
-    final completionResult = await showDialog<Map<String, dynamic>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => TaskCompletionDialog(
-        taskTitle: task.title,
+  String _getFrequencyText(RecurrenceFrequency frequency) {
+    switch (frequency) {
+      case RecurrenceFrequency.daily:
+        return 'Ежедневно';
+      case RecurrenceFrequency.weekly:
+        return 'Еженедельно';
+      case RecurrenceFrequency.monthly:
+        return 'Ежемесячно';
+      case RecurrenceFrequency.yearly:
+        return 'Ежегодно';
+    }
+  }
+
+  String _getUserDisplayName(ProfileUser user) {
+    final parts = <String>[];
+    if (user.lastName != null && user.lastName!.isNotEmpty) {
+      parts.add(user.lastName!);
+    }
+    if (user.firstName != null && user.firstName!.isNotEmpty) {
+      parts.add(user.firstName!);
+    }
+    if (user.patronymic != null && user.patronymic!.isNotEmpty) {
+      parts.add(user.patronymic!);
+    }
+    return parts.isEmpty ? user.email : parts.join(' ');
+  }
+
+  /// Строит карточку точки контроля
+  Widget _buildControlPointCard(ControlPoint controlPoint) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          Icons.assessment,
+          color: controlPoint.isActive ? Colors.purple : Colors.grey,
+        ),
+        title: Text(
+          controlPoint.title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: controlPoint.isActive ? null : Colors.grey,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (controlPoint.description != null &&
+                controlPoint.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  controlPoint.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.repeat, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  '${_getFrequencyText(controlPoint.frequency)} (каждые ${controlPoint.interval})',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            if (controlPoint.assignee != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    _getUserDisplayName(controlPoint.assignee!),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+            if (controlPoint.metrics != null && controlPoint.metrics!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.trending_up, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Метрик: ${controlPoint.metrics!.length}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (controlPoint.isActive)
+              Icon(Icons.check_circle, color: Colors.green, size: 20)
+            else
+              Icon(Icons.cancel, color: Colors.grey, size: 20),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () {
+          // TODO: Переход на детальную страницу точки контроля
+          // Пока можно показать snackbar или открыть диалог
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Точка контроля: ${controlPoint.title}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  /// Отмечает задачу как выполненную с анимацией
+  Future<void> _completeTask(Task task) async {
+    Map<String, dynamic>? completionResult;
+
+    // Проверяем тип задачи и показываем соответствующий диалог
+    if (task.hasControlPoint && task.indicators != null && task.indicators!.isNotEmpty) {
+      // Для точки контроля показываем диалог с метриками
+      completionResult = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ControlPointCompletionDialog(
+          taskTitle: task.title,
+          indicators: task.indicators!,
+        ),
+      );
+    } else {
+      // Для обычной задачи или регулярной задачи показываем диалог с resultText и файлом
+      completionResult = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TaskCompletionDialog(
+          taskTitle: task.title,
+        ),
+      );
+    }
 
     // Если пользователь отменил диалог, ничего не делаем
     if (completionResult == null) {
       return;
     }
 
-    final resultText = completionResult['resultText'] as String;
-    final resultFileId = completionResult['resultFileId'] as String?;
+    // Извлекаем данные в зависимости от типа задачи
+    String? resultText;
+    String? resultFileId;
+    List<TaskIndicator>? updatedIndicators;
+
+    if (task.hasControlPoint && task.indicators != null && task.indicators!.isNotEmpty) {
+      // Для точки контроля получаем обновленные метрики
+      updatedIndicators = completionResult['indicators'] as List<TaskIndicator>;
+    } else {
+      // Для обычной задачи получаем resultText и resultFileId
+      resultText = completionResult['resultText'] as String?;
+      resultFileId = completionResult['resultFileId'] as String?;
+    }
 
     final updateTaskUseCase = Provider.of<UpdateTask>(context, listen: false);
     final profileProvider = Provider.of<ProfileProvider>(
@@ -1033,13 +1269,17 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
       hasControlPoint: task.hasControlPoint,
       dontForget: task.dontForget,
       voiceNoteUrl: task.voiceNoteUrl,
+      // Для точки контроля resultText и resultFileId должны быть null
+      // Для обычной задачи - заполняются из диалога
       resultText: resultText,
       resultFileId: resultFileId,
       createdAt: task.createdAt,
       updatedAt: DateTime.now(),
       observerIds: task.observerIds,
       attachments: task.attachments,
-      indicators: task.indicators,
+      // Для точки контроля используем обновленные метрики с actualValue
+      // Для обычной задачи - оставляем исходные метрики
+      indicators: updatedIndicators ?? task.indicators,
       recurrence: task.recurrence,
       business: task.business,
       assignee: task.assignee,
@@ -1202,9 +1442,9 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     _error = error;
                   });
                 },
-                onSubmit: (task) async {
+                onSubmit: (taskModel) async {
                   final result = await widget.createTaskUseCase.call(
-                    CreateTaskParams(task: task),
+                    CreateTaskParams(task: taskModel),
                   );
 
                   result.fold(

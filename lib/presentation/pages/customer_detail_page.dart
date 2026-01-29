@@ -965,9 +965,9 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     _error = error;
                   });
                 },
-                onSubmit: (task) async {
+                onSubmit: (taskModel) async {
                   final result = await widget.createTaskUseCase.call(
-                    CreateTaskParams(task: task),
+                    CreateTaskParams(task: taskModel),
                   );
 
                   result.fold(
