@@ -813,8 +813,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final frequencyText = _getControlPointFrequencyText(controlPoint);
     return InkWell(
       onTap: () {
-        // TODO: Открыть детальную страницу точки контроля
-        // Navigator.of(context).pushNamed('/control-points/detail', arguments: controlPoint.id);
+        Navigator.of(context).pushNamed(
+          '/control-points/detail',
+          arguments: controlPoint.id,
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),

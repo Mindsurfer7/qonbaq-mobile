@@ -31,6 +31,7 @@ import 'package:qonbaq/presentation/pages/tasks_crm_page.dart';
 import 'package:qonbaq/presentation/pages/operational_tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_card_page.dart';
 import 'package:qonbaq/presentation/pages/control_points_page.dart';
+import 'package:qonbaq/presentation/pages/control_point_detail_page.dart';
 import 'package:qonbaq/presentation/pages/business_processes_page.dart';
 import 'package:qonbaq/presentation/pages/construction_page.dart';
 import 'package:qonbaq/presentation/pages/production_page.dart';
@@ -760,6 +761,17 @@ class MyApp extends StatelessWidget {
                   (context) => const TaskCardPage(),
               '/business/operational/tasks/task_card/control_points':
                   (context) => const ControlPointsPage(),
+              '/control-points/detail': (context) {
+                final controlPointId =
+                    ModalRoute.of(context)!.settings.arguments as String?;
+                if (controlPointId == null) {
+                  return Scaffold(
+                    appBar: AppBar(title: const Text('Точка контроля')),
+                    body: Center(child: Text('ID точки контроля не указан')),
+                  );
+                }
+                return ControlPointDetailPage(controlPointId: controlPointId);
+              },
               '/business/operational/business_processes':
                   (context) => const BusinessProcessesPage(),
               '/business/operational/construction':
