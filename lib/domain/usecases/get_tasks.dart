@@ -16,6 +16,13 @@ class GetTasksParams {
   final bool? dontForget;
   final String? customerId;
   final bool? hasCustomer;
+  final bool? hasRecurringTask;
+  final DateTime? scheduledDate;
+  final bool? deadlineToday;
+  final DateTime? deadlineDate;
+  final String? recurringTaskId;
+  final String? controlPointId;
+  final bool? showAll;
   final int? page;
   final int? limit;
 
@@ -30,6 +37,13 @@ class GetTasksParams {
     this.dontForget,
     this.customerId,
     this.hasCustomer,
+    this.hasRecurringTask,
+    this.scheduledDate,
+    this.deadlineToday,
+    this.deadlineDate,
+    this.recurringTaskId,
+    this.controlPointId,
+    this.showAll,
     this.page,
     this.limit,
   });
@@ -54,6 +68,13 @@ class GetTasks implements UseCase<List<Task>, GetTasksParams> {
       dontForget: params.dontForget,
       customerId: params.customerId,
       hasCustomer: params.hasCustomer,
+      hasRecurringTask: params.hasRecurringTask,
+      scheduledDate: params.scheduledDate,
+      deadlineToday: params.deadlineToday,
+      deadlineDate: params.deadlineDate,
+      recurringTaskId: params.recurringTaskId,
+      controlPointId: params.controlPointId,
+      showAll: params.showAll,
       page: params.page,
       limit: params.limit,
     );

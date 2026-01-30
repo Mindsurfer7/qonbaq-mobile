@@ -23,6 +23,13 @@ abstract class TaskRemoteDataSource extends DataSource {
     bool? dontForget,
     String? customerId,
     bool? hasCustomer,
+    bool? hasRecurringTask,
+    DateTime? scheduledDate,
+    bool? deadlineToday,
+    DateTime? deadlineDate,
+    String? recurringTaskId,
+    String? controlPointId,
+    bool? showAll,
     int? page,
     int? limit,
   });

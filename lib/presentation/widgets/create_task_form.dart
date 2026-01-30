@@ -63,7 +63,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
   // Параметры регулярности
   RecurrenceFrequency? _recurrenceFrequency;
   int _recurrenceInterval = 1; // Интервал (каждые N дней/недель/месяцев)
-  String? _timeOfDay; // Время создания задачи в формате "HH:MM"
+  String? _timeOfDay = '09:00'; // Время создания задачи в формате "HH:MM" (по умолчанию 9:00)
   List<int>? _daysOfWeek; // Дни недели для WEEKLY (0-6, где 0=воскресенье)
   int? _recurrenceDayOfMonth; // Для monthly: день месяца (1-31)
   DateTime? _startDate; // Дата начала создания задач
@@ -861,43 +861,43 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   });
                 },
               ),
-              const SizedBox(height: 16),
-              // Смещение дедлайна
-              FormBuilderTextField(
-                name: 'deadlineOffset',
-                initialValue: _deadlineOffset?.toString(),
-                decoration: InputDecoration(
-                  labelText: 'Смещение дедлайна (часы)',
-                  helperText: 'Смещение дедлайна в часах от времени создания (например, 8 = дедлайн в 17:00, если создается в 09:00)',
-                  border: const OutlineInputBorder(),
-                  errorText: _fieldErrors['deadlineOffset'],
-                  errorMaxLines: 2,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final offset = int.tryParse(value);
-                    if (offset != null) {
-                      setState(() {
-                        _deadlineOffset = offset;
-                      });
-                    }
-                  } else {
-                    setState(() {
-                      _deadlineOffset = null;
-                    });
-                  }
-                },
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final offset = int.tryParse(value);
-                    if (offset == null) {
-                      return 'Введите число';
-                    }
-                  }
-                  return null;
-                },
-              ),
+              // const SizedBox(height: 16),
+              // // Смещение дедлайна - закомментировано как ненужное
+              // FormBuilderTextField(
+              //   name: 'deadlineOffset',
+              //   initialValue: _deadlineOffset?.toString(),
+              //   decoration: InputDecoration(
+              //     labelText: 'Смещение дедлайна (часы)',
+              //     helperText: 'Смещение дедлайна в часах от времени создания (например, 8 = дедлайн в 17:00, если создается в 09:00)',
+              //     border: const OutlineInputBorder(),
+              //     errorText: _fieldErrors['deadlineOffset'],
+              //     errorMaxLines: 2,
+              //   ),
+              //   keyboardType: TextInputType.number,
+              //   onChanged: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final offset = int.tryParse(value);
+              //       if (offset != null) {
+              //         setState(() {
+              //           _deadlineOffset = offset;
+              //         });
+              //       }
+              //     } else {
+              //       setState(() {
+              //         _deadlineOffset = null;
+              //       });
+              //     }
+              //   },
+              //   validator: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final offset = int.tryParse(value);
+              //       if (offset == null) {
+              //         return 'Введите число';
+              //       }
+              //     }
+              //     return null;
+              //   },
+              // ),
             ],
             const SizedBox(height: 8),
 
@@ -1017,12 +1017,13 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 ]),
               ),
               const SizedBox(height: 16),
-              // Время создания задачи
+              // Время создания точки контроля
               FormBuilderTextField(
                 name: 'timeOfDay',
                 initialValue: _timeOfDay,
                 decoration: InputDecoration(
-                  labelText: 'Время создания задачи',
+                  labelText: 'Время создания точки контроля',
+                  hintText: 'Время создания точки контроля',
                   helperText: 'Формат: HH:MM (например, 09:00)',
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.access_time),
@@ -1139,7 +1140,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 initialValue: _startDate,
                 decoration: InputDecoration(
                   labelText: 'Дата начала',
-                  helperText: 'С какой даты начать создавать задачи (по умолчанию сегодня)',
+                  helperText: 'С какой даты начать создавать точки контроля (по умолчанию сегодня)',
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today),
                   errorText: _fieldErrors['startDate'],
@@ -1159,7 +1160,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 initialValue: _endDate,
                 decoration: InputDecoration(
                   labelText: 'Дата окончания',
-                  helperText: 'До какой даты создавать задачи (оставьте пустым для бесконечного создания)',
+                  helperText: 'До какой даты создавать точки контроля (оставьте пустым для бесконечного создания)',
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today),
                   errorText: _fieldErrors['endDate'],
@@ -1172,43 +1173,43 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   });
                 },
               ),
-              const SizedBox(height: 16),
-              // Смещение дедлайна
-              FormBuilderTextField(
-                name: 'deadlineOffset',
-                initialValue: _deadlineOffset?.toString(),
-                decoration: InputDecoration(
-                  labelText: 'Смещение дедлайна (часы)',
-                  helperText: 'Смещение дедлайна в часах от времени создания (например, 8 = дедлайн в 17:00, если создается в 09:00)',
-                  border: const OutlineInputBorder(),
-                  errorText: _fieldErrors['deadlineOffset'],
-                  errorMaxLines: 2,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final offset = int.tryParse(value);
-                    if (offset != null) {
-                      setState(() {
-                        _deadlineOffset = offset;
-                      });
-                    }
-                  } else {
-                    setState(() {
-                      _deadlineOffset = null;
-                    });
-                  }
-                },
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final offset = int.tryParse(value);
-                    if (offset == null) {
-                      return 'Введите число';
-                    }
-                  }
-                  return null;
-                },
-              ),
+              // const SizedBox(height: 16),
+              // // Смещение дедлайна - закомментировано как ненужное
+              // FormBuilderTextField(
+              //   name: 'deadlineOffset',
+              //   initialValue: _deadlineOffset?.toString(),
+              //   decoration: InputDecoration(
+              //     labelText: 'Смещение дедлайна (часы)',
+              //     helperText: 'Смещение дедлайна в часах от времени создания точки контроля (например, 8 = дедлайн в 17:00, если создается в 09:00)',
+              //     border: const OutlineInputBorder(),
+              //     errorText: _fieldErrors['deadlineOffset'],
+              //     errorMaxLines: 2,
+              //   ),
+              //   keyboardType: TextInputType.number,
+              //   onChanged: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final offset = int.tryParse(value);
+              //       if (offset != null) {
+              //         setState(() {
+              //           _deadlineOffset = offset;
+              //         });
+              //       }
+              //     } else {
+              //       setState(() {
+              //         _deadlineOffset = null;
+              //       });
+              //     }
+              //   },
+              //   validator: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final offset = int.tryParse(value);
+              //       if (offset == null) {
+              //         return 'Введите число';
+              //       }
+              //     }
+              //     return null;
+              //   },
+              // ),
             ],
             // Поля для метрик (показываются только если точка контроля)
             if (_isControlPoint) ...[

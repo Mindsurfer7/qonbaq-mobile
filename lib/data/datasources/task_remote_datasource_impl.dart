@@ -111,6 +111,13 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
     bool? dontForget,
     String? customerId,
     bool? hasCustomer,
+    bool? hasRecurringTask,
+    DateTime? scheduledDate,
+    bool? deadlineToday,
+    DateTime? deadlineDate,
+    String? recurringTaskId,
+    String? controlPointId,
+    bool? showAll,
     int? page,
     int? limit,
   }) async {
@@ -139,6 +146,31 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       }
       if (hasCustomer != null) {
         queryParams['hasCustomer'] = hasCustomer.toString();
+      }
+      if (hasRecurringTask != null) {
+        queryParams['hasRecurringTask'] = hasRecurringTask.toString();
+      }
+      if (scheduledDate != null) {
+        // Форматируем дату в формат YYYY-MM-DD
+        queryParams['scheduledDate'] = 
+            '${scheduledDate.year}-${scheduledDate.month.toString().padLeft(2, '0')}-${scheduledDate.day.toString().padLeft(2, '0')}';
+      }
+      if (deadlineToday != null) {
+        queryParams['deadlineToday'] = deadlineToday.toString();
+      }
+      if (deadlineDate != null) {
+        // Форматируем дату в формат YYYY-MM-DD
+        queryParams['deadlineDate'] = 
+            '${deadlineDate.year}-${deadlineDate.month.toString().padLeft(2, '0')}-${deadlineDate.day.toString().padLeft(2, '0')}';
+      }
+      if (recurringTaskId != null) {
+        queryParams['recurringTaskId'] = recurringTaskId;
+      }
+      if (controlPointId != null) {
+        queryParams['controlPointId'] = controlPointId;
+      }
+      if (showAll != null) {
+        queryParams['showAll'] = showAll.toString();
       }
       if (page != null) queryParams['page'] = page.toString();
       if (limit != null) queryParams['limit'] = limit.toString();
