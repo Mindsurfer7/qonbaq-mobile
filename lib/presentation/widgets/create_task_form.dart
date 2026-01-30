@@ -627,8 +627,8 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 });
               },
             ),
-            // Поля для настройки регулярности (показываются только если задача регулярная или точка контроля)
-            if (_isRecurring || _isControlPoint) ...[
+            // Поля для настройки регулярности (показываются только если задача регулярная, НО НЕ точка контроля)
+            if (_isRecurring && !_isControlPoint) ...[
               const SizedBox(height: 16),
               // Тип регулярности
               FormBuilderDropdown<RecurrenceFrequency>(
@@ -938,6 +938,278 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 });
               },
             ),
+            // Поля для настройки регулярности точки контроля (показываются только если точка контроля включена)
+            if (_isControlPoint) ...[
+              const SizedBox(height: 16),
+              // Тип регулярности
+              FormBuilderDropdown<RecurrenceFrequency>(
+                name: 'recurrenceFrequency',
+                decoration: InputDecoration(
+                  labelText: 'Тип регулярности *',
+                  border: const OutlineInputBorder(),
+                  errorText: _fieldErrors['recurrenceFrequency'],
+                  errorMaxLines: 2,
+                ),
+                initialValue: _recurrenceFrequency,
+                dropdownColor: context.appTheme.backgroundSurface,
+                borderRadius: BorderRadius.circular(
+                  context.appTheme.borderRadius,
+                ),
+                selectedItemBuilder: (BuildContext context) {
+                  return RecurrenceFrequency.values
+                      .map<Widget>((RecurrenceFrequency frequency) {
+                    return Text(_getRecurrenceFrequencyText(frequency));
+                  }).toList();
+                },
+                items: RecurrenceFrequency.values
+                    .map(
+                      (frequency) => createStyledDropdownItem<RecurrenceFrequency>(
+                        context: context,
+                        value: frequency,
+                        child: Text(_getRecurrenceFrequencyText(frequency)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _recurrenceFrequency = value;
+                    // Очищаем специфичные поля при смене типа регулярности
+                    if (value != RecurrenceFrequency.monthly) {
+                      _recurrenceDayOfMonth = null;
+                      _formKey.currentState?.fields['recurrenceDayOfMonth']?.didChange(null);
+                    }
+                    if (value != RecurrenceFrequency.weekly) {
+                      _daysOfWeek = null;
+                      _formKey.currentState?.fields['daysOfWeek']?.didChange(null);
+                    }
+                  });
+                },
+                validator: FormBuilderValidators.required(
+                  errorText: 'Выберите тип регулярности',
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Интервал
+              FormBuilderTextField(
+                name: 'recurrenceInterval',
+                initialValue: _recurrenceInterval.toString(),
+                decoration: InputDecoration(
+                  labelText: 'Интервал',
+                  helperText: 'Каждые N дней/недель/месяцев (по умолчанию 1)',
+                  border: const OutlineInputBorder(),
+                  errorText: _fieldErrors['recurrenceInterval'],
+                  errorMaxLines: 2,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final interval = int.tryParse(value);
+                    if (interval != null && interval > 0) {
+                      setState(() {
+                        _recurrenceInterval = interval;
+                      });
+                    }
+                  }
+                },
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.numeric(),
+                  FormBuilderValidators.min(1, errorText: 'Интервал должен быть больше 0'),
+                ]),
+              ),
+              const SizedBox(height: 16),
+              // Время создания задачи
+              FormBuilderTextField(
+                name: 'timeOfDay',
+                initialValue: _timeOfDay,
+                decoration: InputDecoration(
+                  labelText: 'Время создания задачи',
+                  helperText: 'Формат: HH:MM (например, 09:00)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: const Icon(Icons.access_time),
+                  errorText: _fieldErrors['timeOfDay'],
+                  errorMaxLines: 2,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _timeOfDay = value;
+                  });
+                },
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$');
+                    if (!timeRegex.hasMatch(value)) {
+                      return 'Неверный формат времени. Используйте HH:MM';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              // Поле для выбора дня месяца (только для monthly)
+              if (_recurrenceFrequency == RecurrenceFrequency.monthly) ...[
+                const SizedBox(height: 16),
+                FormBuilderDropdown<int>(
+                  name: 'recurrenceDayOfMonth',
+                  decoration: InputDecoration(
+                    labelText: 'День месяца *',
+                    border: const OutlineInputBorder(),
+                    helperText: 'Например, каждое 5 число',
+                    errorText: _fieldErrors['recurrenceDayOfMonth'],
+                    errorMaxLines: 2,
+                  ),
+                  initialValue: _recurrenceDayOfMonth,
+                  dropdownColor: context.appTheme.backgroundSurface,
+                  borderRadius: BorderRadius.circular(
+                    context.appTheme.borderRadius,
+                  ),
+                  selectedItemBuilder: (BuildContext context) {
+                    return List.generate(31, (index) => index + 1)
+                        .map<Widget>((int day) {
+                      return Text('$day число');
+                    }).toList();
+                  },
+                  items: List.generate(31, (index) => index + 1)
+                      .map(
+                        (day) => createStyledDropdownItem<int>(
+                          context: context,
+                          value: day,
+                          child: Text('$day число'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceDayOfMonth = value;
+                    });
+                  },
+                  validator: FormBuilderValidators.required(
+                    errorText: 'Выберите день месяца',
+                  ),
+                ),
+              ],
+              // Поле для выбора дней недели (только для weekly)
+              if (_recurrenceFrequency == RecurrenceFrequency.weekly) ...[
+                const SizedBox(height: 16),
+                FormBuilderField<List<int>>(
+                  name: 'daysOfWeek',
+                  initialValue: _daysOfWeek,
+                  builder: (FormFieldState<List<int>> field) {
+                    return InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Дни недели *',
+                        border: const OutlineInputBorder(),
+                        helperText: 'Выберите дни недели',
+                        errorText: field.errorText ?? _fieldErrors['daysOfWeek'],
+                        errorMaxLines: 2,
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          for (int i = 0; i < 7; i++)
+                            FilterChip(
+                              label: Text(_getDayOfWeekName(i)),
+                              selected: _daysOfWeek?.contains(i) ?? false,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _daysOfWeek ??= [];
+                                  if (selected) {
+                                    _daysOfWeek!.add(i);
+                                  } else {
+                                    _daysOfWeek!.remove(i);
+                                  }
+                                  field.didChange(_daysOfWeek);
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Выберите хотя бы один день недели';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+              const SizedBox(height: 16),
+              // Дата начала
+              FormBuilderDateTimePicker(
+                name: 'startDate',
+                initialValue: _startDate,
+                decoration: InputDecoration(
+                  labelText: 'Дата начала',
+                  helperText: 'С какой даты начать создавать задачи (по умолчанию сегодня)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: const Icon(Icons.calendar_today),
+                  errorText: _fieldErrors['startDate'],
+                  errorMaxLines: 2,
+                ),
+                inputType: InputType.date,
+                onChanged: (value) {
+                  setState(() {
+                    _startDate = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              // Дата окончания
+              FormBuilderDateTimePicker(
+                name: 'endDate',
+                initialValue: _endDate,
+                decoration: InputDecoration(
+                  labelText: 'Дата окончания',
+                  helperText: 'До какой даты создавать задачи (оставьте пустым для бесконечного создания)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: const Icon(Icons.calendar_today),
+                  errorText: _fieldErrors['endDate'],
+                  errorMaxLines: 2,
+                ),
+                inputType: InputType.date,
+                onChanged: (value) {
+                  setState(() {
+                    _endDate = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              // Смещение дедлайна
+              FormBuilderTextField(
+                name: 'deadlineOffset',
+                initialValue: _deadlineOffset?.toString(),
+                decoration: InputDecoration(
+                  labelText: 'Смещение дедлайна (часы)',
+                  helperText: 'Смещение дедлайна в часах от времени создания (например, 8 = дедлайн в 17:00, если создается в 09:00)',
+                  border: const OutlineInputBorder(),
+                  errorText: _fieldErrors['deadlineOffset'],
+                  errorMaxLines: 2,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final offset = int.tryParse(value);
+                    if (offset != null) {
+                      setState(() {
+                        _deadlineOffset = offset;
+                      });
+                    }
+                  } else {
+                    setState(() {
+                      _deadlineOffset = null;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final offset = int.tryParse(value);
+                    if (offset == null) {
+                      return 'Введите число';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
             // Поля для метрик (показываются только если точка контроля)
             if (_isControlPoint) ...[
               const SizedBox(height: 16),
