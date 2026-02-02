@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -45,20 +46,97 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
   
   Map<String, dynamic>? _formSchema; // Схема динамической формы
   Map<String, dynamic>? _initialValues; // Начальные значения для формы
+  Timer? _autoSaveTimer; // Таймер для автоматического сохранения данных формы
 
   @override
   void initState() {
     super.initState();
-    // Предзаполняем поля из formData, если они уже есть (для обратной совместимости)
-    if (widget.approval?.formData != null) {
+    // Восстанавливаем данные из провайдера
+    _restoreFormData();
+    _loadSchema();
+    _loadAccounts();
+    // Запускаем автоматическое сохранение данных формы каждые 2 секунды
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (mounted && _formKey.currentState != null) {
+        _saveFormData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoSaveTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Восстановить данные формы из провайдера
+  void _restoreFormData() {
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    );
+    
+    // Пытаемся восстановить данные из провайдера
+    final savedData = pendingProvider.getPaymentDetailsFormData(widget.approvalId);
+    
+    if (savedData != null && savedData.isNotEmpty) {
+      // Восстанавливаем данные из провайдера
+      _selectedPaymentMethod = savedData['paymentMethod']?.toString();
+      _selectedAccountId = savedData['accountId']?.toString();
+      _selectedFromAccountId = savedData['fromAccountId']?.toString();
+      // Используем сохраненные данные как начальные значения для динамической формы
+      _initialValues = Map<String, dynamic>.from(savedData);
+    } else if (widget.approval?.formData != null) {
+      // Предзаполняем поля из formData, если они уже есть (для обратной совместимости)
       _selectedPaymentMethod = widget.approval!.formData!['paymentMethod']?.toString();
       _selectedAccountId = widget.approval!.formData!['accountId']?.toString();
       _selectedFromAccountId = widget.approval!.formData!['fromAccountId']?.toString();
       // Сохраняем formData как начальные значения для динамической формы
       _initialValues = Map<String, dynamic>.from(widget.approval!.formData!);
     }
-    _loadSchema();
-    _loadAccounts();
+  }
+
+  /// Сохранить данные формы в провайдер
+  void _saveFormData() {
+    if (_formKey.currentState == null) return;
+    
+    _formKey.currentState!.save();
+    final formValues = _formKey.currentState!.value;
+    
+    // Собираем все данные формы для сохранения
+    final dataToSave = <String, dynamic>{};
+    
+    // Сохраняем выбранные значения для старой формы
+    if (_selectedPaymentMethod != null) {
+      dataToSave['paymentMethod'] = _selectedPaymentMethod;
+    }
+    if (_selectedAccountId != null) {
+      dataToSave['accountId'] = _selectedAccountId;
+    }
+    if (_selectedFromAccountId != null) {
+      dataToSave['fromAccountId'] = _selectedFromAccountId;
+    }
+    
+    // Сохраняем все значения из формы (включая динамические поля)
+    formValues.forEach((key, value) {
+      if (value != null) {
+        // Убираем префикс блока для сохранения
+        final fieldName = key.contains('.') ? key.split('.').last : key;
+        // Преобразуем DateTime в ISO строку для сохранения
+        if (value is DateTime) {
+          dataToSave[fieldName] = value.toIso8601String();
+        } else {
+          dataToSave[fieldName] = value;
+        }
+      }
+    });
+    
+    // Сохраняем в провайдер
+    final pendingProvider = Provider.of<PendingConfirmationsProvider>(
+      context,
+      listen: false,
+    );
+    pendingProvider.savePaymentDetailsFormData(widget.approvalId, dataToSave);
   }
 
   Future<void> _loadSchema() async {
@@ -458,6 +536,8 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                         _formKey.currentState?.fields['accountId']?.didChange(null);
                         _formKey.currentState?.fields['fromAccountId']?.didChange(null);
                       });
+                      // Сохраняем данные формы при изменении
+                      _saveFormData();
                     },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -489,6 +569,8 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                           setState(() {
                             _selectedAccountId = value;
                           });
+                          // Сохраняем данные формы при изменении
+                          _saveFormData();
                         },
                         validator: (value) {
                           if (_selectedPaymentMethod == 'CASH' && 
@@ -523,6 +605,8 @@ class _PaymentDetailsDialogState extends State<PaymentDetailsDialog> {
                           setState(() {
                             _selectedFromAccountId = value;
                           });
+                          // Сохраняем данные формы при изменении
+                          _saveFormData();
                         },
                         validator: (value) {
                           if ((_selectedPaymentMethod == 'BANK_TRANSFER' || 

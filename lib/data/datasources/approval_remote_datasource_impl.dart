@@ -945,30 +945,26 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
     Map<String, dynamic>? formData,
   }) async {
     try {
-      // Структура запроса: { formData: { paymentMethod, accountId?, fromAccountId?, ... } }
-      // Все поля должны быть внутри formData, включая paymentMethod, accountId, fromAccountId
-      final finalFormData = <String, dynamic>{};
+      // Структура запроса: { paymentMethod, accountId?, fromAccountId?, ... }
+      // Все поля должны быть на верхнем уровне запроса, не внутри formData
+      // Сервер сам соберет эти поля в formData при сохранении
+      final body = <String, dynamic>{};
       
-      // Добавляем существующий formData (если есть)
+      // Добавляем существующий formData (если есть) - все поля на верхнем уровне
       if (formData != null && formData.isNotEmpty) {
-        finalFormData.addAll(formData);
+        body.addAll(formData);
       }
       
-      // Добавляем paymentMethod в formData (обязательное поле)
-      finalFormData['paymentMethod'] = paymentMethod;
+      // Добавляем paymentMethod (обязательное поле)
+      body['paymentMethod'] = paymentMethod;
       
       // Добавляем accountId или fromAccountId в зависимости от способа оплаты
       if (paymentMethod == 'CASH' && accountId != null) {
-        finalFormData['accountId'] = accountId;
+        body['accountId'] = accountId;
       } else if ((paymentMethod == 'BANK_TRANSFER' || paymentMethod == 'TERMINAL') && 
                  fromAccountId != null) {
-        finalFormData['fromAccountId'] = fromAccountId;
+        body['fromAccountId'] = fromAccountId;
       }
-      
-      // Отправляем только formData
-      final body = <String, dynamic>{
-        'formData': finalFormData,
-      };
 
       final response = await apiClient.patch(
         '/api/approvals/$id/payment-details',

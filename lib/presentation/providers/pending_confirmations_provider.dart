@@ -25,6 +25,9 @@ class PendingConfirmationsProvider with ChangeNotifier {
   String? _error;
   Timer? _pollingTimer;
   String? _currentBusinessId;
+  
+  // Хранилище данных формы платежных реквизитов по approvalId
+  final Map<String, Map<String, dynamic>> _paymentDetailsFormData = {};
 
   /// Список pending confirmations
   List<PendingConfirmation> get pendingConfirmations => _pendingConfirmations;
@@ -258,7 +261,26 @@ class PendingConfirmationsProvider with ChangeNotifier {
   /// Обновить awaiting payment details после заполнения
   void removeAwaitingPaymentDetails(String approvalId) {
     _awaitingPaymentDetailsIds.remove(approvalId);
+    // Очищаем сохраненные данные формы после успешного заполнения
+    _paymentDetailsFormData.remove(approvalId);
     notifyListeners();
+  }
+
+  /// Сохранить данные формы платежных реквизитов
+  void savePaymentDetailsFormData(String approvalId, Map<String, dynamic> formData) {
+    _paymentDetailsFormData[approvalId] = Map<String, dynamic>.from(formData);
+    // Не вызываем notifyListeners, так как это не влияет на UI напрямую
+  }
+
+  /// Получить сохраненные данные формы платежных реквизитов
+  Map<String, dynamic>? getPaymentDetailsFormData(String approvalId) {
+    final data = _paymentDetailsFormData[approvalId];
+    return data != null ? Map<String, dynamic>.from(data) : null;
+  }
+
+  /// Очистить сохраненные данные формы платежных реквизитов
+  void clearPaymentDetailsFormData(String approvalId) {
+    _paymentDetailsFormData.remove(approvalId);
   }
 
   /// Запустить периодические запросы (каждые 2 минуты)
