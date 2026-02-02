@@ -1658,9 +1658,18 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                           _selectedTemplate = value;
                           _error = null; // Очищаем ошибку при выборе
 
-                          // Автоматически заполняем title из шаблона
-                          if (value != null && _titleController.text.isEmpty) {
-                            _titleController.text = value.name;
+                          // Автоматически заполняем title из нового шаблона
+                          // Если title был пустым или совпадал со старым шаблоном, обновляем его
+                          if (value != null) {
+                            final currentTitle = _titleController.text.trim();
+                            if (currentTitle.isEmpty ||
+                                (oldTemplate != null &&
+                                    currentTitle == oldTemplate.name)) {
+                              _titleController.text = value.name;
+                              // Обновляем значение в форме
+                              _formKey.currentState?.fields['title']
+                                  ?.didChange(value.name);
+                            }
                           }
 
                           // Очищаем значения полей динамической формы при смене шаблона
