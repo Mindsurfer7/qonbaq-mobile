@@ -1059,6 +1059,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   bool _isLoadingTemplates = true;
   bool _isLoading = false;
   String? _error;
+  bool _isUpdatingTemplate = false; // Флаг для предотвращения циклических обновлений
 
   @override
   void initState() {
@@ -1222,36 +1223,55 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
     );
     if (cacheData == null) return;
 
-    // Восстанавливаем значения в форму
-    for (var entry in cacheData.entries) {
-      final fieldName = entry.key;
-      var value = entry.value;
+    // Устанавливаем флаг, чтобы предотвратить вызов onChanged при программном изменении
+    _isUpdatingTemplate = true;
 
-      // Если это поле template, ищем шаблон по коду
-      if (fieldName == 'template' && value is String) {
-        final template = _templates.firstWhere(
-          (t) => t.code == value,
-          orElse: () => _templates.first,
-        );
-        value = template;
-      } else if (value is String && _isIso8601Date(value)) {
-        // Восстанавливаем DateTime из строки
-        value = DateTime.tryParse(value);
+    try {
+      // Восстанавливаем значения в форму
+      for (var entry in cacheData.entries) {
+        final fieldName = entry.key;
+        var value = entry.value;
+
+        // Пропускаем поле template - оно уже установлено
+        if (fieldName == 'template') continue;
+
+        if (value is String && _isIso8601Date(value)) {
+          // Восстанавливаем DateTime из строки
+          value = DateTime.tryParse(value);
+        }
+
+        final field = _formKey.currentState?.fields[fieldName];
+        if (field != null && value != null) {
+          // Для контроллеров текстовых полей обновляем контроллер
+          if (fieldName == 'title' && value is String) {
+            _titleController.text = value;
+          } else if (fieldName == 'description' && value is String) {
+            _descriptionController.text = value;
+          }
+          // Обновляем значение поля напрямую через FormBuilderState
+          // Это не вызовет onChanged, так как мы устанавливаем флаг _isUpdatingTemplate
+          field.didChange(value);
+        }
       }
 
-      final field = _formKey.currentState?.fields[fieldName];
-      if (field != null && value != null) {
-        // Для контроллеров текстовых полей обновляем контроллер
-        if (fieldName == 'title' && value is String) {
-          _titleController.text = value;
-        } else if (fieldName == 'description' && value is String) {
-          _descriptionController.text = value;
-        }
-        field.didChange(value);
+      // Снимаем флаг после загрузки в следующем кадре
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _isUpdatingTemplate = false;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      // В случае ошибки снимаем флаг
+      if (mounted) {
+        setState(() {
+          _isUpdatingTemplate = false;
+        });
       }
     }
-
-    setState(() {});
   }
 
   /// Проверка, является ли строка датой в формате ISO8601
@@ -1618,47 +1638,68 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                           );
                         }).toList(),
                     onChanged: (value) async {
-                      // Сохраняем данные старого шаблона перед сменой
-                      if (_selectedTemplate != null &&
-                          _formKey.currentState != null) {
-                        await _saveFormToCache(_selectedTemplate!.code);
+                      // Предотвращаем обработку, если значение не изменилось или идет обновление
+                      if (value == _selectedTemplate || _isUpdatingTemplate) {
+                        return;
                       }
 
-                      setState(() {
-                        final oldTemplate = _selectedTemplate;
-                        _selectedTemplate = value;
-                        _error = null; // Очищаем ошибку при выборе
+                      // Устанавливаем флаг обновления шаблона
+                      _isUpdatingTemplate = true;
 
-                        // Автоматически заполняем title из шаблона
-                        if (value != null && _titleController.text.isEmpty) {
-                          _titleController.text = value.name;
+                      try {
+                        // Сохраняем данные старого шаблона перед сменой
+                        if (_selectedTemplate != null &&
+                            _formKey.currentState != null) {
+                          await _saveFormToCache(_selectedTemplate!.code);
                         }
 
-                        // Очищаем значения полей динамической формы при смене шаблона
-                        if (oldTemplate != null &&
-                            oldTemplate != value &&
-                            _formKey.currentState != null) {
-                          final oldSchema = oldTemplate.formSchema;
-                          if (oldSchema != null) {
-                            final oldProperties =
-                                oldSchema['properties']
-                                    as Map<String, dynamic>?;
-                            if (oldProperties != null) {
-                              for (var fieldName in oldProperties.keys) {
-                                // Очищаем поля из старого шаблона
-                                _formKey.currentState?.fields[fieldName]
-                                    ?.didChange(null);
+                        setState(() {
+                          final oldTemplate = _selectedTemplate;
+                          _selectedTemplate = value;
+                          _error = null; // Очищаем ошибку при выборе
+
+                          // Автоматически заполняем title из шаблона
+                          if (value != null && _titleController.text.isEmpty) {
+                            _titleController.text = value.name;
+                          }
+
+                          // Очищаем значения полей динамической формы при смене шаблона
+                          if (oldTemplate != null &&
+                              oldTemplate != value &&
+                              _formKey.currentState != null) {
+                            final oldSchema = oldTemplate.formSchema;
+                            if (oldSchema != null) {
+                              final oldProperties =
+                                  oldSchema['properties']
+                                      as Map<String, dynamic>?;
+                              if (oldProperties != null) {
+                                for (var fieldName in oldProperties.keys) {
+                                  // Очищаем поля из старого шаблона
+                                  _formKey.currentState?.fields[fieldName]
+                                      ?.didChange(null);
+                                }
                               }
                             }
                           }
-                        }
-                      });
-
-                      // Загружаем данные из кэша для нового шаблона
-                      if (value != null) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) async {
-                          await _loadFormFromCache(value.code);
                         });
+
+                        // Загружаем данные из кэша для нового шаблона
+                        if (value != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                            await _loadFormFromCache(value.code);
+                            // Снимаем флаг после загрузки
+                            if (mounted) {
+                              setState(() {
+                                _isUpdatingTemplate = false;
+                              });
+                            }
+                          });
+                        } else {
+                          _isUpdatingTemplate = false;
+                        }
+                      } catch (e) {
+                        // В случае ошибки снимаем флаг
+                        _isUpdatingTemplate = false;
                       }
                     },
                     validator: (value) {

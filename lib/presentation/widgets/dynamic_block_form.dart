@@ -37,16 +37,39 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
   /// Флаг для отслеживания, был ли вызван dispose
   bool _isDisposed = false;
 
+  /// Флаг для предотвращения циклических обновлений
+  bool _isUpdatingFields = false;
+
   @override
   void dispose() {
     _isDisposed = true;
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(DynamicBlockForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Если formSchema изменился, очищаем локальное хранилище значений
+    if (oldWidget.formSchema != widget.formSchema) {
+      _localFieldValues.clear();
+      _isUpdatingFields = false;
+    }
+  }
+
   /// Обработчик изменения полей формы - перестраивает виджет для обновления видимости
   void _handleFieldChanged(String fieldName, dynamic value) {
     // Проверяем, что виджет не disposed
     if (_isDisposed || !mounted) return;
+
+    // Если идет обновление полей программно, не обрабатываем изменения
+    if (_isUpdatingFields) return;
+
+    // Проверяем, действительно ли значение изменилось
+    final oldValue = _localFieldValues[fieldName];
+    if (oldValue == value) {
+      // Значение не изменилось, не нужно обновлять
+      return;
+    }
 
     // Обновляем локальное хранилище
     _localFieldValues[fieldName] = value;
@@ -55,7 +78,7 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
     // Но только если виджет еще mounted
     if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed && mounted) {
+        if (!_isDisposed && mounted && !_isUpdatingFields) {
           setState(() {});
         }
       });
