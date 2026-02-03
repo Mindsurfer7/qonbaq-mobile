@@ -31,10 +31,10 @@ class RegisterRequest implements Model {
     if (inviteCode != null && inviteCode!.isNotEmpty) {
       json['inviteCode'] = inviteCode!;
     }
-    if (firstName != null && firstName!.isNotEmpty) {
+    if (firstName != null) {
       json['firstName'] = firstName!;
     }
-    if (lastName != null && lastName!.isNotEmpty) {
+    if (lastName != null) {
       json['lastName'] = lastName!;
     }
     return json;

@@ -41,7 +41,19 @@ class AuthRemoteDataSource extends DataSource {
           'Пользователь с таким email уже существует',
         );
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при регистрации';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при регистрации');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -77,7 +89,19 @@ class AuthRemoteDataSource extends DataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Неверный email или пароль');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при входе';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при входе');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -105,7 +129,19 @@ class AuthRemoteDataSource extends DataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Refresh токен недействителен');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при обновлении токена';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при обновлении токена');
+        }
       }
     } catch (e) {
       if (e is Exception) {

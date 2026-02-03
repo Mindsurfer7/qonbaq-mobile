@@ -20,11 +20,13 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
   ApprovalRemoteDataSourceImpl({required this.apiClient});
 
   /// Парсит сообщение об ошибке из body ответа
-  /// Возвращает сообщение из поля 'error' или дефолтное сообщение
+  /// Возвращает сообщение из поля 'error' или 'message', или дефолтное сообщение
   String _parseErrorMessage(String body, String defaultMessage) {
     try {
       final json = jsonDecode(body) as Map<String, dynamic>;
-      return json['error'] as String? ?? defaultMessage;
+      return json['error'] as String? ?? 
+          json['message'] as String? ?? 
+          defaultMessage;
     } catch (e) {
       return defaultMessage;
     }
@@ -68,7 +70,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при создании шаблона согласования',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -115,7 +121,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении списка шаблонов согласований',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -146,7 +156,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Шаблон не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении шаблона согласования',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -188,7 +202,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Шаблон не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при обновлении шаблона согласования',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -224,7 +242,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }
@@ -298,7 +316,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }
@@ -357,7 +375,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении списка согласований',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -478,7 +500,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при удалении согласования',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -520,7 +546,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при создании комментария к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -558,7 +588,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Согласование не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении комментариев к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -597,7 +631,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при обновлении комментария к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -625,7 +663,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Комментарий не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при удалении комментария к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -673,7 +715,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при добавлении вложения к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -714,7 +760,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Согласование не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении вложений к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -739,7 +789,11 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Вложение не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при удалении вложения к согласованию',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -825,7 +879,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }
@@ -921,7 +975,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }
@@ -996,7 +1050,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }
@@ -1039,7 +1093,7 @@ class ApprovalRemoteDataSourceImpl extends ApprovalRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при удалении шаблона согласования',
         );
         throw Exception(errorMessage);
       }

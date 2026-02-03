@@ -44,9 +44,6 @@ dependencies:
   # HTTP клиент
   http: ^1.2.0
   
-  # Работа с .env файлами
-  flutter_dotenv: ^5.1.0
-  
   # Хранение данных
   shared_preferences: ^2.2.2
   
@@ -108,7 +105,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - .env
     - routes.json
     - assets/images/
   #   - images/a_dot_burr.jpeg

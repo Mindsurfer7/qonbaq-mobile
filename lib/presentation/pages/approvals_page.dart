@@ -5,7 +5,7 @@ import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/services/voice_context.dart';
 import '../../core/utils/form_cache_storage.dart';
-import '../../core/utils/unassigned_roles_popup_storage.dart';
+// import '../../core/utils/unassigned_roles_popup_storage.dart'; // Закомментировано, так как старый попап не используется
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
 import '../../domain/usecases/get_approvals.dart';
@@ -21,6 +21,7 @@ import '../widgets/dynamic_block_form.dart';
 import '../widgets/voice_record_block.dart';
 import '../widgets/pending_confirmations_section.dart';
 import '../widgets/awaiting_payment_details_section.dart';
+import '../widgets/role_assignment_stepper_dialog.dart';
 import 'approval_detail_page.dart';
 
 /// Страница согласований
@@ -160,7 +161,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         // Показываем поп-ап о неназначенных ролях, если они есть
         if (result.unassignedRoles != null &&
             result.unassignedRoles!.isNotEmpty) {
-          _showUnassignedRolesPopup(
+          _showRoleAssignmentStepper(
             result.unassignedRoles!,
             result.message ?? '',
           );
@@ -250,7 +251,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             // Показываем поп-ап о неназначенных ролях, если они есть
             if (result.unassignedRoles != null &&
                 result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(
+              _showRoleAssignmentStepper(
                 result.unassignedRoles!,
                 result.message ?? '',
               );
@@ -299,7 +300,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           allPending.addAll(result.approvals);
           if (result.unassignedRoles != null &&
               result.unassignedRoles!.isNotEmpty) {
-            _showUnassignedRolesPopup(
+            _showRoleAssignmentStepper(
               result.unassignedRoles!,
               result.message ?? '',
             );
@@ -311,7 +312,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           allPending.addAll(result.approvals);
           if (result.unassignedRoles != null &&
               result.unassignedRoles!.isNotEmpty) {
-            _showUnassignedRolesPopup(
+            _showRoleAssignmentStepper(
               result.unassignedRoles!,
               result.message ?? '',
             );
@@ -323,7 +324,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
             allPending.addAll(result.approvals);
             if (result.unassignedRoles != null &&
                 result.unassignedRoles!.isNotEmpty) {
-              _showUnassignedRolesPopup(
+              _showRoleAssignmentStepper(
                 result.unassignedRoles!,
                 result.message ?? '',
               );
@@ -367,7 +368,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           completed = result.approvals;
           if (result.unassignedRoles != null &&
               result.unassignedRoles!.isNotEmpty) {
-            _showUnassignedRolesPopup(
+            _showRoleAssignmentStepper(
               result.unassignedRoles!,
               result.message ?? '',
             );
@@ -379,7 +380,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           approved = result.approvals;
           if (result.unassignedRoles != null &&
               result.unassignedRoles!.isNotEmpty) {
-            _showUnassignedRolesPopup(
+            _showRoleAssignmentStepper(
               result.unassignedRoles!,
               result.message ?? '',
             );
@@ -391,7 +392,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           rejected = result.approvals;
           if (result.unassignedRoles != null &&
               result.unassignedRoles!.isNotEmpty) {
-            _showUnassignedRolesPopup(
+            _showRoleAssignmentStepper(
               result.unassignedRoles!,
               result.message ?? '',
             );
@@ -431,84 +432,112 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     return 'Произошла ошибка';
   }
 
-  void _showUnassignedRolesPopup(
+  // Старый метод попапа - закомментирован, но сохранен на случай необходимости
+  // void _showUnassignedRolesPopup(
+  //   List<UnassignedRoleInfo> roles,
+  //   String message,
+  // ) async {
+  //   // Используем флаг, чтобы не показывать несколько диалогов одновременно
+  //   if (!mounted) return;
+
+  //   // Проверяем, нужно ли скрывать поп-ап
+  //   final shouldHide = await UnassignedRolesPopupStorage.shouldHidePopup();
+  //   if (shouldHide) {
+  //     return;
+  //   }
+
+  //   // Увеличиваем счетчик и проверяем, нужно ли показывать поп-ап
+  //   final shouldShow = await UnassignedRolesPopupStorage.incrementShowCount();
+  //   if (!shouldShow) {
+  //     return;
+  //   }
+
+  //   showDialog(
+  //     context: context,
+  //     builder:
+  //         (dialogContext) => AlertDialog(
+  //           title: const Row(
+  //             children: [
+  //               Icon(Icons.warning, color: Colors.orange),
+  //               SizedBox(width: 8),
+  //               Expanded(child: Text('Неназначенные роли')),
+  //             ],
+  //           ),
+  //           content: SingleChildScrollView(
+  //             child: Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(message, style: const TextStyle(fontSize: 14)),
+  //                 const SizedBox(height: 16),
+  //                 ...roles.map(
+  //                   (role) => Padding(
+  //                     padding: const EdgeInsets.only(bottom: 8),
+  //                     child: Row(
+  //                       children: [
+  //                         const Icon(
+  //                           Icons.person_off,
+  //                           size: 20,
+  //                           color: Colors.orange,
+  //                         ),
+  //                         const SizedBox(width: 8),
+  //                         Expanded(
+  //                           child: Text(
+  //                             role.name,
+  //                             style: const TextStyle(
+  //                               fontSize: 14,
+  //                               fontWeight: FontWeight.bold,
+  //                             ),
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () => Navigator.of(dialogContext).pop(),
+  //               child: const Text('Закрыть'),
+  //             ),
+  //             ElevatedButton(
+  //               onPressed: () {
+  //                 Navigator.of(dialogContext).pop();
+  //                 Navigator.of(context).pushNamed('/roles-assignment');
+  //               },
+  //               child: const Text('Назначить роли'),
+  //             ),
+  //           ],
+  //         ),
+  //   );
+  // }
+
+  /// Показать многошаговый попап для назначения основных ролей
+  void _showRoleAssignmentStepper(
     List<UnassignedRoleInfo> roles,
     String message,
   ) async {
-    // Используем флаг, чтобы не показывать несколько диалогов одновременно
     if (!mounted) return;
 
-    // Проверяем, нужно ли скрывать поп-ап
-    final shouldHide = await UnassignedRolesPopupStorage.shouldHidePopup();
-    if (shouldHide) {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final selectedBusiness = profileProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
       return;
     }
 
-    // Увеличиваем счетчик и проверяем, нужно ли показывать поп-ап
-    final shouldShow = await UnassignedRolesPopupStorage.incrementShowCount();
-    if (!shouldShow) {
-      return;
-    }
-
+    // Показываем многошаговый попап
     showDialog(
       context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Expanded(child: Text('Неназначенные роли')),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(message, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(height: 16),
-                  ...roles.map(
-                    (role) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person_off,
-                            size: 20,
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              role.name,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Закрыть'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  Navigator.of(context).pushNamed('/roles-assignment');
-                },
-                child: const Text('Назначить роли'),
-              ),
-            ],
-          ),
+      barrierDismissible: false,
+      builder: (dialogContext) => RoleAssignmentStepperDialog(
+        businessId: selectedBusiness.id,
+      ),
     );
   }
 

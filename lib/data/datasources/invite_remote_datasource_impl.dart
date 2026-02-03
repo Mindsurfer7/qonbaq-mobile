@@ -59,10 +59,24 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['error'] as String? ?? 'Ошибка валидации';
+        final message = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при создании приглашения';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при создании приглашения');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -93,7 +107,19 @@ class InviteRemoteDataSourceImpl extends InviteRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении текущих приглашений';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении текущих приглашений');
+        }
       }
     } catch (e) {
       if (e is Exception) {

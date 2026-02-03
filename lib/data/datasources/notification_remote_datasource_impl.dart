@@ -15,7 +15,9 @@ class NotificationRemoteDataSourceImpl extends NotificationRemoteDataSource {
   String _parseErrorMessage(String body, String defaultMessage) {
     try {
       final json = jsonDecode(body) as Map<String, dynamic>;
-      return json['error'] as String? ?? defaultMessage;
+      return json['error'] as String? ?? 
+          json['message'] as String? ?? 
+          defaultMessage;
     } catch (e) {
       return defaultMessage;
     }
@@ -62,7 +64,7 @@ class NotificationRemoteDataSourceImpl extends NotificationRemoteDataSource {
       } else {
         final errorMessage = _parseErrorMessage(
           response.body,
-          'Ошибка сервера: ${response.statusCode}',
+          'Ошибка при получении уведомлений',
         );
         throw Exception(errorMessage);
       }

@@ -95,7 +95,9 @@ class StorageRemoteDataSourceImpl extends StorageRemoteDataSource {
         throw Exception('Не авторизован');
       } else {
         final json = jsonDecode(responseBody) as Map<String, dynamic>;
-        final error = json['error'] as String? ?? 'Ошибка сервера: ${streamedResponse.statusCode}';
+        final error = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при загрузке файла';
         throw Exception(error);
       }
     } catch (e) {
@@ -148,7 +150,9 @@ class StorageRemoteDataSourceImpl extends StorageRemoteDataSource {
         throw Exception('Файл не найден');
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final error = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final error = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при получении URL файла';
         throw Exception(error);
       }
     } catch (e) {
@@ -198,7 +202,9 @@ class StorageRemoteDataSourceImpl extends StorageRemoteDataSource {
         throw Exception('Файл не найден');
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final error = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final error = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при получении URL файла по ключу';
         throw Exception(error);
       }
     } catch (e) {

@@ -55,7 +55,9 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         throw Exception('Нет доступа к этой компании');
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при получении списка трудоустройств';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -88,7 +90,7 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
       businessId: businessId,
       position: employment?['position'] as String?,
       orgPosition: employment?['orgPosition'] as String?,
-      roleCode: employment?['roleCode'] as String?, // Может отсутствовать в текущем API
+      roleCode: employment?['roleCode'] as String?, // Может быть null, если роль не назначена
       user: EmploymentUserModel(
         id: user['id'] as String,
         email: user['email'] as String,
@@ -123,6 +125,7 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
       'MARKETER': 'Маркетолог',
       'FINANCE_MANAGER': 'Менеджер по финансам',
       'LOGISTICIAN': 'Логист',
+      'OTHER': 'Другое',
     };
     return roleNames[roleCode] ?? roleCode;
   }
@@ -158,7 +161,9 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         throw Exception('Трудоустройство не найдено');
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при получении трудоустройства';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -210,7 +215,9 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         throw Exception(errorMessage);
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при обновлении трудоустройств';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -262,7 +269,9 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         throw Exception(errorMessage);
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при обновлении трудоустройств';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -333,7 +342,9 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         throw Exception(errorMessage);
       } else {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final errorMessage = json['error'] as String? ?? 'Ошибка сервера: ${response.statusCode}';
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при удалении трудоустройства';
         throw Exception(errorMessage);
       }
     } catch (e) {

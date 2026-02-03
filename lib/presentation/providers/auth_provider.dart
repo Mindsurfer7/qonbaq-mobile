@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/auth_user.dart';
+import '../../domain/entities/business.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/login_user.dart';
 import '../../domain/usecases/guest_login_user.dart';
 import '../../domain/usecases/refresh_token.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/token_storage.dart';
 
@@ -13,15 +15,18 @@ class AuthProvider with ChangeNotifier {
   final LoginUser loginUser;
   final GuestLoginUser guestLoginUser;
   final RefreshToken refreshToken;
+  final AuthRepository authRepository;
 
   AuthProvider({
     required this.registerUser,
     required this.loginUser,
     required this.guestLoginUser,
     required this.refreshToken,
+    required this.authRepository,
   });
 
   AuthUser? _user;
+  Business? _guestBusiness; // Демо-бизнес для гостей
   bool _isLoading = false;
   String? _error;
 
@@ -36,6 +41,9 @@ class AuthProvider with ChangeNotifier {
 
   /// Проверка авторизации
   bool get isAuthenticated => _user != null;
+
+  /// Демо-бизнес для гостей
+  Business? get guestBusiness => _guestBusiness;
 
   /// Регистрация пользователя
   Future<bool> register({
@@ -120,12 +128,15 @@ class AuthProvider with ChangeNotifier {
     return result.fold(
       (failure) {
         _error = _getErrorMessage(failure);
+        _guestBusiness = null;
         notifyListeners();
         return false;
       },
       (user) {
         _user = user;
         _error = null;
+        // Получаем демо-бизнес из репозитория
+        _guestBusiness = authRepository.getGuestBusiness();
         notifyListeners();
         return true;
       },
@@ -135,6 +146,7 @@ class AuthProvider with ChangeNotifier {
   /// Выход пользователя
   Future<void> logout() async {
     _user = null;
+    _guestBusiness = null;
     _error = null;
     // Очищаем токены
     await TokenStorage.instance.clearTokens();

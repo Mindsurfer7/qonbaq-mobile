@@ -53,7 +53,22 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при начале рабочего дня';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при начале рабочего дня');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -96,7 +111,22 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при завершении рабочего дня';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при завершении рабочего дня');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -142,7 +172,22 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при отметке отсутствия';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при отметке отсутствия');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -188,7 +233,19 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         // Если рабочего дня нет, возвращаем null
         return null;
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении статуса рабочего дня';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении статуса рабочего дня');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -220,7 +277,19 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении статистики рабочего дня';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении статистики рабочего дня');
+        }
       }
     } catch (e) {
       if (e is Exception) {

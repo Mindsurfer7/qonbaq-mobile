@@ -56,7 +56,22 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при создании задачи';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при создании задачи');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -89,7 +104,19 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Задача не найдена');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при получении задачи';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении задачи');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -200,7 +227,19 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при получении списка задач';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении списка задач');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -235,7 +274,22 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при обновлении задачи';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при обновлении задачи');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -263,7 +317,19 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Задача не найдена');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при удалении задачи';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при удалении задачи');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -324,7 +390,22 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при создании комментария';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при создании комментария');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -362,7 +443,22 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при обновлении комментария';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is ValidationException) {
+            rethrow;
+          }
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при обновлении комментария');
+        }
       }
     } catch (e) {
       if (e is ValidationException) {
@@ -390,7 +486,19 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Комментарий не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final errorMessage = json['error'] as String? ?? 
+              json['message'] as String? ?? 
+              'Ошибка при удалении комментария';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при удалении комментария');
+        }
       }
     } catch (e) {
       if (e is Exception) {

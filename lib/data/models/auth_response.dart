@@ -1,6 +1,7 @@
 import '../../domain/entities/auth_user.dart';
 import '../../domain/entities/approval_permission.dart';
 import '../../domain/entities/department.dart';
+import '../../domain/entities/business.dart';
 import '../models/model.dart';
 
 /// Модель ответа аутентификации
@@ -215,6 +216,8 @@ class AuthUserModel implements Model {
   final String username;
   final bool isAdmin;
   final bool isGuest;
+  final String? firstName;
+  final String? lastName;
 
   AuthUserModel({
     required this.id,
@@ -222,6 +225,8 @@ class AuthUserModel implements Model {
     required this.username,
     required this.isAdmin,
     this.isGuest = false,
+    this.firstName,
+    this.lastName,
   });
 
   factory AuthUserModel.fromJson(Map<String, dynamic> json) {
@@ -231,6 +236,8 @@ class AuthUserModel implements Model {
       username: json['username'] as String? ?? '',
       isAdmin: json['isAdmin'] as bool? ?? false,
       isGuest: json['isGuest'] as bool? ?? false,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
     );
   }
 
@@ -242,6 +249,8 @@ class AuthUserModel implements Model {
       'username': username,
       'isAdmin': isAdmin,
       'isGuest': isGuest,
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
     };
   }
 
@@ -254,6 +263,8 @@ class AuthUserModel implements Model {
       isAdmin: isAdmin,
       isGuest: isGuest,
       approvalPermissions: approvalPermissions,
+      firstName: firstName,
+      lastName: lastName,
     );
   }
 }
@@ -285,5 +296,15 @@ class GuestBusinessModel implements Model {
       'name': name,
       if (description != null) 'description': description,
     };
+  }
+
+  /// Преобразование в доменную сущность Business
+  Business toBusinessEntity() {
+    return Business(
+      id: id,
+      name: name,
+      description: description,
+      type: BusinessType.business, // Демо-бизнес всегда имеет тип business
+    );
   }
 }

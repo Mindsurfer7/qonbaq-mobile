@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../core/error/failures.dart';
 import '../entities/auth_user.dart';
+import '../entities/business.dart';
 import '../repositories/repository.dart';
 
 /// Интерфейс репозитория для аутентификации
@@ -26,4 +27,7 @@ abstract class AuthRepository extends Repository {
 
   /// Гостевой вход
   Future<Either<Failure, AuthUser>> guestLogin({required String guestUuid});
+
+  /// Получить демо-бизнес для гостя (доступен после успешного гостевого логина)
+  Business? getGuestBusiness();
 }

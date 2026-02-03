@@ -83,8 +83,8 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
     required String email,
     String? username, // Никнейм опциональный
     required String password,
-    String? firstName,
-    String? lastName,
+    required String firstName,
+    required String lastName,
   }) async {
     setState(() {
       _isLoading = true;
@@ -280,8 +280,8 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
             textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.words,
             validator: (value) {
-              if (value != null && value.isNotEmpty && value.trim().isEmpty) {
-                return 'Имя не может состоять только из пробелов';
+              if (value == null || value.trim().isEmpty) {
+                return 'Введите имя';
               }
               return null;
             },
@@ -297,8 +297,8 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
             textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.words,
             validator: (value) {
-              if (value != null && value.isNotEmpty && value.trim().isEmpty) {
-                return 'Фамилия не может состоять только из пробелов';
+              if (value == null || value.trim().isEmpty) {
+                return 'Введите фамилию';
               }
               return null;
             },
@@ -395,12 +395,8 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
                   email: _emailController.text.trim(),
                   // username не передаем, так как никнейм не используется
                   password: _passwordController.text,
-                  firstName: _firstNameController.text.trim().isNotEmpty
-                      ? _firstNameController.text.trim()
-                      : null,
-                  lastName: _lastNameController.text.trim().isNotEmpty
-                      ? _lastNameController.text.trim()
-                      : null,
+                  firstName: _firstNameController.text.trim(),
+                  lastName: _lastNameController.text.trim(),
                 );
               }
             },
@@ -428,16 +424,7 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
       onSave: (data) async {
         final result = await updateEmployment.call(
           UpdateEmploymentParams(
-            position: data['position'] as String?,
-            positionType: data['positionType'] as String?,
-            orgPosition: data['orgPosition'] as String?,
             workPhone: data['workPhone'] as String?,
-            workExperience: data['workExperience'] as int?,
-            accountability: data['accountability'] as String?,
-            personnelNumber: data['personnelNumber'] as String?,
-            hireDate: data['hireDate'] != null 
-                ? DateTime.parse(data['hireDate'] as String)
-                : null,
             roleCode: data['roleCode'] as String?,
             businessId: _currentBusiness?.id,
           ),

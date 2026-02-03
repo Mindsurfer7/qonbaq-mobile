@@ -333,22 +333,12 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
                   inviteType: selectedBusiness?.type == BusinessType.business 
                       ? InviteType.business 
                       : InviteType.family,
-                  initialPosition: employment.position,
                   initialRoleCode: employment.roleCode,
                   onSave: (data) async {
                     final result = await updateEmployment.call(
                       UpdateEmploymentParams(
                         employmentId: isGeneralDirector ? employment.id : null,
-                        position: data['position'] as String?,
-                        positionType: data['positionType'] as String?,
-                        orgPosition: data['orgPosition'] as String?,
                         workPhone: data['workPhone'] as String?,
-                        workExperience: data['workExperience'] as int?,
-                        accountability: data['accountability'] as String?,
-                        personnelNumber: data['personnelNumber'] as String?,
-                        hireDate: data['hireDate'] != null 
-                            ? DateTime.parse(data['hireDate'] as String)
-                            : null,
                         roleCode: data['roleCode'] as String?,
                         businessId: selectedBusiness?.id,
                       ),
@@ -401,6 +391,7 @@ class _EmployeeRoleTile extends StatelessWidget {
     'MARKETER': 'Маркетолог',
     'FINANCE_MANAGER': 'Менеджер по финансам',
     'LOGISTICIAN': 'Логист',
+    'OTHER': 'Другое',
   };
 
   @override

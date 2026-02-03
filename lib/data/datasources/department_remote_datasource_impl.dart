@@ -23,6 +23,18 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
     };
   }
 
+  /// Парсит сообщение об ошибке из body ответа
+  String _parseErrorMessage(String body, String defaultMessage) {
+    try {
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      return json['error'] as String? ?? 
+          json['message'] as String? ?? 
+          defaultMessage;
+    } catch (_) {
+      return defaultMessage;
+    }
+  }
+
   @override
   Future<List<DepartmentModel>> getBusinessDepartments(
     String businessId,
@@ -54,7 +66,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 403) {
         throw Exception('Нет доступа к этой компании');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении списка подразделений',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -84,7 +100,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Подразделение не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -114,10 +134,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка валидации';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при создании подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -152,10 +178,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
         throw Exception('Подразделение не найдено');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка валидации';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при удалении подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -180,7 +212,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Подразделение не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -217,7 +253,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Подразделение не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -252,10 +292,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
         throw Exception('Подразделение не найдено');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка валидации';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при назначении руководителя подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -287,7 +333,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Подразделение не найдено');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -317,10 +367,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
         throw Exception('Подразделение или сотрудник не найдены');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка валидации';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при назначении сотрудника в подразделение',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -355,7 +411,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Подразделение или сотрудник не найдены');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при удалении сотрудника из подразделения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -385,10 +445,16 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
         throw Exception('Подразделение не найдено');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка валидации';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка валидации';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при назначении сотрудников в подразделение',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -429,7 +495,11 @@ class DepartmentRemoteDataSourceImpl extends DepartmentRemoteDataSource {
       } else if (response.statusCode == 403) {
         throw Exception('Нет доступа к этой компании');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Ошибка при получении списка подразделений',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {

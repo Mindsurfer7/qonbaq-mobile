@@ -1,4 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Общие константы приложения
@@ -11,15 +10,14 @@ class AppConstants {
   // Версия API (если нужно)
   static const String apiVersion = 'v1';
 
-  // Базовый URL API (приоритет: --dart-define > .env > дефолт)
+  // Базовый URL API (вшивается в билд через --dart-define)
   static String get apiBaseUrl {
-    // Сначала проверяем --dart-define (для production деплоя)
     const dartDefineUrl = String.fromEnvironment('API_BASE_URL');
     if (dartDefineUrl.isNotEmpty) {
       return dartDefineUrl;
     }
-    // Если не задано через --dart-define, используем .env
-    return dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000';
+    // Дефолтное значение для разработки (если не задано через --dart-define)
+    return 'http://localhost:3000';
   }
 
   // Базовый URL фронтенда (для формирования ссылок инвайтов)
@@ -30,12 +28,16 @@ class AppConstants {
         final uri = Uri.base;
         return '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
       } catch (e) {
-        // Fallback на .env или дефолт
-        return dotenv.env['FRONTEND_BASE_URL'] ?? 'http://localhost:1111';
+        // Fallback на дефолт для веба
+        return 'http://localhost:1111';
       }
     } else {
-      // На мобильных - из .env или дефолт
-      return dotenv.env['FRONTEND_BASE_URL'] ?? 'https://qonbaq.com';
+      // На мобильных - из --dart-define или дефолт
+      const dartDefineUrl = String.fromEnvironment('FRONTEND_BASE_URL');
+      if (dartDefineUrl.isNotEmpty) {
+        return dartDefineUrl;
+      }
+      return 'https://qonbaq.com';
     }
   }
 

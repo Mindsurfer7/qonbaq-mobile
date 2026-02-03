@@ -41,6 +41,9 @@ class SearchableDropdown<T> extends StatelessWidget {
   /// Виджет для отображения элемента в списке
   final Widget Function(BuildContext, T)? itemBuilder;
 
+  /// Режим автоматической валидации
+  final AutovalidateMode autovalidateMode;
+
   const SearchableDropdown({
     super.key,
     this.value,
@@ -54,6 +57,7 @@ class SearchableDropdown<T> extends StatelessWidget {
     this.searchThreshold = 5,
     this.filterFunction,
     this.itemBuilder,
+    this.autovalidateMode = AutovalidateMode.disabled,
   });
 
   @override
@@ -80,6 +84,7 @@ class SearchableDropdown<T> extends StatelessWidget {
       isDense: true,
       dropdownColor: context.appTheme.backgroundSurface,
       borderRadius: BorderRadius.circular(context.appTheme.borderRadius),
+      autovalidateMode: autovalidateMode,
       selectedItemBuilder: (BuildContext context) {
         return items.map<Widget>((T item) {
           return Text(

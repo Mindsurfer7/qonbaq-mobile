@@ -68,7 +68,19 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении списка бизнесов';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении списка бизнесов');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -102,10 +114,24 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
         throw Exception('Не авторизован');
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = json['message'] as String? ?? 'Ошибка запроса';
+        final message = json['message'] as String? ?? 
+            json['error'] as String? ?? 
+            'Ошибка запроса';
         throw Exception(message);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении профиля пользователя';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении профиля пользователя');
+        }
       }
     } catch (e) {
       if (e is Exception) {
@@ -140,7 +166,19 @@ class UserRemoteDataSourceImpl extends UserRemoteDataSource {
       } else if (response.statusCode == 403) {
         throw Exception('Нет доступа к этой компании');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении списка сотрудников';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении списка сотрудников');
+        }
       }
     } catch (e) {
       if (e is Exception) {

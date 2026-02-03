@@ -80,7 +80,19 @@ class ControlPointRemoteDataSourceImpl
       } else if (response.statusCode == 403) {
         throw Exception('Нет доступа');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении списка точек контроля';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении списка точек контроля');
+        }
       }
     } catch (e) {
       if (e is FormatException) {
@@ -114,7 +126,19 @@ class ControlPointRemoteDataSourceImpl
       } else if (response.statusCode == 404) {
         throw Exception('Точка контроля не найдена');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        // Пытаемся извлечь сообщение из поля error
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>?;
+          final errorMessage = json?['error'] as String? ?? 
+              json?['message'] as String? ?? 
+              'Ошибка при получении точки контроля';
+          throw Exception(errorMessage);
+        } catch (e) {
+          if (e is Exception && !(e is FormatException)) {
+            rethrow;
+          }
+          throw Exception('Ошибка при получении точки контроля');
+        }
       }
     } catch (e) {
       if (e is Exception) {

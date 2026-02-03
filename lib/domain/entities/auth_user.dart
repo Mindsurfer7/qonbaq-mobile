@@ -10,6 +10,8 @@ class AuthUser extends Entity {
   final bool isAdmin;
   final bool isGuest;
   final List<ApprovalPermission> approvalPermissions;
+  final String? firstName;
+  final String? lastName;
 
   const AuthUser({
     required this.id,
@@ -18,6 +20,8 @@ class AuthUser extends Entity {
     required this.isAdmin,
     this.isGuest = false,
     this.approvalPermissions = const [],
+    this.firstName,
+    this.lastName,
   });
 
   /// Проверка, может ли пользователь согласовывать в конкретном бизнесе
@@ -89,7 +93,9 @@ class AuthUser extends Entity {
           email == other.email &&
           username == other.username &&
           isAdmin == other.isAdmin &&
-          isGuest == other.isGuest;
+          isGuest == other.isGuest &&
+          firstName == other.firstName &&
+          lastName == other.lastName;
 
   @override
   int get hashCode =>
@@ -97,9 +103,11 @@ class AuthUser extends Entity {
       email.hashCode ^
       username.hashCode ^
       isAdmin.hashCode ^
-      isGuest.hashCode;
+      isGuest.hashCode ^
+      firstName.hashCode ^
+      lastName.hashCode;
 
   @override
   String toString() =>
-      'AuthUser(id: $id, email: $email, username: $username, isAdmin: $isAdmin, isGuest: $isGuest, approvalPermissions: ${approvalPermissions.length})';
+      'AuthUser(id: $id, email: $email, username: $username, firstName: $firstName, lastName: $lastName, isAdmin: $isAdmin, isGuest: $isGuest, approvalPermissions: ${approvalPermissions.length})';
 }

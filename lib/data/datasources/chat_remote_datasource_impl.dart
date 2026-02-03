@@ -48,7 +48,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       } else if (response.statusCode == 401) {
         throw Exception('Не авторизован');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при получении списка чатов',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -88,7 +92,10 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       } else if (response.statusCode == 403) {
         throw Exception('Нет доступа к этому бизнесу');
       } else {
-        final errorMessage = _extractErrorMessage(response.body);
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при получении списка анонимных чатов',
+        );
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -99,12 +106,14 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
     }
   }
 
-  String _extractErrorMessage(String responseBody) {
+  String _extractErrorMessage(String responseBody, String defaultMessage) {
     try {
       final json = jsonDecode(responseBody) as Map<String, dynamic>;
-      return json['error'] as String? ?? 'Ошибка сервера';
+      return json['error'] as String? ?? 
+          json['message'] as String? ?? 
+          defaultMessage;
     } catch (_) {
-      return 'Ошибка сервера';
+      return defaultMessage;
     }
   }
 
@@ -136,7 +145,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Пользователь не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при получении или создании чата с пользователем',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -166,7 +179,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Чат не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при получении чата',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -202,7 +219,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
       } else if (response.statusCode == 404) {
         throw Exception('Чат не найден');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при получении сообщений чата',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is Exception) {
@@ -256,7 +277,11 @@ class ChatRemoteDataSourceImpl extends ChatRemoteDataSource {
         final validationResponse = ValidationErrorResponse.fromJson(json);
         throw ValidationException(validationResponse);
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        final errorMessage = _extractErrorMessage(
+          response.body,
+          'Ошибка при отправке сообщения',
+        );
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (e is ValidationException) {

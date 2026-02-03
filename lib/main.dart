@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qonbaq/core/utils/api_client.dart';
 import 'package:qonbaq/core/utils/constants.dart';
 import 'package:qonbaq/core/utils/routes_config.dart';
@@ -198,6 +197,7 @@ import 'package:qonbaq/domain/usecases/create_account.dart';
 import 'package:qonbaq/domain/usecases/get_financial_report.dart';
 import 'package:qonbaq/domain/usecases/get_accounts.dart';
 import 'package:qonbaq/presentation/providers/financial_provider.dart';
+import 'package:qonbaq/presentation/providers/role_assignment_form_provider.dart';
 import 'package:qonbaq/data/datasources/employment_remote_datasource.dart';
 import 'package:qonbaq/data/datasources/employment_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/employment_repository_impl.dart';
@@ -243,8 +243,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Инициализируем данные локали для форматирования дат
   await initializeDateFormatting('ru', null);
-  // Загружаем .env файл перед запуском приложения
-  await dotenv.load(fileName: '.env');
   // Загружаем конфигурацию маршрутов
   await RoutesConfig.instance.loadRoutes();
   // Инициализируем хранилище токенов
@@ -289,6 +287,7 @@ class MyApp extends StatelessWidget {
       loginUser: loginUser,
       guestLoginUser: guestLoginUser,
       refreshToken: refreshTokenUseCase,
+      authRepository: authRepository,
     );
 
     // Инициализация зависимостей для профиля
@@ -630,6 +629,9 @@ class MyApp extends StatelessWidget {
     // Инициализация провайдера темы
     final themeProvider = ThemeProvider();
 
+    // Провайдер для формы назначения ролей
+    final roleAssignmentFormProvider = RoleAssignmentFormProvider();
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => themeProvider),
@@ -644,6 +646,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => pendingConfirmationsProvider),
         ChangeNotifierProvider(create: (_) => crmProvider),
         ChangeNotifierProvider(create: (_) => ordersProvider),
+        ChangeNotifierProvider(create: (_) => roleAssignmentFormProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),

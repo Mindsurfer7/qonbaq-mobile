@@ -8,18 +8,11 @@ class EmploymentFormWidget extends StatefulWidget {
   /// Если указан, используется /api/employments/{employmentId}
   final String? endpoint;
   
-  /// Тип invite кода (для определения лейбла поля position)
+  /// Тип invite кода (для определения обязательности поля roleCode)
   final InviteType? inviteType;
   
   /// Начальные значения полей
-  final String? initialPosition;
-  final String? initialPositionType;
-  final String? initialOrgPosition;
   final String? initialWorkPhone;
-  final int? initialWorkExperience;
-  final String? initialAccountability;
-  final String? initialPersonnelNumber;
-  final DateTime? initialHireDate;
   final String? initialRoleCode;
   
   /// Callback при успешном сохранении
@@ -32,14 +25,7 @@ class EmploymentFormWidget extends StatefulWidget {
     super.key,
     this.endpoint,
     this.inviteType,
-    this.initialPosition,
-    this.initialPositionType,
-    this.initialOrgPosition,
     this.initialWorkPhone,
-    this.initialWorkExperience,
-    this.initialAccountability,
-    this.initialPersonnelNumber,
-    this.initialHireDate,
     this.initialRoleCode,
     this.onSaved,
     this.onSave,
@@ -51,42 +37,22 @@ class EmploymentFormWidget extends StatefulWidget {
 
 class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
   final _formKey = GlobalKey<FormState>();
-  final _positionController = TextEditingController();
-  final _positionTypeController = TextEditingController();
-  final _orgPositionController = TextEditingController();
   final _workPhoneController = TextEditingController();
-  // final _workExperienceController = TextEditingController();
-  // final _accountabilityController = TextEditingController();
-  // final _personnelNumberController = TextEditingController();
   
   String? _selectedRoleCode;
-  // DateTime? _hireDate;
   bool _isLoading = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _positionController.text = widget.initialPosition ?? '';
-    _positionTypeController.text = widget.initialPositionType ?? '';
-    _orgPositionController.text = widget.initialOrgPosition ?? '';
     _workPhoneController.text = widget.initialWorkPhone ?? '';
-    // _workExperienceController.text = widget.initialWorkExperience?.toString() ?? '';
-    // _accountabilityController.text = widget.initialAccountability ?? '';
-    // _personnelNumberController.text = widget.initialPersonnelNumber ?? '';
     _selectedRoleCode = widget.initialRoleCode;
-    // _hireDate = widget.initialHireDate;
   }
 
   @override
   void dispose() {
-    _positionController.dispose();
-    _positionTypeController.dispose();
-    _orgPositionController.dispose();
     _workPhoneController.dispose();
-    // _workExperienceController.dispose();
-    // _accountabilityController.dispose();
-    // _personnelNumberController.dispose();
     super.dispose();
   }
 
@@ -108,35 +74,11 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
     });
 
     final data = <String, dynamic>{};
-    if (_positionController.text.isNotEmpty) {
-      data['position'] = _positionController.text.trim();
-    }
-    if (_positionTypeController.text.isNotEmpty) {
-      data['positionType'] = _positionTypeController.text.trim();
-    }
-    if (_orgPositionController.text.isNotEmpty) {
-      data['orgPosition'] = _orgPositionController.text.trim();
+    if (_selectedRoleCode != null && _selectedRoleCode!.isNotEmpty) {
+      data['roleCode'] = _selectedRoleCode;
     }
     if (_workPhoneController.text.isNotEmpty) {
       data['workPhone'] = _workPhoneController.text.trim();
-    }
-    // if (_workExperienceController.text.isNotEmpty) {
-    //   final experience = int.tryParse(_workExperienceController.text);
-    //   if (experience != null) {
-    //     data['workExperience'] = experience;
-    //   }
-    // }
-    // if (_accountabilityController.text.isNotEmpty) {
-    //   data['accountability'] = _accountabilityController.text.trim();
-    // }
-    // if (_personnelNumberController.text.isNotEmpty) {
-    //   data['personnelNumber'] = _personnelNumberController.text.trim();
-    // }
-    // if (_hireDate != null) {
-    //   data['hireDate'] = _hireDate!.toIso8601String();
-    // }
-    if (_selectedRoleCode != null && _selectedRoleCode!.isNotEmpty) {
-      data['roleCode'] = _selectedRoleCode;
     }
 
     try {
@@ -170,23 +112,8 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
     }
   }
 
-  // Future<void> _selectHireDate() async {
-  //   final picked = await showDatePicker(
-  //     context: context,
-  //     initialDate: _hireDate ?? DateTime.now(),
-  //     firstDate: DateTime(1900),
-  //     lastDate: DateTime.now(),
-  //   );
-  //   if (picked != null) {
-  //     setState(() {
-  //       _hireDate = picked;
-  //     });
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
-    final isFamily = widget.inviteType == InviteType.family;
     final isBusiness = widget.inviteType == InviteType.business;
 
     return Form(
@@ -197,25 +124,12 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Поле position (должность или роль)
-            TextFormField(
-              controller: _positionController,
-              decoration: InputDecoration(
-                labelText: isFamily ? 'Роль' : 'Должность',
-                hintText: isFamily ? 'Например: дочь, отец' : 'Например: Менеджер',
-                prefixIcon: const Icon(Icons.work_outline),
-                border: const OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-            
             // Поле roleCode (обязательно для business)
             if (isBusiness) ...[
               DropdownButtonFormField<String>(
                 value: _selectedRoleCode,
                 decoration: const InputDecoration(
-                  labelText: 'Код роли *',
+                  labelText: 'Должность *',
                   prefixIcon: Icon(Icons.badge_outlined),
                   border: OutlineInputBorder(),
                   helperText: 'Обязательное поле для бизнеса',
@@ -254,6 +168,10 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
                     value: 'LOGISTICIAN',
                     child: Text('Логист', overflow: TextOverflow.ellipsis),
                   ),
+                  DropdownMenuItem(
+                    value: 'OTHER',
+                    child: Text('Другое', overflow: TextOverflow.ellipsis),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -262,39 +180,13 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Выберите роль';
+                    return 'Выберите должность';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
             ],
-            
-            // Поле positionType
-            TextFormField(
-              controller: _positionTypeController,
-              decoration: const InputDecoration(
-                labelText: 'Тип должности',
-                hintText: 'Например: Штатный',
-                prefixIcon: Icon(Icons.category_outlined),
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-            
-            // Поле orgPosition
-            TextFormField(
-              controller: _orgPositionController,
-              decoration: const InputDecoration(
-                labelText: 'Организационная должность',
-                hintText: 'Например: Должность работника',
-                prefixIcon: Icon(Icons.business_center_outlined),
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
             
             // Поле workPhone
             TextFormField(
@@ -308,76 +200,6 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
             ),
-            const SizedBox(height: 24),
-            // // Поле workExperience
-            // TextFormField(
-            //   controller: _workExperienceController,
-            //   decoration: const InputDecoration(
-            //     labelText: 'Опыт работы (лет)',
-            //     hintText: 'Например: 5',
-            //     prefixIcon: Icon(Icons.calendar_today_outlined),
-            //     border: OutlineInputBorder(),
-            //   ),
-            //   keyboardType: TextInputType.number,
-            //   textInputAction: TextInputAction.next,
-            //   validator: (value) {
-            //     if (value != null && value.isNotEmpty) {
-            //       final experience = int.tryParse(value);
-            //       if (experience == null || experience < 0) {
-            //         return 'Введите корректное число';
-            //       }
-            //     }
-            //     return null;
-            //   },
-            // ),
-            // const SizedBox(height: 16),
-            // 
-            // // Поле accountability
-            // TextFormField(
-            //   controller: _accountabilityController,
-            //   decoration: const InputDecoration(
-            //     labelText: 'Зона ответственности',
-            //     hintText: 'Опишите зону ответственности',
-            //     prefixIcon: Icon(Icons.assignment_outlined),
-            //     border: OutlineInputBorder(),
-            //   ),
-            //   maxLines: 3,
-            //   textInputAction: TextInputAction.next,
-            // ),
-            // const SizedBox(height: 16),
-            // 
-            // // Поле personnelNumber
-            // TextFormField(
-            //   controller: _personnelNumberController,
-            //   decoration: const InputDecoration(
-            //     labelText: 'Табельный номер',
-            //     hintText: 'Например: 12345',
-            //     prefixIcon: Icon(Icons.numbers_outlined),
-            //     border: OutlineInputBorder(),
-            //   ),
-            //   textInputAction: TextInputAction.done,
-            // ),
-            // const SizedBox(height: 16),
-            // 
-            // // Поле hireDate
-            // InkWell(
-            //   onTap: _selectHireDate,
-            //   child: InputDecorator(
-            //     decoration: const InputDecoration(
-            //       labelText: 'Дата приема на работу',
-            //       prefixIcon: Icon(Icons.event_outlined),
-            //       border: OutlineInputBorder(),
-            //     ),
-            //     child: Text(
-            //       _hireDate != null
-            //           ? '${_hireDate!.day}.${_hireDate!.month}.${_hireDate!.year}'
-            //           : 'Выберите дату',
-            //       style: TextStyle(
-            //         color: _hireDate != null ? null : Colors.grey,
-            //       ),
-            //     ),
-            //   ),
-            // ),
             const SizedBox(height: 24),
             
             // Ошибка

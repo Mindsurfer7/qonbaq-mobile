@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../domain/entities/auth_user.dart';
+import '../../domain/entities/business.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/token_storage.dart';
@@ -12,6 +13,7 @@ import '../repositories/repository_impl.dart';
 /// Реализация репозитория аутентификации
 class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
+  Business? _guestBusiness; // Сохраняем демо-бизнес для гостей
 
   AuthRepositoryImpl({required this.remoteDataSource});
 
@@ -110,9 +112,20 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       );
+      
+      // Сохраняем демо-бизнес из ответа
+      if (response.business != null) {
+        _guestBusiness = response.business!.toBusinessEntity();
+      }
+      
       return Right(response.toUserEntity());
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  /// Получить демо-бизнес для гостя
+  Business? getGuestBusiness() {
+    return _guestBusiness;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/invite_provider.dart';
 import '../../domain/entities/business.dart';
 import '../widgets/create_business_dialog.dart';
@@ -115,6 +116,17 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     List<Business> businessList,
     ProfileProvider provider,
   ) async {
+    // Проверяем, является ли пользователь гостем
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.user?.isGuest == true) {
+      // Если гость, используем демо-бизнес из AuthProvider
+      final guestBusiness = authProvider.guestBusiness;
+      if (guestBusiness != null) {
+        await _selectWorkspace(guestBusiness);
+        return;
+      }
+    }
+
     // Отладочная информация
     debugPrint('=== Business Action Debug ===');
     debugPrint(
