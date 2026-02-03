@@ -7,7 +7,7 @@ import '../repositories/auth_repository.dart';
 /// Параметры для регистрации
 class RegisterParams {
   final String email;
-  final String username;
+  final String? username; // Никнейм опциональный
   final String password;
   final String? inviteCode;
   final String? firstName;
@@ -15,7 +15,7 @@ class RegisterParams {
 
   RegisterParams({
     required this.email,
-    required this.username,
+    this.username,
     required this.password,
     this.inviteCode,
     this.firstName,

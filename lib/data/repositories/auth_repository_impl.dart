@@ -5,6 +5,7 @@ import '../../core/error/failures.dart';
 import '../../core/utils/token_storage.dart';
 import '../models/register_request.dart';
 import '../models/login_request.dart';
+import '../models/guest_login_request.dart';
 import '../datasources/auth_remote_datasource.dart';
 import '../repositories/repository_impl.dart';
 
@@ -17,7 +18,7 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, AuthUser>> register({
     required String email,
-    required String username,
+    String? username, // Никнейм опциональный
     required String password,
     String? inviteCode,
     String? firstName,
@@ -82,6 +83,29 @@ class AuthRepositoryImpl extends RepositoryImpl implements AuthRepository {
     try {
       final response = await remoteDataSource.refreshToken(refreshToken);
       // Сохраняем обновленные токены
+      await TokenStorage.instance.setTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      );
+      return Right(response.toUserEntity());
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthUser>> guestLogin({required String guestUuid}) async {
+    try {
+      final request = GuestLoginRequest(guestUuid: guestUuid);
+
+      // Валидация
+      final validationError = request.validate();
+      if (validationError != null) {
+        return Left(GeneralFailure(validationError));
+      }
+
+      final response = await remoteDataSource.guestLogin(request);
+      // Сохраняем оба токена
       await TokenStorage.instance.setTokens(
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,

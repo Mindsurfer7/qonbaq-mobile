@@ -8,12 +8,14 @@ import 'package:qonbaq/data/datasources/auth_remote_datasource.dart';
 import 'package:qonbaq/data/repositories/auth_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/auth_repository.dart';
 import 'package:qonbaq/domain/usecases/login_user.dart';
+import 'package:qonbaq/domain/usecases/guest_login_user.dart';
 import 'package:qonbaq/domain/usecases/register_user.dart';
 import 'package:qonbaq/domain/usecases/refresh_token.dart';
 import 'package:qonbaq/presentation/pages/auth_page.dart';
 import 'package:qonbaq/presentation/pages/home_page.dart';
 import 'package:qonbaq/presentation/pages/start_page.dart';
 import 'package:qonbaq/presentation/pages/workspace_selector_page.dart';
+import 'package:qonbaq/presentation/pages/welcome_page.dart';
 import 'package:qonbaq/presentation/pages/business_main_page.dart';
 import 'package:qonbaq/presentation/pages/operational_block_page.dart';
 import 'package:qonbaq/presentation/pages/financial_block_page.dart';
@@ -280,10 +282,12 @@ class MyApp extends StatelessWidget {
     );
     final registerUser = RegisterUser(authRepository);
     final loginUser = LoginUser(authRepository);
+    final guestLoginUser = GuestLoginUser(authRepository);
     final refreshTokenUseCase = RefreshToken(authRepository);
     final authProvider = AuthProvider(
       registerUser: registerUser,
       loginUser: loginUser,
+      guestLoginUser: guestLoginUser,
       refreshToken: refreshTokenUseCase,
     );
 
@@ -715,6 +719,8 @@ class MyApp extends StatelessWidget {
             routes: {
               // Стартовая страница
               '/': (context) => const StartPage(),
+              // Страница приветствия с автоматическим гостевым логином
+              '/welcome': (context) => const WelcomePage(),
               // Выбор workspace (семья или бизнес)
               '/workspace-selector': (context) => const WorkspaceSelectorPage(),
               // Регистрация с invite кодом (обрабатывает /register?invite=...)

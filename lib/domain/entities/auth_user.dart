@@ -8,6 +8,7 @@ class AuthUser extends Entity {
   final String email;
   final String username;
   final bool isAdmin;
+  final bool isGuest;
   final List<ApprovalPermission> approvalPermissions;
 
   const AuthUser({
@@ -15,6 +16,7 @@ class AuthUser extends Entity {
     required this.email,
     required this.username,
     required this.isAdmin,
+    this.isGuest = false,
     this.approvalPermissions = const [],
   });
 
@@ -86,13 +88,18 @@ class AuthUser extends Entity {
           id == other.id &&
           email == other.email &&
           username == other.username &&
-          isAdmin == other.isAdmin;
+          isAdmin == other.isAdmin &&
+          isGuest == other.isGuest;
 
   @override
   int get hashCode =>
-      id.hashCode ^ email.hashCode ^ username.hashCode ^ isAdmin.hashCode;
+      id.hashCode ^
+      email.hashCode ^
+      username.hashCode ^
+      isAdmin.hashCode ^
+      isGuest.hashCode;
 
   @override
   String toString() =>
-      'AuthUser(id: $id, email: $email, username: $username, isAdmin: $isAdmin, approvalPermissions: ${approvalPermissions.length})';
+      'AuthUser(id: $id, email: $email, username: $username, isAdmin: $isAdmin, isGuest: $isGuest, approvalPermissions: ${approvalPermissions.length})';
 }

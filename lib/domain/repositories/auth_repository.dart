@@ -8,7 +8,7 @@ abstract class AuthRepository extends Repository {
   /// Регистрация пользователя
   Future<Either<Failure, AuthUser>> register({
     required String email,
-    required String username,
+    String? username, // Никнейм опциональный
     required String password,
     String? inviteCode,
     String? firstName,
@@ -23,4 +23,7 @@ abstract class AuthRepository extends Repository {
 
   /// Обновление токена через refresh token
   Future<Either<Failure, AuthUser>> refreshToken(String refreshToken);
+
+  /// Гостевой вход
+  Future<Either<Failure, AuthUser>> guestLogin({required String guestUuid});
 }

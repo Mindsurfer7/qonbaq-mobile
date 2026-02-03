@@ -678,34 +678,34 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Интервал
-              FormBuilderTextField(
-                name: 'recurrenceInterval',
-                initialValue: _recurrenceInterval.toString(),
-                decoration: InputDecoration(
-                  labelText: 'Интервал',
-                  helperText: 'Каждые N дней/недель/месяцев (по умолчанию 1)',
-                  border: const OutlineInputBorder(),
-                  errorText: _fieldErrors['recurrenceInterval'],
-                  errorMaxLines: 2,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final interval = int.tryParse(value);
-                    if (interval != null && interval > 0) {
-                      setState(() {
-                        _recurrenceInterval = interval;
-                      });
-                    }
-                  }
-                },
-                validator: FormBuilderValidators.compose([
-                  FormBuilderValidators.numeric(),
-                  FormBuilderValidators.min(1, errorText: 'Интервал должен быть больше 0'),
-                ]),
-              ),
-              const SizedBox(height: 16),
+              // Интервал - закомментировано
+              // FormBuilderTextField(
+              //   name: 'recurrenceInterval',
+              //   initialValue: _recurrenceInterval.toString(),
+              //   decoration: InputDecoration(
+              //     labelText: 'Интервал',
+              //     helperText: 'Каждые N дней/недель/месяцев (по умолчанию 1)',
+              //     border: const OutlineInputBorder(),
+              //     errorText: _fieldErrors['recurrenceInterval'],
+              //     errorMaxLines: 2,
+              //   ),
+              //   keyboardType: TextInputType.number,
+              //   onChanged: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final interval = int.tryParse(value);
+              //       if (interval != null && interval > 0) {
+              //         setState(() {
+              //           _recurrenceInterval = interval;
+              //         });
+              //       }
+              //     }
+              //   },
+              //   validator: FormBuilderValidators.compose([
+              //     FormBuilderValidators.numeric(),
+              //     FormBuilderValidators.min(1, errorText: 'Интервал должен быть больше 0'),
+              //   ]),
+              // ),
+              // const SizedBox(height: 16),
               // Время создания задачи
               FormBuilderTextField(
                 name: 'timeOfDay',
@@ -989,34 +989,34 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Интервал
-              FormBuilderTextField(
-                name: 'recurrenceInterval',
-                initialValue: _recurrenceInterval.toString(),
-                decoration: InputDecoration(
-                  labelText: 'Интервал',
-                  helperText: 'Каждые N дней/недель/месяцев (по умолчанию 1)',
-                  border: const OutlineInputBorder(),
-                  errorText: _fieldErrors['recurrenceInterval'],
-                  errorMaxLines: 2,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final interval = int.tryParse(value);
-                    if (interval != null && interval > 0) {
-                      setState(() {
-                        _recurrenceInterval = interval;
-                      });
-                    }
-                  }
-                },
-                validator: FormBuilderValidators.compose([
-                  FormBuilderValidators.numeric(),
-                  FormBuilderValidators.min(1, errorText: 'Интервал должен быть больше 0'),
-                ]),
-              ),
-              const SizedBox(height: 16),
+              // Интервал - закомментировано
+              // FormBuilderTextField(
+              //   name: 'recurrenceInterval',
+              //   initialValue: _recurrenceInterval.toString(),
+              //   decoration: InputDecoration(
+              //     labelText: 'Интервал',
+              //     helperText: 'Каждые N дней/недель/месяцев (по умолчанию 1)',
+              //     border: const OutlineInputBorder(),
+              //     errorText: _fieldErrors['recurrenceInterval'],
+              //     errorMaxLines: 2,
+              //   ),
+              //   keyboardType: TextInputType.number,
+              //   onChanged: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final interval = int.tryParse(value);
+              //       if (interval != null && interval > 0) {
+              //         setState(() {
+              //           _recurrenceInterval = interval;
+              //         });
+              //       }
+              //     }
+              //   },
+              //   validator: FormBuilderValidators.compose([
+              //     FormBuilderValidators.numeric(),
+              //     FormBuilderValidators.min(1, errorText: 'Интервал должен быть больше 0'),
+              //   ]),
+              // ),
+              // const SizedBox(height: 16),
               // Время создания точки контроля
               FormBuilderTextField(
                 name: 'timeOfDay',

@@ -30,7 +30,7 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
   // Контроллеры формы регистрации
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
+  // final _usernameController = TextEditingController(); // Никнейм не используется
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -48,7 +48,7 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
   @override
   void dispose() {
     _emailController.dispose();
-    _usernameController.dispose();
+    // _usernameController.dispose(); // Никнейм не используется
     _firstNameController.dispose();
     _lastNameController.dispose();
     _passwordController.dispose();
@@ -81,7 +81,7 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
 
   Future<void> _handleRegistration({
     required String email,
-    required String username,
+    String? username, // Никнейм опциональный
     required String password,
     String? firstName,
     String? lastName,
@@ -249,26 +249,27 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
             },
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _usernameController,
-            decoration: const InputDecoration(
-              labelText: 'Имя пользователя',
-              prefixIcon: Icon(Icons.person),
-              border: OutlineInputBorder(),
-              helperText: 'От 3 до 30 символов',
-            ),
-            textInputAction: TextInputAction.next,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Введите имя пользователя';
-              }
-              if (value.length < 3 || value.length > 30) {
-                return 'Имя пользователя должно быть от 3 до 30 символов';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
+          // Поле никнейма закомментировано - никнейм не используется
+          // TextFormField(
+          //   controller: _usernameController,
+          //   decoration: const InputDecoration(
+          //     labelText: 'Имя пользователя',
+          //     prefixIcon: Icon(Icons.person),
+          //     border: OutlineInputBorder(),
+          //     helperText: 'От 3 до 30 символов',
+          //   ),
+          //   textInputAction: TextInputAction.next,
+          //   validator: (value) {
+          //     if (value == null || value.isEmpty) {
+          //       return 'Введите имя пользователя';
+          //     }
+          //     if (value.length < 3 || value.length > 30) {
+          //       return 'Имя пользователя должно быть от 3 до 30 символов';
+          //     }
+          //     return null;
+          //   },
+          // ),
+          // const SizedBox(height: 16),
           TextFormField(
             controller: _firstNameController,
             decoration: const InputDecoration(
@@ -392,7 +393,7 @@ class _RegistrationStepperWidgetState extends State<RegistrationStepperWidget> {
               if (_formKey.currentState!.validate()) {
                 _handleRegistration(
                   email: _emailController.text.trim(),
-                  username: _usernameController.text.trim(),
+                  // username не передаем, так как никнейм не используется
                   password: _passwordController.text,
                   firstName: _firstNameController.text.trim().isNotEmpty
                       ? _firstNameController.text.trim()

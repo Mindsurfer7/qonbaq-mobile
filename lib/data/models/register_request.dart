@@ -3,7 +3,7 @@ import '../models/model.dart';
 /// Модель запроса регистрации
 class RegisterRequest implements Model {
   final String email;
-  final String username;
+  final String? username; // Никнейм опциональный
   final String password;
   final String? inviteCode;
   final String? firstName;
@@ -11,7 +11,7 @@ class RegisterRequest implements Model {
 
   RegisterRequest({
     required this.email,
-    required this.username,
+    this.username,
     required this.password,
     this.inviteCode,
     this.firstName,
@@ -22,9 +22,12 @@ class RegisterRequest implements Model {
   Map<String, dynamic> toJson() {
     final json = {
       'email': email,
-      'username': username,
       'password': password,
     };
+    // Добавляем username только если он указан
+    if (username != null && username!.isNotEmpty) {
+      json['username'] = username!;
+    }
     if (inviteCode != null && inviteCode!.isNotEmpty) {
       json['inviteCode'] = inviteCode!;
     }
@@ -45,12 +48,12 @@ class RegisterRequest implements Model {
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       return 'Неверный формат email';
     }
-    if (username.isEmpty) {
-      return 'Имя пользователя обязательно';
-    }
-    if (username.length < 3 || username.length > 30) {
-      return 'Имя пользователя должно быть от 3 до 30 символов';
-    }
+    // Валидация username убрана, так как никнейм не используется
+    // if (username != null && username!.isNotEmpty) {
+    //   if (username!.length < 3 || username!.length > 30) {
+    //     return 'Имя пользователя должно быть от 3 до 30 символов';
+    //   }
+    // }
     if (password.isEmpty) {
       return 'Пароль обязателен';
     }

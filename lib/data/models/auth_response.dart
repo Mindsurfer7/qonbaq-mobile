@@ -9,12 +9,18 @@ class AuthResponse implements Model {
   final String accessToken;
   final String refreshToken;
   final List<ApprovalPermissionModel> approvalPermissions;
+  final GuestBusinessModel? business;
+  final bool isReadOnly;
+  final String? expiresIn;
 
   AuthResponse({
     required this.user,
     required this.accessToken,
     required this.refreshToken,
     this.approvalPermissions = const [],
+    this.business,
+    this.isReadOnly = false,
+    this.expiresIn,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
@@ -25,11 +31,21 @@ class AuthResponse implements Model {
             .toList() ??
         [];
 
+    GuestBusinessModel? business;
+    if (json['business'] != null) {
+      business = GuestBusinessModel.fromJson(
+        json['business'] as Map<String, dynamic>,
+      );
+    }
+
     return AuthResponse(
       user: AuthUserModel.fromJson(json['user'] as Map<String, dynamic>),
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
       approvalPermissions: permissions,
+      business: business,
+      isReadOnly: json['isReadOnly'] as bool? ?? false,
+      expiresIn: json['expiresIn'] as String?,
     );
   }
 
@@ -40,6 +56,9 @@ class AuthResponse implements Model {
       'accessToken': accessToken,
       'refreshToken': refreshToken,
       'approvalPermissions': approvalPermissions.map((e) => e.toJson()).toList(),
+      if (business != null) 'business': business!.toJson(),
+      'isReadOnly': isReadOnly,
+      if (expiresIn != null) 'expiresIn': expiresIn,
     };
   }
 
@@ -195,26 +214,35 @@ class AuthUserModel implements Model {
   final String email;
   final String username;
   final bool isAdmin;
+  final bool isGuest;
 
   AuthUserModel({
     required this.id,
     required this.email,
     required this.username,
     required this.isAdmin,
+    this.isGuest = false,
   });
 
   factory AuthUserModel.fromJson(Map<String, dynamic> json) {
     return AuthUserModel(
       id: json['id'] as String,
-      email: json['email'] as String,
-      username: json['username'] as String,
+      email: json['email'] as String? ?? '',
+      username: json['username'] as String? ?? '',
       isAdmin: json['isAdmin'] as bool? ?? false,
+      isGuest: json['isGuest'] as bool? ?? false,
     );
   }
 
   @override
   Map<String, dynamic> toJson() {
-    return {'id': id, 'email': email, 'username': username, 'isAdmin': isAdmin};
+    return {
+      'id': id,
+      'email': email,
+      'username': username,
+      'isAdmin': isAdmin,
+      'isGuest': isGuest,
+    };
   }
 
   /// Преобразование в доменную сущность
@@ -224,7 +252,38 @@ class AuthUserModel implements Model {
       email: email,
       username: username,
       isAdmin: isAdmin,
+      isGuest: isGuest,
       approvalPermissions: approvalPermissions,
     );
+  }
+}
+
+/// Модель бизнеса для гостевой сессии
+class GuestBusinessModel implements Model {
+  final String id;
+  final String name;
+  final String? description;
+
+  GuestBusinessModel({
+    required this.id,
+    required this.name,
+    this.description,
+  });
+
+  factory GuestBusinessModel.fromJson(Map<String, dynamic> json) {
+    return GuestBusinessModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      if (description != null) 'description': description,
+    };
   }
 }

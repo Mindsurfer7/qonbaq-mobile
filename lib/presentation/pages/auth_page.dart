@@ -23,12 +23,20 @@ class _AuthPageState extends State<AuthPage>
   void initState() {
     super.initState();
     // Определяем начальный индекс таба: если есть invite код, начинаем с регистрации
-    final initialIndex = (widget.inviteCode != null || 
-                         DeepLinkService.instance.pendingInviteCode != null) ? 1 : 0;
-    _tabController = TabController(length: 2, vsync: this, initialIndex: initialIndex);
-    
+    final initialIndex =
+        (widget.inviteCode != null ||
+                DeepLinkService.instance.pendingInviteCode != null)
+            ? 1
+            : 0;
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
+
     // Если есть inviteCode, переключаемся на таб регистрации
-    if (widget.inviteCode != null || DeepLinkService.instance.pendingInviteCode != null) {
+    if (widget.inviteCode != null ||
+        DeepLinkService.instance.pendingInviteCode != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _tabController.animateTo(1);
@@ -61,7 +69,8 @@ class _AuthPageState extends State<AuthPage>
         children: [
           const LoginTab(),
           RegistrationStepperWidget(
-            inviteCode: widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode,
+            inviteCode:
+                widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode,
           ),
         ],
       ),
@@ -272,11 +281,11 @@ class RegisterTab extends StatefulWidget {
 class _RegisterTabState extends State<RegisterTab> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
+  // final _usernameController = TextEditingController(); // Никнейм не используется
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailFocusNode = FocusNode();
-  final _usernameFocusNode = FocusNode();
+  // final _usernameFocusNode = FocusNode(); // Никнейм не используется
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
   bool _obscurePassword = true;
@@ -287,17 +296,18 @@ class _RegisterTabState extends State<RegisterTab> {
   void initState() {
     super.initState();
     // Получаем код приглашения из параметра или из deep link сервиса
-    _inviteCode = widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode;
+    _inviteCode =
+        widget.inviteCode ?? DeepLinkService.instance.pendingInviteCode;
   }
 
   @override
   void dispose() {
     _emailController.dispose();
-    _usernameController.dispose();
+    // _usernameController.dispose(); // Никнейм не используется
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _emailFocusNode.dispose();
-    _usernameFocusNode.dispose();
+    // _usernameFocusNode.dispose(); // Никнейм не используется
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
     super.dispose();
@@ -311,7 +321,7 @@ class _RegisterTabState extends State<RegisterTab> {
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.register(
       email: _emailController.text.trim(),
-      username: _usernameController.text.trim(),
+      // username не передаем, так как никнейм не используется
       password: _passwordController.text,
       inviteCode: _inviteCode,
     );
@@ -381,7 +391,8 @@ class _RegisterTabState extends State<RegisterTab> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) {
-                    _usernameFocusNode.requestFocus();
+                    _passwordFocusNode
+                        .requestFocus(); // Переходим сразу к паролю, так как никнейм закомментирован
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -396,30 +407,31 @@ class _RegisterTabState extends State<RegisterTab> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _usernameController,
-                  focusNode: _usernameFocusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Имя пользователя',
-                    prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(),
-                    helperText: 'От 3 до 30 символов',
-                  ),
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) {
-                    _passwordFocusNode.requestFocus();
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Введите имя пользователя';
-                    }
-                    if (value.length < 3 || value.length > 30) {
-                      return 'Имя пользователя должно быть от 3 до 30 символов';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                // Поле никнейма закомментировано - никнейм не используется
+                // TextFormField(
+                //   controller: _usernameController,
+                //   focusNode: _usernameFocusNode,
+                //   decoration: const InputDecoration(
+                //     labelText: 'Имя пользователя',
+                //     prefixIcon: Icon(Icons.person),
+                //     border: OutlineInputBorder(),
+                //     helperText: 'От 3 до 30 символов',
+                //   ),
+                //   textInputAction: TextInputAction.next,
+                //   onFieldSubmitted: (_) {
+                //     _passwordFocusNode.requestFocus();
+                //   },
+                //   validator: (value) {
+                //     if (value == null || value.isEmpty) {
+                //       return 'Введите имя пользователя';
+                //     }
+                //     if (value.length < 3 || value.length > 30) {
+                //       return 'Имя пользователя должно быть от 3 до 30 символов';
+                //     }
+                //     return null;
+                //   },
+                // ),
+                // const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   focusNode: _passwordFocusNode,
@@ -559,12 +571,12 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _extractInviteAndNavigate() async {
     // Небольшая задержка для инициализации
     await Future.delayed(const Duration(milliseconds: 100));
-    
+
     if (!mounted) return;
 
     // Проверяем invite код в сервисе (уже должен быть обработан через app_links)
     String? inviteCode = DeepLinkService.instance.pendingInviteCode;
-    
+
     // Если invite код не найден, пытаемся получить из текущего URL
     if (inviteCode == null) {
       inviteCode = await DeepLinkService.instance.checkCurrentUrlForInvite();
@@ -585,10 +597,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/login_user.dart';
+import '../../domain/usecases/guest_login_user.dart';
 import '../../domain/usecases/refresh_token.dart';
 import '../../core/error/failures.dart';
 import '../../core/utils/token_storage.dart';
@@ -10,11 +11,13 @@ import '../../core/utils/token_storage.dart';
 class AuthProvider with ChangeNotifier {
   final RegisterUser registerUser;
   final LoginUser loginUser;
+  final GuestLoginUser guestLoginUser;
   final RefreshToken refreshToken;
 
   AuthProvider({
     required this.registerUser,
     required this.loginUser,
+    required this.guestLoginUser,
     required this.refreshToken,
   });
 
@@ -37,7 +40,7 @@ class AuthProvider with ChangeNotifier {
   /// Регистрация пользователя
   Future<bool> register({
     required String email,
-    required String username,
+    String? username, // Никнейм опциональный
     required String password,
     String? inviteCode,
     String? firstName,
@@ -83,6 +86,33 @@ class AuthProvider with ChangeNotifier {
 
     final result = await loginUser.call(
       LoginParams(email: email, password: password),
+    );
+
+    _isLoading = false;
+
+    return result.fold(
+      (failure) {
+        _error = _getErrorMessage(failure);
+        notifyListeners();
+        return false;
+      },
+      (user) {
+        _user = user;
+        _error = null;
+        notifyListeners();
+        return true;
+      },
+    );
+  }
+
+  /// Гостевой вход
+  Future<bool> guestLogin({required String guestUuid}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final result = await guestLoginUser.call(
+      GuestLoginParams(guestUuid: guestUuid),
     );
 
     _isLoading = false;
