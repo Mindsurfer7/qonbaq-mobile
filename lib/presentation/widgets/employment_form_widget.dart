@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/invite.dart';
+import '../../domain/entities/employment_enums.dart';
 
 /// Виджет формы для заполнения данных трудоустройства
 class EmploymentFormWidget extends StatefulWidget {
@@ -135,44 +136,12 @@ class _EmploymentFormWidgetState extends State<EmploymentFormWidget> {
                   helperText: 'Обязательное поле для бизнеса',
                 ),
                 isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'ACCOUNTANT',
-                    child: Text('Бухгалтер', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'LAWYER',
-                    child: Text('Юрист', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'SALES_MANAGER',
-                    child: Text('Менеджер продаж', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'PURCHASE_MANAGER',
-                    child: Text('Менеджер закупа', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'SECRETARY',
-                    child: Text('Секретарь', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'MARKETER',
-                    child: Text('Маркетолог', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'FINANCE_MANAGER',
-                    child: Text('Менеджер по финансам', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'LOGISTICIAN',
-                    child: Text('Логист', overflow: TextOverflow.ellipsis),
-                  ),
-                  DropdownMenuItem(
-                    value: 'OTHER',
-                    child: Text('Другое', overflow: TextOverflow.ellipsis),
-                  ),
-                ],
+                items: RoleCode.values.map((role) {
+                  return DropdownMenuItem<String>(
+                    value: role.code,
+                    child: Text(role.nameRu, overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedRoleCode = value;

@@ -204,6 +204,7 @@ import 'package:qonbaq/data/repositories/employment_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/employment_repository.dart';
 import 'package:qonbaq/domain/usecases/get_business_employments_with_roles.dart';
 import 'package:qonbaq/domain/usecases/update_employments_roles.dart';
+import 'package:qonbaq/domain/usecases/assign_functional_roles.dart';
 import 'package:qonbaq/domain/usecases/update_employment.dart';
 import 'package:qonbaq/presentation/providers/roles_provider.dart';
 import 'package:qonbaq/data/datasources/fixed_asset_remote_datasource_impl.dart';
@@ -314,6 +315,7 @@ class MyApp extends StatelessWidget {
     );
     final updateEmploymentsRoles = UpdateEmploymentsRoles(employmentRepository);
     final updateEmployment = UpdateEmployment(employmentRepository);
+    final assignFunctionalRoles = AssignFunctionalRoles(employmentRepository);
     
     final profileProvider = ProfileProvider(
       getUserBusinesses: getUserBusinesses,
@@ -660,6 +662,7 @@ class MyApp extends StatelessWidget {
         Provider<UserRepository>(create: (_) => userRepository),
         Provider<EmploymentRepository>(create: (_) => employmentRepository),
         Provider<UpdateEmployment>(create: (_) => updateEmployment),
+        Provider<AssignFunctionalRoles>(create: (_) => assignFunctionalRoles),
         Provider<ChatRepository>(create: (_) => chatRepository),
         Provider<StartWorkDay>(create: (_) => startWorkDay),
         Provider<EndWorkDay>(create: (_) => endWorkDay),

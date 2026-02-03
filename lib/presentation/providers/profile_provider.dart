@@ -4,6 +4,7 @@ import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/entities/employment_with_role.dart';
+import '../../domain/entities/employment_enums.dart';
 import '../../domain/usecases/get_user_businesses.dart';
 import '../../domain/usecases/get_user_profile.dart';
 import '../../domain/usecases/create_business.dart';
@@ -70,7 +71,11 @@ class ProfileProvider with ChangeNotifier {
   String? get currentUserRoleCode => _currentUserEmployment?.roleCode;
 
   /// Проверка, является ли пользователь бухгалтером в текущем бизнесе
-  bool get isAccountant => currentUserRoleCode == 'ACCOUNTANT';
+  bool get isAccountant {
+    final roleCode = currentUserRoleCode;
+    if (roleCode == null) return false;
+    return RoleCodeExtension.fromCode(roleCode) == RoleCode.accountant;
+  }
 
   /// Получить список сотрудников для выбранного бизнеса
   List<Employee>? getEmployeesForSelectedBusiness() {

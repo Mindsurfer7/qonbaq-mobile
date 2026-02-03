@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../core/utils/api_client.dart';
 import '../../core/utils/token_storage.dart';
+import '../../domain/entities/employment_enums.dart';
 import '../datasources/employment_remote_datasource.dart';
 import '../models/employment_with_role_model.dart';
 import '../models/api_response.dart';
@@ -116,18 +117,8 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
 
   /// Возвращает название роли по коду
   String _getRoleName(String roleCode) {
-    const roleNames = {
-      'ACCOUNTANT': 'Бухгалтер',
-      'LAWYER': 'Юрист',
-      'SALES_MANAGER': 'Менеджер продаж',
-      'PURCHASE_MANAGER': 'Менеджер закупа',
-      'SECRETARY': 'Секретарь',
-      'MARKETER': 'Маркетолог',
-      'FINANCE_MANAGER': 'Менеджер по финансам',
-      'LOGISTICIAN': 'Логист',
-      'OTHER': 'Другое',
-    };
-    return roleNames[roleCode] ?? roleCode;
+    final role = RoleCodeExtension.fromCode(roleCode);
+    return role?.nameRu ?? roleCode;
   }
 
   @override
@@ -345,6 +336,59 @@ class EmploymentRemoteDataSourceImpl extends EmploymentRemoteDataSource {
         final errorMessage = json['error'] as String? ?? 
             json['message'] as String? ?? 
             'Ошибка при удалении трудоустройства';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Ошибка сети: $e');
+    }
+  }
+
+  @override
+  Future<void> assignFunctionalRoles({
+    required String businessId,
+    required List<Map<String, dynamic>> assignments,
+  }) async {
+    try {
+      final response = await apiClient.post(
+        '/api/employments/functional-roles',
+        headers: _getAuthHeaders(),
+        body: {
+          'businessId': businessId,
+          'assignments': assignments,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Успешное назначение, ничего не возвращаем
+        return;
+      } else if (response.statusCode == 400) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка валидации';
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Не авторизован');
+      } else if (response.statusCode == 403) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Нет доступа к указанному бизнесу';
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 404) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Некоторые трудоустройства не найдены или не принадлежат указанному бизнесу';
+        throw Exception(errorMessage);
+      } else {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final errorMessage = json['error'] as String? ?? 
+            json['message'] as String? ?? 
+            'Ошибка при назначении функциональных ролей';
         throw Exception(errorMessage);
       }
     } catch (e) {

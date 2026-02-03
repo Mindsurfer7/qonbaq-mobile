@@ -40,4 +40,11 @@ abstract class EmploymentRepository {
     String? roleCode,
     String? businessId,
   });
+
+  /// Назначить функциональные роли сотрудникам
+  /// assignments: список назначений, где каждое содержит employmentId и список permissions
+  Future<Either<Failure, void>> assignFunctionalRoles({
+    required String businessId,
+    required List<Map<String, dynamic>> assignments,
+  });
 }

@@ -1,4 +1,5 @@
 import '../entities/entity.dart';
+import 'employment_enums.dart';
 
 /// Информация о назначении департамента при назначении роли
 class DepartmentAssignment extends Entity {
@@ -69,6 +70,13 @@ class EmploymentWithRole extends Entity {
 
   /// Название роли
   String? get roleName => role?.name;
+
+  /// Получить enum организационной позиции
+  OrgPositionCode? get orgPositionCode =>
+      OrgPositionCodeExtension.fromCode(orgPosition);
+
+  /// Получить enum роли
+  RoleCode? get roleCodeEnum => RoleCodeExtension.fromCode(roleCode);
 
   @override
   bool operator ==(Object other) =>

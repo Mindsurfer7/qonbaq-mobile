@@ -37,7 +37,14 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final apiResponse = ApiResponse.fromJson(
           json,
           (data) {
-            final workDayJson = data as Map<String, dynamic>;
+            // Ответ имеет структуру: { success: true, workDay: {...} }
+            final dataMap = data as Map<String, dynamic>;
+            final workDayJson = dataMap['workDay'] as Map<String, dynamic>?;
+            if (workDayJson == null) {
+              throw FormatException(
+                'Ожидалось поле "workDay" в ответе API, получено: $dataMap',
+              );
+            }
             // Добавляем businessId, если его нет в ответе
             if (!workDayJson.containsKey('businessId')) {
               workDayJson['businessId'] = businessId;
@@ -95,7 +102,14 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final apiResponse = ApiResponse.fromJson(
           json,
           (data) {
-            final workDayJson = data as Map<String, dynamic>;
+            // Ответ имеет структуру: { success: true, workDay: {...} }
+            final dataMap = data as Map<String, dynamic>;
+            final workDayJson = dataMap['workDay'] as Map<String, dynamic>?;
+            if (workDayJson == null) {
+              throw FormatException(
+                'Ожидалось поле "workDay" в ответе API, получено: $dataMap',
+              );
+            }
             // Добавляем businessId, если его нет в ответе
             if (!workDayJson.containsKey('businessId')) {
               workDayJson['businessId'] = businessId;
@@ -156,7 +170,14 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
         final apiResponse = ApiResponse.fromJson(
           json,
           (data) {
-            final workDayJson = data as Map<String, dynamic>;
+            // Ответ имеет структуру: { success: true, workDay: {...} }
+            final dataMap = data as Map<String, dynamic>;
+            final workDayJson = dataMap['workDay'] as Map<String, dynamic>?;
+            if (workDayJson == null) {
+              throw FormatException(
+                'Ожидалось поле "workDay" в ответе API, получено: $dataMap',
+              );
+            }
             // Добавляем businessId, если его нет в ответе
             if (!workDayJson.containsKey('businessId')) {
               workDayJson['businessId'] = businessId;

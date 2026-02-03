@@ -1,5 +1,6 @@
 import '../entities/entity.dart';
 import 'business.dart';
+import 'employment_enums.dart';
 
 /// Доменная сущность профиля пользователя
 class UserProfile extends Entity {
@@ -68,6 +69,10 @@ class Employment extends Entity {
     this.personnelNumber,
     required this.isActive,
   });
+
+  /// Получить enum организационной позиции
+  OrgPositionCode? get orgPositionCode =>
+      OrgPositionCodeExtension.fromCode(orgPosition);
 }
 
 /// Данные сотрудника

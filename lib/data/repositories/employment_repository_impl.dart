@@ -98,4 +98,20 @@ class EmploymentRepositoryImpl extends RepositoryImpl implements EmploymentRepos
       return Left(ServerFailure('Ошибка при обновлении трудоустройства: $e'));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> assignFunctionalRoles({
+    required String businessId,
+    required List<Map<String, dynamic>> assignments,
+  }) async {
+    try {
+      await remoteDataSource.assignFunctionalRoles(
+        businessId: businessId,
+        assignments: assignments,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при назначении функциональных ролей: $e'));
+    }
+  }
 }

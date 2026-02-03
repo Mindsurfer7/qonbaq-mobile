@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/roles_provider.dart';
 import '../../domain/entities/employment_with_role.dart';
+import '../../domain/entities/employment_enums.dart';
 import '../../domain/entities/invite.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/usecases/update_employment.dart';
@@ -382,18 +383,6 @@ class _EmployeeRoleTile extends StatelessWidget {
     this.onEdit,
   });
 
-  static const Map<String, String> _roleNames = {
-    'ACCOUNTANT': 'Бухгалтер',
-    'LAWYER': 'Юрист',
-    'SALES_MANAGER': 'Менеджер продаж',
-    'PURCHASE_MANAGER': 'Менеджер закупа',
-    'SECRETARY': 'Секретарь',
-    'MARKETER': 'Маркетолог',
-    'FINANCE_MANAGER': 'Менеджер по финансам',
-    'LOGISTICIAN': 'Логист',
-    'OTHER': 'Другое',
-  };
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -468,10 +457,10 @@ class _EmployeeRoleTile extends StatelessWidget {
                     value: null,
                     child: Text('Без роли', overflow: TextOverflow.ellipsis),
                   ),
-                  ..._roleNames.entries.map(
-                    (entry) => DropdownMenuItem<String?>(
-                      value: entry.key,
-                      child: Text(entry.value, overflow: TextOverflow.ellipsis),
+                  ...RoleCode.values.map(
+                    (role) => DropdownMenuItem<String?>(
+                      value: role.code,
+                      child: Text(role.nameRu, overflow: TextOverflow.ellipsis),
                     ),
                   ),
                 ],

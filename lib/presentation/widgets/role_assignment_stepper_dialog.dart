@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/employment_with_role.dart';
+import '../../domain/usecases/assign_functional_roles.dart';
 import '../providers/role_assignment_form_provider.dart';
 import '../providers/roles_provider.dart';
 import '../widgets/searchable_dropdown.dart';
 
-/// Многошаговый диалог для назначения трех основных ролей
+/// Многошаговый диалог для назначения функциональных ролей
 class RoleAssignmentStepperDialog extends StatefulWidget {
   final String businessId;
 
@@ -22,19 +23,17 @@ class RoleAssignmentStepperDialog extends StatefulWidget {
 class _RoleAssignmentStepperDialogState
     extends State<RoleAssignmentStepperDialog> {
   int _currentStep = 0;
+  bool _isSubmitting = false;
   final List<String> _roleTitles = [
-    'Кто утверждает финальный документ или заявку?',
-    'Кто выдает деньги?',
-    'Кто оформляет документы (подшивает документы)?',
+    'Кто отвечает за выдачу денег?',
+    'Кто подписывает согласования вместо гендиректора?',
   ];
   final List<String> _roleDescriptions = [
-    'Выберите сотрудника, который будет утверждать финальные документы и заявки. Обычно это генеральный директор.',
-    'Выберите сотрудника, который будет выдавать деньги. Это может быть бухгалтер или другое назначенное лицо.',
-    'Выберите сотрудника, который будет оформлять документы. Обычно это кадровик или другое назначенное лицо.',
+    'Выберите сотрудника, который будет отвечать за выдачу денег. Это может быть бухгалтер или другое назначенное лицо.',
+    'Выберите сотрудника, который будет подписывать согласования вместо генерального директора.',
   ];
-  final List<String?> _selectedEmploymentIds = [null, null, null];
+  final List<String?> _selectedEmploymentIds = [null, null];
   final List<GlobalKey<FormFieldState>> _formFieldKeys = [
-    GlobalKey<FormFieldState>(),
     GlobalKey<FormFieldState>(),
     GlobalKey<FormFieldState>(),
   ];
@@ -61,13 +60,10 @@ class _RoleAssignmentStepperDialogState
         Provider.of<RoleAssignmentFormProvider>(context, listen: false);
     switch (stepIndex) {
       case 0:
-        formProvider.setFinalApprover(employmentId);
-        break;
-      case 1:
         formProvider.setMoneyIssuer(employmentId);
         break;
-      case 2:
-        formProvider.setDocumentProcessor(employmentId);
+      case 1:
+        formProvider.setApprovalAuthorize(employmentId);
         break;
     }
   }
@@ -82,7 +78,7 @@ class _RoleAssignmentStepperDialogState
       }
     }
 
-    if (_currentStep < 2) {
+    if (_currentStep < 1) {
       setState(() {
         _currentStep++;
       });
@@ -102,7 +98,7 @@ class _RoleAssignmentStepperDialogState
   }
 
   bool _isLastStep() {
-    return _currentStep == 2;
+    return _currentStep == 1;
   }
 
   Future<void> _submit() async {
@@ -115,14 +111,80 @@ class _RoleAssignmentStepperDialogState
       }
     }
 
-    // Данные уже сохранены в провайдер через _onEmployeeSelected
-    // TODO: Здесь нужно будет определить, как назначать эти роли
-    // Возможно, это будут специальные коды ролей или отдельный API endpoint
-    // Пока просто переходим на страницу распределения ролей
+    if (_isSubmitting) return;
 
-    if (mounted) {
-      Navigator.of(context).pop();
-      Navigator.of(context).pushNamed('/roles-assignment');
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final formProvider =
+          Provider.of<RoleAssignmentFormProvider>(context, listen: false);
+      final assignments = formProvider.getAssignments();
+
+      if (assignments.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Необходимо назначить все роли'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      final assignFunctionalRoles =
+          Provider.of<AssignFunctionalRoles>(context, listen: false);
+      
+      final result = await assignFunctionalRoles.call(
+        AssignFunctionalRolesParams(
+          businessId: widget.businessId,
+          assignments: assignments,
+        ),
+      );
+
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(failure.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isSubmitting = false;
+          });
+        },
+        (_) {
+          // Успешное назначение
+          formProvider.clear();
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Функциональные роли успешно назначены'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -154,7 +216,7 @@ class _RoleAssignmentStepperDialogState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Назначение основных ролей',
+                          'Назначение функциональных ролей',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -162,7 +224,7 @@ class _RoleAssignmentStepperDialogState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Шаг ${_currentStep + 1} из 3',
+                          'Шаг ${_currentStep + 1} из 2',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -179,11 +241,11 @@ class _RoleAssignmentStepperDialogState
               height: 4,
               margin: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: List.generate(3, (index) {
+                children: List.generate(2, (index) {
                   return Expanded(
                     child: Container(
                       margin: EdgeInsets.only(
-                        right: index < 2 ? 4 : 0,
+                        right: index < 1 ? 4 : 0,
                       ),
                       decoration: BoxDecoration(
                         color: index <= _currentStep
@@ -288,10 +350,18 @@ class _RoleAssignmentStepperDialogState
                   else
                     const SizedBox.shrink(),
                   ElevatedButton(
-                    onPressed: _canProceedToNext()
-                        ? (_isLastStep() ? _submit : _nextStep)
-                        : null,
-                    child: Text(_isLastStep() ? 'Завершить' : 'Далее'),
+                    onPressed: (_isSubmitting || !_canProceedToNext())
+                        ? null
+                        : (_isLastStep() ? _submit : _nextStep),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(_isLastStep() ? 'Завершить' : 'Далее'),
                   ),
                 ],
               ),
