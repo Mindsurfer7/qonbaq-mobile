@@ -34,6 +34,13 @@ enum TaskListType {
 }
 
 /// Страница задач
+///
+/// @deprecated Используйте [OperationalTasksPage] вместо этого класса.
+/// Этот класс устарел и будет удален в будущих версиях.
+/// Правильный роут: /business/operational/tasks
+@Deprecated(
+  'Используйте OperationalTasksPage по роуту /business/operational/tasks',
+)
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
 
@@ -266,7 +273,8 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     final profile = profileProvider.profile;
 
     // Проверяем, является ли пользователь гендиректором
-    final isGeneralDirector = currentUser?.isAdmin == true ||
+    final isGeneralDirector =
+        currentUser?.isAdmin == true ||
         profile?.orgStructure.isGeneralDirector == true;
 
     print('TasksPage: isGeneralDirector: $isGeneralDirector');
@@ -276,8 +284,10 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
       _isLoadingControlPoints = true;
     });
 
-    final getControlPointsUseCase =
-        Provider.of<GetControlPoints>(context, listen: false);
+    final getControlPointsUseCase = Provider.of<GetControlPoints>(
+      context,
+      listen: false,
+    );
 
     print('TasksPage: Calling useCase with params:');
     print('  businessId: $businessId');
@@ -307,12 +317,16 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         });
       },
       (paginatedResult) {
-        print('TasksPage: UseCase returned Right (success): ${paginatedResult.items.length} items');
+        print(
+          'TasksPage: UseCase returned Right (success): ${paginatedResult.items.length} items',
+        );
         setState(() {
           _isLoadingControlPoints = false;
           _controlPoints = paginatedResult.items;
         });
-        print('TasksPage: ControlPoints in state: ${_controlPoints.length} items');
+        print(
+          'TasksPage: ControlPoints in state: ${_controlPoints.length} items',
+        );
       },
     );
   }
@@ -732,7 +746,8 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
             : observedTasks.isNotEmpty);
 
     // Проверяем, есть ли контрольные точки для отображения (только для текущих задач)
-    final hasControlPointsToShow = listType == TaskListType.current && _controlPoints.isNotEmpty;
+    final hasControlPointsToShow =
+        listType == TaskListType.current && _controlPoints.isNotEmpty;
 
     // Если нет ни задач, ни контрольных точек, показываем пустой экран
     if (!hasTasksToShow && !hasControlPointsToShow) {
@@ -837,13 +852,18 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
           ],
 
           // Секция "Точки контроля" (только для текущих задач)
-          if (listType == TaskListType.current && _controlPoints.isNotEmpty) ...[
+          if (listType == TaskListType.current &&
+              _controlPoints.isNotEmpty) ...[
             // Отладочная информация
             Builder(
               builder: (context) {
                 print('TasksPage: Building UI for current tasks');
-                print('TasksPage: _controlPoints.length: ${_controlPoints.length}');
-                print('TasksPage: _controlPoints.isNotEmpty: ${_controlPoints.isNotEmpty}');
+                print(
+                  'TasksPage: _controlPoints.length: ${_controlPoints.length}',
+                );
+                print(
+                  'TasksPage: _controlPoints.isNotEmpty: ${_controlPoints.isNotEmpty}',
+                );
                 return const SizedBox.shrink();
               },
             ),
@@ -868,7 +888,9 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                 ],
               ),
             ),
-            ..._controlPoints.map((controlPoint) => _buildControlPointCard(controlPoint)),
+            ..._controlPoints.map(
+              (controlPoint) => _buildControlPointCard(controlPoint),
+            ),
           ],
         ],
       ),
@@ -1181,7 +1203,8 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                 ],
               ),
             ],
-            if (controlPoint.metrics != null && controlPoint.metrics!.isNotEmpty) ...[
+            if (controlPoint.metrics != null &&
+                controlPoint.metrics!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -1226,24 +1249,25 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     Map<String, dynamic>? completionResult;
 
     // Проверяем тип задачи и показываем соответствующий диалог
-    if (task.hasControlPoint && task.indicators != null && task.indicators!.isNotEmpty) {
+    if (task.hasControlPoint &&
+        task.indicators != null &&
+        task.indicators!.isNotEmpty) {
       // Для точки контроля показываем диалог с метриками
       completionResult = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => ControlPointCompletionDialog(
-          taskTitle: task.title,
-          indicators: task.indicators!,
-        ),
+        builder:
+            (context) => ControlPointCompletionDialog(
+              taskTitle: task.title,
+              indicators: task.indicators!,
+            ),
       );
     } else {
       // Для обычной задачи или регулярной задачи показываем диалог с resultText и файлом
       completionResult = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => TaskCompletionDialog(
-          taskTitle: task.title,
-        ),
+        builder: (context) => TaskCompletionDialog(taskTitle: task.title),
       );
     }
 
@@ -1257,7 +1281,9 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     String? resultFileId;
     List<TaskIndicator>? updatedIndicators;
 
-    if (task.hasControlPoint && task.indicators != null && task.indicators!.isNotEmpty) {
+    if (task.hasControlPoint &&
+        task.indicators != null &&
+        task.indicators!.isNotEmpty) {
       // Для точки контроля получаем обновленные метрики
       updatedIndicators = completionResult['indicators'] as List<TaskIndicator>;
     } else {

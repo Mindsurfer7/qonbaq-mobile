@@ -280,7 +280,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(context, 'Задачи', '/tasks', Icons.task),
+          _buildNavItem(context, 'Задачи', '/business/operational/tasks', Icons.task),
           _buildNavItem(
             context,
             'Согласования',

@@ -54,7 +54,8 @@ import 'package:qonbaq/presentation/pages/start_work_day_page.dart';
 import 'package:qonbaq/presentation/pages/chats_email_page.dart';
 import 'package:qonbaq/presentation/pages/calendar_page.dart';
 import 'package:qonbaq/presentation/pages/profile_settings_page.dart';
-import 'package:qonbaq/presentation/pages/tasks_page.dart';
+// DEPRECATED: tasks_page.dart помечен как deprecated, используйте operational_tasks_page.dart
+// import 'package:qonbaq/presentation/pages/tasks_page.dart';
 import 'package:qonbaq/presentation/pages/task_detail_page.dart';
 import 'package:qonbaq/presentation/pages/approvals_page.dart';
 import 'package:qonbaq/presentation/pages/roles_assignment_page.dart';
@@ -859,7 +860,8 @@ class MyApp extends StatelessWidget {
                 }
                 return DepartmentDetailPage(departmentId: departmentId);
               },
-              '/tasks': (context) => const TasksPage(),
+              // DEPRECATED: Используйте /business/operational/tasks вместо /tasks
+              // '/tasks': (context) => const TasksPage(),
               '/tasks/detail': (context) {
                 final taskId =
                     ModalRoute.of(context)!.settings.arguments as String?;
