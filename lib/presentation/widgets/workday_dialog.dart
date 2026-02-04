@@ -84,7 +84,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               // Закрываем диалог и сразу переходим на страницу задач
               if (context.mounted) {
                 Navigator.of(context).pop();
-                Navigator.of(context).pushReplacementNamed('/tasks');
+                Navigator.of(context).pushNamed('/tasks');
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -121,18 +121,18 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               );
               
               Navigator.of(context).pop(true);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Рабочий день завершен в $endTimeStr',
-                  ),
-                  backgroundColor: Colors.blue,
-                ),
-              );
               
               // Навигация на страницу табелирования
               if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/business/admin/timesheet');
+                Navigator.of(context).pushNamed('/business/admin/timesheet');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Рабочий день завершен в $endTimeStr',
+                    ),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
               }
             },
           );
