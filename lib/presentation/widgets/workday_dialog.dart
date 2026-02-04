@@ -81,19 +81,18 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
                 startTime: startTimeStr,
               );
               
-              Navigator.of(context).pop(true);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Рабочий день начат в $startTimeStr',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              
-              // Навигация на страницу задач
+              // Закрываем диалог и сразу переходим на страницу задач
               if (context.mounted) {
+                Navigator.of(context).pop();
                 Navigator.of(context).pushReplacementNamed('/tasks');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Рабочий день начат в $startTimeStr',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               }
             },
           );
@@ -295,7 +294,6 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
     Color color,
     WorkDayAction action,
   ) {
-    final isSelected = _selectedAction == action;
     final isDisabled = _isLoading && _selectedAction != action;
 
     return ElevatedButton.icon(
@@ -314,15 +312,11 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
       icon: Icon(icon),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? color : color.withOpacity(0.1),
-        foregroundColor: isSelected ? Colors.white : color,
+        backgroundColor: color,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
         ),
       ),
     );
