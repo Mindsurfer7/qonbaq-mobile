@@ -5,6 +5,7 @@ import '../widgets/workday_dialog.dart';
 import '../providers/profile_provider.dart';
 import '../providers/pending_confirmations_provider.dart';
 import '../providers/auth_provider.dart';
+import '../../domain/entities/workday.dart';
 
 /// Главная страница бизнес-приложения
 class BusinessMainPage extends StatefulWidget {
@@ -157,12 +158,25 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildTopNavItem(
-                  context,
-                  'Начать рабочий день',
-                  null,
-                  Icons.play_arrow,
-                  onTap: () => _showWorkDayDialog(context),
+                Selector<ProfileProvider, bool?>(
+                  selector: (context, provider) {
+                    final workDay = provider.profile?.workDay;
+                    return workDay?.status == WorkDayStatus.started;
+                  },
+                  builder: (context, isStarted, child) {
+                    final label = isStarted == true 
+                        ? 'Завершить рабочий день' 
+                        : 'Начать рабочий день';
+                    final icon = isStarted == true ? Icons.stop : Icons.play_arrow;
+                    
+                    return _buildWorkDayButton(
+                      context,
+                      label,
+                      icon,
+                      isStarted == true,
+                      onTap: () => _showWorkDayDialog(context),
+                    );
+                  },
                 ),
                 _buildTopNavItem(
                   context,
@@ -359,6 +373,56 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWorkDayButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    bool isStarted, {
+    VoidCallback? onTap,
+  }) {
+    final color = isStarted ? Colors.red : Colors.green;
+    
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(height: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: color,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

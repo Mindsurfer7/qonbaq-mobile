@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../domain/usecases/start_workday.dart';
 import '../../domain/usecases/end_workday.dart';
 import '../../domain/usecases/mark_absent.dart';
+import '../../domain/entities/workday.dart';
+import '../../core/services/local_notification_service.dart';
 import '../providers/profile_provider.dart';
 
 /// Диалог для работы с рабочим днем
@@ -68,16 +70,31 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
                 _isLoading = false;
               });
             },
-            (workDay) {
+            (workDay) async {
+              // Обновляем профиль, чтобы получить актуальный workDay
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              await profileProvider.loadProfile();
+              
+              // Показываем локальное уведомление
+              final startTimeStr = _formatTime(workDay.startTime);
+              await LocalNotificationService().showWorkDayStartedNotification(
+                startTime: startTimeStr,
+              );
+              
               Navigator.of(context).pop(true);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Рабочий день начат в ${_formatTime(workDay.startTime)}',
+                    'Рабочий день начат в $startTimeStr',
                   ),
                   backgroundColor: Colors.green,
                 ),
               );
+              
+              // Навигация на страницу задач
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/tasks');
+              }
             },
           );
           break;
@@ -93,16 +110,31 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
                 _isLoading = false;
               });
             },
-            (workDay) {
+            (workDay) async {
+              // Обновляем профиль, чтобы получить актуальный workDay
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              await profileProvider.loadProfile();
+              
+              // Показываем локальное уведомление
+              final endTimeStr = _formatTime(workDay.endTime);
+              await LocalNotificationService().showWorkDayEndedNotification(
+                endTime: endTimeStr,
+              );
+              
               Navigator.of(context).pop(true);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Рабочий день завершен в ${_formatTime(workDay.endTime)}',
+                    'Рабочий день завершен в $endTimeStr',
                   ),
                   backgroundColor: Colors.blue,
                 ),
               );
+              
+              // Навигация на страницу табелирования
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/business/admin/timesheet');
+              }
             },
           );
           break;
@@ -148,6 +180,10 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final workDay = profileProvider.profile?.workDay;
+    final isStarted = workDay?.status == WorkDayStatus.started;
+    
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -183,22 +219,28 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               ),
               const SizedBox(height: 16),
             ],
-            _buildActionButton(
-              context,
-              'Начать рабочий день',
-              Icons.play_arrow,
-              Colors.green,
-              WorkDayAction.start,
-            ),
-            const SizedBox(height: 12),
-            _buildActionButton(
-              context,
-              'Завершить рабочий день',
-              Icons.stop,
-              Colors.blue,
-              WorkDayAction.end,
-            ),
-            const SizedBox(height: 12),
+            // Показываем кнопку "Начать рабочий день" только если день не начат
+            if (!isStarted) ...[
+              _buildActionButton(
+                context,
+                'Начать рабочий день',
+                Icons.play_arrow,
+                Colors.green,
+                WorkDayAction.start,
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Показываем кнопку "Завершить рабочий день" только если день начат
+            if (isStarted) ...[
+              _buildActionButton(
+                context,
+                'Завершить рабочий день',
+                Icons.stop,
+                Colors.red,
+                WorkDayAction.end,
+              ),
+              const SizedBox(height: 12),
+            ],
             _buildActionButton(
               context,
               'Отсутствую по причине',
@@ -277,6 +319,10 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
         ),
       ),
     );

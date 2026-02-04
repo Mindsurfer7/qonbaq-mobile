@@ -16,6 +16,8 @@ import '../widgets/user_selector_widget.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/comment_item.dart';
 import '../widgets/user_info_row.dart';
+import '../widgets/task_completion_dialog.dart';
+import '../widgets/control_point_completion_dialog.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/usecases/get_file_url.dart';
 import '../../domain/usecases/download_file.dart';
@@ -266,6 +268,117 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       _assignedToId = null;
       _assignedById = null;
     });
+  }
+
+  Future<void> _completeTask() async {
+    if (_task == null) return;
+
+    Map<String, dynamic>? completionResult;
+
+    // Проверяем тип задачи и показываем соответствующий диалог
+    if (_task!.hasControlPoint && _task!.indicators != null && _task!.indicators!.isNotEmpty) {
+      // Для точки контроля показываем диалог с метриками
+      completionResult = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ControlPointCompletionDialog(
+          taskTitle: _task!.title,
+          indicators: _task!.indicators!,
+        ),
+      );
+    } else {
+      // Для обычной задачи показываем диалог с resultText и файлом
+      completionResult = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TaskCompletionDialog(
+          taskTitle: _task!.title,
+        ),
+      );
+    }
+
+    // Если пользователь отменил диалог, ничего не делаем
+    if (completionResult == null) {
+      return;
+    }
+
+    // Извлекаем данные в зависимости от типа задачи
+    String? resultText;
+    String? resultFileId;
+    List<TaskIndicator>? updatedIndicators;
+
+    if (_task!.hasControlPoint && _task!.indicators != null && _task!.indicators!.isNotEmpty) {
+      // Для точки контроля получаем обновленные метрики
+      updatedIndicators = completionResult['indicators'] as List<TaskIndicator>;
+    } else {
+      // Для обычной задачи получаем resultText и resultFileId
+      resultText = completionResult['resultText'] as String?;
+      resultFileId = completionResult['resultFileId'] as String?;
+    }
+
+    final updateTaskUseCase = Provider.of<UpdateTask>(context, listen: false);
+
+    // Создаем обновленную задачу со статусом completed
+    final updatedTask = Task(
+      id: _task!.id,
+      businessId: _task!.businessId,
+      title: _task!.title,
+      description: _task!.description,
+      status: TaskStatus.completed,
+      priority: _task!.priority,
+      assignedTo: _task!.assignedTo,
+      assignedBy: _task!.assignedBy,
+      assignmentDate: _task!.assignmentDate,
+      deadline: _task!.deadline,
+      isImportant: _task!.isImportant,
+      isRecurring: _task!.isRecurring,
+      hasControlPoint: _task!.hasControlPoint,
+      dontForget: _task!.dontForget,
+      voiceNoteUrl: _task!.voiceNoteUrl,
+      resultText: resultText,
+      resultFileId: resultFileId,
+      createdAt: _task!.createdAt,
+      updatedAt: DateTime.now(),
+      observerIds: _task!.observerIds,
+      attachments: _task!.attachments,
+      indicators: updatedIndicators ?? _task!.indicators,
+      recurrence: _task!.recurrence,
+      business: _task!.business,
+      assignee: _task!.assignee,
+      assigner: _task!.assigner,
+      observers: _task!.observers,
+      comments: _task!.comments,
+    );
+
+    final result = await updateTaskUseCase.call(
+      UpdateTaskParams(id: _task!.id, task: updatedTask),
+    );
+
+    result.fold(
+      (failure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getErrorMessage(failure)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      (task) {
+        setState(() {
+          _task = task;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Задача завершена!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -779,6 +892,28 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                                         ],
                                         const SizedBox(height: 16),
                                       ],
+                                    ),
+
+                                  // Кнопка завершения задачи
+                                  if (_task!.status != TaskStatus.completed &&
+                                      _task!.status != TaskStatus.cancelled)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 16),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _completeTask,
+                                          icon: const Icon(Icons.check_circle),
+                                          label: const Text('Завершить задачу'),
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
+                                      ),
                                     ),
 
                                   // Комментарии

@@ -105,6 +105,7 @@ import 'package:qonbaq/domain/usecases/get_current_invite.dart';
 import 'package:qonbaq/core/utils/token_storage.dart';
 import 'package:qonbaq/core/utils/auth_interceptor.dart';
 import 'package:qonbaq/core/utils/deep_link_service.dart';
+import 'package:qonbaq/core/services/local_notification_service.dart';
 import 'package:qonbaq/data/datasources/workday_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/workday_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/workday_repository.dart';
@@ -250,6 +251,8 @@ Future<void> main() async {
   await TokenStorage.instance.initialize();
   // Инициализируем обработку deep links
   await DeepLinkService.instance.initialize();
+  // Инициализируем сервис локальных уведомлений
+  await LocalNotificationService().initialize();
   runApp(const MyApp());
 }
 

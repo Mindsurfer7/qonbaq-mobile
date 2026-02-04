@@ -1,6 +1,7 @@
 import '../../domain/entities/user_profile.dart';
 import '../models/model.dart';
 import 'business_model.dart';
+import 'workday_model.dart';
 
 /// Модель профиля пользователя
 class UserProfileModel implements Model {
@@ -11,6 +12,7 @@ class UserProfileModel implements Model {
   final OrgStructureModel orgStructure;
   final InterchangeableEmployeeModel? interchangeableEmployee;
   final List<HrDocumentModel> hrDocuments;
+  final WorkDayModel? workDay;
 
   const UserProfileModel({
     required this.user,
@@ -20,9 +22,14 @@ class UserProfileModel implements Model {
     required this.orgStructure,
     this.interchangeableEmployee,
     required this.hrDocuments,
+    this.workDay,
   });
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
+    final businessId = json['business'] != null
+        ? (json['business'] as Map<String, dynamic>)['id'] as String?
+        : null;
+    
     return UserProfileModel(
       user: ProfileUserModel.fromJson(json['user'] as Map<String, dynamic>),
       business: BusinessModel.fromJson(
@@ -51,6 +58,20 @@ class UserProfileModel implements Model {
               )
               .toList() ??
           [],
+      workDay: json['workDay'] != null
+          ? () {
+              final workDayJson = json['workDay'] as Map<String, dynamic>;
+              // Добавляем businessId, если его нет
+              if (businessId != null && !workDayJson.containsKey('businessId')) {
+                workDayJson['businessId'] = businessId;
+              }
+              // Добавляем date, если его нет (используем сегодняшнюю дату)
+              if (!workDayJson.containsKey('date')) {
+                workDayJson['date'] = DateTime.now().toIso8601String();
+              }
+              return WorkDayModel.fromJson(workDayJson);
+            }()
+          : null,
     );
   }
 
@@ -65,6 +86,7 @@ class UserProfileModel implements Model {
       if (interchangeableEmployee != null)
         'interchangeableEmployee': interchangeableEmployee!.toJson(),
       'hrDocuments': hrDocuments.map((doc) => doc.toJson()).toList(),
+      if (workDay != null) 'workDay': workDay!.toJson(),
     };
   }
 
@@ -77,6 +99,7 @@ class UserProfileModel implements Model {
       orgStructure: orgStructure.toEntity(),
       interchangeableEmployee: interchangeableEmployee?.toEntity(),
       hrDocuments: hrDocuments.map((doc) => doc.toEntity()).toList(),
+      workDay: workDay?.toEntity(),
     );
   }
 }

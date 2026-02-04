@@ -1,6 +1,7 @@
 import '../entities/entity.dart';
 import 'business.dart';
 import 'employment_enums.dart';
+import 'workday.dart';
 
 /// Доменная сущность профиля пользователя
 class UserProfile extends Entity {
@@ -11,6 +12,7 @@ class UserProfile extends Entity {
   final OrgStructure orgStructure;
   final InterchangeableEmployee? interchangeableEmployee;
   final List<HrDocument> hrDocuments;
+  final WorkDay? workDay;
 
   const UserProfile({
     required this.user,
@@ -20,6 +22,7 @@ class UserProfile extends Entity {
     required this.orgStructure,
     this.interchangeableEmployee,
     required this.hrDocuments,
+    this.workDay,
   });
 }
 
