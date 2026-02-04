@@ -483,40 +483,40 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
             ),
             const SizedBox(height: 16),
 
-            // Статус
-            FormBuilderDropdown<TaskStatus>(
-              name: 'status',
-              decoration: InputDecoration(
-                labelText: 'Статус',
-                border: const OutlineInputBorder(),
-                errorText: _fieldErrors['status'],
-                errorMaxLines: 2,
-              ),
-              initialValue: TaskStatus.inProgress,
-              dropdownColor: context.appTheme.backgroundSurface,
-              borderRadius: BorderRadius.circular(
-                context.appTheme.borderRadius,
-              ),
-              selectedItemBuilder: (BuildContext context) {
-                return TaskStatus.values
-                    .where((status) => status != TaskStatus.pending)
-                    .map<Widget>((TaskStatus status) {
-                  return Text(_getStatusText(status));
-                }).toList();
-              },
-              items:
-                  TaskStatus.values
-                      .where((status) => status != TaskStatus.pending)
-                      .map(
-                        (status) => createStyledDropdownItem<TaskStatus>(
-                          context: context,
-                          value: status,
-                          child: Text(_getStatusText(status)),
-                        ),
-                      )
-                      .toList(),
-            ),
-            const SizedBox(height: 16),
+            // Статус - закомментировано, автоматически устанавливается "в работе" при создании
+            // FormBuilderDropdown<TaskStatus>(
+            //   name: 'status',
+            //   decoration: InputDecoration(
+            //     labelText: 'Статус',
+            //     border: const OutlineInputBorder(),
+            //     errorText: _fieldErrors['status'],
+            //     errorMaxLines: 2,
+            //   ),
+            //   initialValue: TaskStatus.inProgress,
+            //   dropdownColor: context.appTheme.backgroundSurface,
+            //   borderRadius: BorderRadius.circular(
+            //     context.appTheme.borderRadius,
+            //   ),
+            //   selectedItemBuilder: (BuildContext context) {
+            //     return TaskStatus.values
+            //         .where((status) => status != TaskStatus.pending)
+            //         .map<Widget>((TaskStatus status) {
+            //       return Text(_getStatusText(status));
+            //     }).toList();
+            //   },
+            //   items:
+            //       TaskStatus.values
+            //           .where((status) => status != TaskStatus.pending)
+            //           .map(
+            //             (status) => createStyledDropdownItem<TaskStatus>(
+            //               context: context,
+            //               value: status,
+            //               child: Text(_getStatusText(status)),
+            //             ),
+            //           )
+            //           .toList(),
+            // ),
+            // const SizedBox(height: 16),
 
             // Checkbox "Я исполнитель в задаче"
             FormBuilderCheckbox(
@@ -1463,7 +1463,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         businessId: widget.businessId,
         title: formData['title'] as String,
         description: formData['description'] as String?,
-        status: formData['status'] as TaskStatus? ?? TaskStatus.inProgress,
+        status: TaskStatus.inProgress, // Всегда "в работе" при создании задачи
         assignedTo: _assignedToId,
         assignedBy: _assignedById,
         assignmentDate:

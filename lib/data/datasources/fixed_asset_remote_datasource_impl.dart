@@ -14,10 +14,14 @@ class FixedAssetRemoteDataSourceImpl extends FixedAssetRemoteDataSource {
   FixedAssetRemoteDataSourceImpl({required this.apiClient});
 
   /// Парсит сообщение об ошибке из body ответа
+  /// Проверяет поля message и error (приоритет у message)
   String _parseErrorMessage(String body, String defaultMessage) {
     try {
       final json = jsonDecode(body) as Map<String, dynamic>;
-      return json['error'] as String? ?? defaultMessage;
+      // Сначала проверяем message, потом error
+      return json['message'] as String? ?? 
+             json['error'] as String? ?? 
+             defaultMessage;
     } catch (e) {
       return defaultMessage;
     }
@@ -184,7 +188,17 @@ class FixedAssetRemoteDataSourceImpl extends FixedAssetRemoteDataSource {
         );
         return apiResponse.data;
       } else if (response.statusCode == 401) {
-        throw Exception('Не авторизован');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Не авторизован',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Доступ запрещен',
+        );
+        throw Exception(errorMessage);
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final validationResponse = ValidationErrorResponse.fromJson(json);
@@ -224,9 +238,23 @@ class FixedAssetRemoteDataSourceImpl extends FixedAssetRemoteDataSource {
         );
         return apiResponse.data;
       } else if (response.statusCode == 401) {
-        throw Exception('Не авторизован');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Не авторизован',
+        );
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 403) {
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Доступ запрещен',
+        );
+        throw Exception(errorMessage);
       } else if (response.statusCode == 404) {
-        throw Exception('Актив не найден');
+        final errorMessage = _parseErrorMessage(
+          response.body,
+          'Актив не найден',
+        );
+        throw Exception(errorMessage);
       } else if (response.statusCode == 400) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final validationResponse = ValidationErrorResponse.fromJson(json);
