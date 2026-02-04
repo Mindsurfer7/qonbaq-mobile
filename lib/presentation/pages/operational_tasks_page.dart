@@ -458,21 +458,50 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
 
   /// Сетка с 4 блоками задач
   Widget _buildTasksGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      padding: const EdgeInsets.all(16),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      children: [
-        // Левый верхний: Все задачи на сегодня (регулярные + нерегулярные, разделены вертикально)
-        _buildTodayTasksBlock(),
-        // Правый верхний: Все задачи на неделе (регулярные + нерегулярные)
-        _buildWeekTasksBlock(),
-        // Левый нижний: Точки контроля со свитчером
-        _buildControlPointsBlock(),
-        // Правый нижний: Аналитика
-        _buildAnalyticsBlock(),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          // Верхний ряд: 50% высоты экрана
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: _buildTodayTasksBlock(),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: _buildWeekTasksBlock(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Нижний ряд: 50% высоты экрана
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: _buildControlPointsBlock(),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: _buildAnalyticsBlock(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -527,16 +556,16 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                           style: TextStyle(fontSize: 10, color: Colors.grey),
                                         ),
                                       )
-                                    : ListView.builder(
+                                    : SingleChildScrollView(
                                         scrollDirection: Axis.horizontal,
-                                        itemCount: _todayRecurringTasks.length,
-                                        itemBuilder: (context, index) {
-                                          final task = _todayRecurringTasks[index];
-                                          return Container(
-                                            margin: const EdgeInsets.only(right: 8),
-                                            child: _buildTaskItem(task),
-                                          );
-                                        },
+                                        child: Row(
+                                          children: _todayRecurringTasks.map((task) {
+                                            return Container(
+                                              margin: const EdgeInsets.only(right: 8),
+                                              child: _buildTaskItem(task),
+                                            );
+                                          }).toList(),
+                                        ),
                                       ),
                               ),
                             ],
@@ -572,16 +601,16 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                           style: TextStyle(fontSize: 10, color: Colors.grey),
                                         ),
                                       )
-                                    : ListView.builder(
+                                    : SingleChildScrollView(
                                         scrollDirection: Axis.horizontal,
-                                        itemCount: _todayIrregularTasks.length,
-                                        itemBuilder: (context, index) {
-                                          final task = _todayIrregularTasks[index];
-                                          return Container(
-                                            margin: const EdgeInsets.only(right: 8),
-                                            child: _buildTaskItem(task),
-                                          );
-                                        },
+                                        child: Row(
+                                          children: _todayIrregularTasks.map((task) {
+                                            return Container(
+                                              margin: const EdgeInsets.only(right: 8),
+                                              child: _buildTaskItem(task),
+                                            );
+                                          }).toList(),
+                                        ),
                                       ),
                               ),
                             ],
@@ -659,12 +688,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                             style: TextStyle(color: Colors.grey),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: allWeekTasks.length,
-                          itemBuilder: (context, index) {
-                            final task = allWeekTasks[index];
-                            return _buildTaskItem(task);
-                          },
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: allWeekTasks.map((task) => _buildTaskItem(task)).toList(),
+                          ),
                         ),
                 ),
               ],
@@ -714,7 +741,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           children: [
             // Заголовок блока
             const Text(
-              'Точки контроля',
+              'Контроль',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -738,8 +765,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                           color: _showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: _showControlPointManagement ? Colors.blue : Colors.grey,
-                            width: _showControlPointManagement ? 2 : 1,
+                            color: Colors.grey,
+                            width: 1,
                           ),
                         ),
                         child: const Text(
@@ -767,8 +794,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                           color: !_showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: !_showControlPointManagement ? Colors.blue : Colors.grey,
-                            width: !_showControlPointManagement ? 2 : 1,
+                            color: Colors.grey,
+                            width: 1,
                           ),
                         ),
                         child: const Text(
@@ -795,12 +822,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                             style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: _controlPoints.length,
-                          itemBuilder: (context, index) {
-                            final controlPoint = _controlPoints[index];
-                            return _buildControlPointEntityItem(controlPoint, index + 1);
-                          },
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: _controlPoints.asMap().entries.map((entry) {
+                              return _buildControlPointEntityItem(entry.value, entry.key + 1);
+                            }).toList(),
+                          ),
                         )
                   : _controlPointTasks.isEmpty
                       ? const Center(
@@ -809,12 +836,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                             style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: _controlPointTasks.length,
-                          itemBuilder: (context, index) {
-                            final task = _controlPointTasks[index];
-                            return _buildControlPointItem(task, index + 1);
-                          },
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: _controlPointTasks.asMap().entries.map((entry) {
+                              return _buildControlPointItem(entry.value, entry.key + 1);
+                            }).toList(),
+                          ),
                         ),
             ),
           ],
@@ -841,15 +868,17 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView(
-                children: [
-                  _buildAnalyticsLink('Задачи все в этом месяце', '/tasks/analytics/month'),
-                  _buildAnalyticsLink('Задачи не выполнены', '/tasks/analytics/not-completed'),
-                  _buildAnalyticsLink('Задачи выполнены с опозданием', '/tasks/analytics/overdue'),
-                  _buildAnalyticsLink('Точки контроля в этом месяце', '/tasks/analytics/control-points-month'),
-                  _buildAnalyticsLink('Точки контроля выполнены', '/tasks/analytics/control-points-completed'),
-                  _buildAnalyticsLink('Точки контроля не выполнены', '/tasks/analytics/control-points-not-completed'),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildAnalyticsLink('Задачи все в этом месяце', '/tasks/analytics/month'),
+                    _buildAnalyticsLink('Задачи не выполнены', '/tasks/analytics/not-completed'),
+                    _buildAnalyticsLink('Задачи выполнены с опозданием', '/tasks/analytics/overdue'),
+                    _buildAnalyticsLink('Точки контроля в этом месяце', '/tasks/analytics/control-points-month'),
+                    _buildAnalyticsLink('Точки контроля выполнены', '/tasks/analytics/control-points-completed'),
+                    _buildAnalyticsLink('Точки контроля не выполнены', '/tasks/analytics/control-points-not-completed'),
+                  ],
+                ),
               ),
             ),
           ],
