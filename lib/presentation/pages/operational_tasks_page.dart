@@ -9,6 +9,7 @@ import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../../data/models/task_model.dart';
+import '../../core/theme/theme_extensions.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/business_selector_widget.dart';
@@ -113,14 +114,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
 
-    // Получаем диапазон недели
-    final startOfWeek = _getStartOfWeek(todayDate);
+    // Получаем завтрашнюю дату (для задач на неделе, чтобы не дублировать с сегодняшними)
+    final tomorrow = todayDate.add(const Duration(days: 1));
+    final tomorrowDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+
+    // Получаем конец недели для диапазона задач на неделе
     final endOfWeek = _getEndOfWeek(todayDate);
-    final startOfWeekDate = DateTime(
-      startOfWeek.year,
-      startOfWeek.month,
-      startOfWeek.day,
-    );
     final endOfWeekDate = DateTime(
       endOfWeek.year,
       endOfWeek.month,
@@ -154,27 +153,29 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       );
 
       // 3. Регулярные задачи на неделе
+      // Начинаем с завтрашнего дня, чтобы не дублировать с задачами на сегодня
       // Примечание: API не поддерживает диапазон для scheduledDate,
-      // поэтому загружаем задачи с началом недели (понедельник)
+      // поэтому загружаем задачи с завтрашнего дня
       final weekRecurringResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
           assignedTo: assignedTo,
           hasRecurringTask: true,
-          scheduledDate: startOfWeekDate,
+          scheduledDate: tomorrowDate,
           showAll: showAll,
           limit: 100,
         ),
       );
 
       // 4. Нерегулярные задачи на неделе
+      // Начинаем с завтрашнего дня, чтобы не дублировать с задачами на сегодня
       final weekIrregularResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
           assignedTo: assignedTo,
           hasRecurringTask: false,
           hasControlPoint: false,
-          deadlineFrom: startOfWeekDate,
+          deadlineFrom: tomorrowDate,
           deadlineTo: endOfWeekDate,
           showAll: showAll,
           limit: 100,
@@ -337,11 +338,28 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          // Иконка обновления
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadAllTasks,
-            tooltip: 'Обновить',
+          // Иконка обновления (стилизованная)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Material(
+              color: context.appTheme.accentPrimary,
+              borderRadius: BorderRadius.circular(20),
+              elevation: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: _loadAllTasks,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.refresh,
+                    size: 20,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
           ),
           // Свитчер с текстом внутри для гендиректора/начальника департамента
           if (canViewAll)
@@ -432,26 +450,60 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 ),
               ),
             ),
-          // Иконка плюсика (уменьшенная)
-          IconButton(
-            icon: const Icon(Icons.add),
-            iconSize: 20,
-            onPressed: () {
-              _showCreateTaskDialog();
-            },
-            tooltip: 'Создать задачу',
+          // Иконка плюсика (стилизованная)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Material(
+              color: context.appTheme.accentPrimary,
+              borderRadius: BorderRadius.circular(20),
+              elevation: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  _showCreateTaskDialog();
+                },
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.add, size: 20, color: Colors.black),
+                ),
+              ),
+            ),
           ),
-          // Иконка микрофона (уменьшенная, вместо домика)
-          IconButton(
-            icon: const Icon(Icons.mic),
-            iconSize: 20,
-            onPressed:
-                selectedBusiness != null
-                    ? () {
-                      _showVoiceTaskDialog(selectedBusiness.id);
-                    }
-                    : null,
-            tooltip: 'Создать голосовым сообщением',
+          // Иконка микрофона (стилизованная, вместо домика)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Material(
+              color:
+                  selectedBusiness != null
+                      ? context.appTheme.accentPrimary
+                      : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(20),
+              elevation: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap:
+                    selectedBusiness != null
+                        ? () {
+                          _showVoiceTaskDialog(selectedBusiness.id);
+                        }
+                        : null,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.mic,
+                    size: 20,
+                    color:
+                        selectedBusiness != null
+                            ? Colors.black
+                            : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -632,8 +684,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                           ),
                                         )
                                         : SingleChildScrollView(
-                                          scrollDirection: Axis.horizontal,
-                                          child: Row(
+                                          child: Column(
                                             children:
                                                 _todayRecurringTasks.map((
                                                   task,
@@ -641,7 +692,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                                   return Container(
                                                     margin:
                                                         const EdgeInsets.only(
-                                                          right: 8,
+                                                          bottom: 4,
                                                         ),
                                                     child: _buildTaskItem(task),
                                                   );
@@ -687,8 +738,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                           ),
                                         )
                                         : SingleChildScrollView(
-                                          scrollDirection: Axis.horizontal,
-                                          child: Row(
+                                          child: Column(
                                             children:
                                                 _todayIrregularTasks.map((
                                                   task,
@@ -696,7 +746,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                                   return Container(
                                                     margin:
                                                         const EdgeInsets.only(
-                                                          right: 8,
+                                                          bottom: 4,
                                                         ),
                                                     child: _buildTaskItem(task),
                                                   );
