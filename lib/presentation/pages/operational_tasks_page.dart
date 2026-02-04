@@ -706,12 +706,21 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final canViewControlPoints = _canViewAllTasks();
     
     return Card(
-      color: Colors.yellow.shade50,
+      color: Colors.purple.shade50,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Заголовок блока
+            const Text(
+              'Точки контроля',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
             // Свитчер "Управление | Задачи" (только для гендиректора/управленца)
             if (canViewControlPoints)
               Row(
@@ -724,9 +733,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                         decoration: BoxDecoration(
-                          color: _showControlPointManagement ? Colors.yellow.shade200 : Colors.transparent,
+                          color: _showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
                             color: _showControlPointManagement ? Colors.blue : Colors.grey,
@@ -737,7 +746,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                           'Управление',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -753,9 +762,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                         decoration: BoxDecoration(
-                          color: !_showControlPointManagement ? Colors.yellow.shade200 : Colors.transparent,
+                          color: !_showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
                             color: !_showControlPointManagement ? Colors.blue : Colors.grey,
@@ -766,7 +775,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                           'Задачи',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -774,14 +783,6 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                     ),
                   ),
                 ],
-              )
-            else
-              const Text(
-                'Точки контроля',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
               ),
             const SizedBox(height: 8),
             // Контент в зависимости от выбранного режима
@@ -825,7 +826,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
   /// Блок аналитики со ссылками
   Widget _buildAnalyticsBlock() {
     return Card(
-      color: Colors.purple.shade50,
+      color: Colors.yellow.shade50,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -879,7 +880,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.analytics, size: 16, color: Colors.purple),
+            Icon(Icons.analytics, size: 16, color: Colors.yellow.shade700),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
