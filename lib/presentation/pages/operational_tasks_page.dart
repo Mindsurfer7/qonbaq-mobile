@@ -13,6 +13,7 @@ import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/create_task_form.dart';
+import '../widgets/voice_task_dialog.dart';
 
 /// Страница задач операционного блока с 4 блоками
 class OperationalTasksPage extends StatefulWidget {
@@ -27,14 +28,18 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
   String? _error;
   
   // Данные для блоков
-  List<Task> _recurringTasks = [];
-  List<Task> _irregularTasks = [];
-  List<Task> _importantTasks = [];
+  List<Task> _todayRecurringTasks = [];
+  List<Task> _todayIrregularTasks = [];
+  List<Task> _weekRecurringTasks = [];
+  List<Task> _weekIrregularTasks = [];
   List<Task> _controlPointTasks = [];
   List<ControlPoint> _controlPoints = []; // Истинные точки контроля
   
   // Фильтр для гендиректора/начальника департамента
   bool _showAll = false;
+  
+  // Свитчер для блока точек контроля: true = Управление, false = Задачи
+  bool _showControlPointManagement = true;
 
   @override
   void initState() {
@@ -58,6 +63,18 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     return currentUser?.isAdmin == true ||
         profile?.orgStructure.isGeneralDirector == true ||
         profile?.orgStructure.isDepartmentHead == true;
+  }
+
+  /// Получает начало недели (понедельник)
+  DateTime _getStartOfWeek(DateTime date) {
+    final weekday = date.weekday;
+    return date.subtract(Duration(days: weekday - 1));
+  }
+
+  /// Получает конец недели (воскресенье)
+  DateTime _getEndOfWeek(DateTime date) {
+    final startOfWeek = _getStartOfWeek(date);
+    return startOfWeek.add(const Duration(days: 6));
   }
 
   /// Загружает все задачи для всех блоков
@@ -93,10 +110,16 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     // Получаем сегодняшнюю дату
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
+    
+    // Получаем диапазон недели
+    final startOfWeek = _getStartOfWeek(todayDate);
+    final endOfWeek = _getEndOfWeek(todayDate);
+    final startOfWeekDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+    final endOfWeekDate = DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day);
 
     try {
       // 1. Регулярные задачи на сегодня
-      final recurringResult = await getTasksUseCase.call(
+      final todayRecurringResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
           assignedTo: assignedTo,
@@ -108,7 +131,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       );
 
       // 2. Нерегулярные задачи на сегодня
-      final irregularResult = await getTasksUseCase.call(
+      final todayIrregularResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
           assignedTo: assignedTo,
@@ -120,18 +143,35 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 3. Важные задачи
-      final importantResult = await getTasksUseCase.call(
+      // 3. Регулярные задачи на неделе
+      // Примечание: API не поддерживает диапазон для scheduledDate,
+      // поэтому загружаем задачи с началом недели (понедельник)
+      final weekRecurringResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
           assignedTo: assignedTo,
-          isImportant: true,
+          hasRecurringTask: true,
+          scheduledDate: startOfWeekDate,
           showAll: showAll,
           limit: 100,
         ),
       );
 
-      // 4. Точки контроля (задачи из точек контроля)
+      // 4. Нерегулярные задачи на неделе
+      final weekIrregularResult = await getTasksUseCase.call(
+        GetTasksParams(
+          businessId: selectedBusiness.id,
+          assignedTo: assignedTo,
+          hasRecurringTask: false,
+          hasControlPoint: false,
+          deadlineFrom: startOfWeekDate,
+          deadlineTo: endOfWeekDate,
+          showAll: showAll,
+          limit: 100,
+        ),
+      );
+
+      // 5. Точки контроля (задачи из точек контроля)
       final controlPointResult = await getTasksUseCase.call(
         GetTasksParams(
           businessId: selectedBusiness.id,
@@ -142,7 +182,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 5. Истинные точки контроля (только для гендиректора/начальника департамента)
+      // 6. Истинные точки контроля (только для гендиректора/начальника департамента)
       if (isAdminOrDirector) {
         final getControlPointsUseCase = Provider.of<GetControlPoints>(
           context,
@@ -180,7 +220,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       }
 
       // Обрабатываем результаты
-      recurringResult.fold(
+      todayRecurringResult.fold(
         (failure) {
           setState(() {
             _error = _getErrorMessage(failure);
@@ -188,12 +228,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         },
         (tasks) {
           setState(() {
-            _recurringTasks = tasks;
+            _todayRecurringTasks = tasks;
           });
         },
       );
 
-      irregularResult.fold(
+      todayIrregularResult.fold(
         (failure) {
           if (_error == null) {
             setState(() {
@@ -203,12 +243,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         },
         (tasks) {
           setState(() {
-            _irregularTasks = tasks;
+            _todayIrregularTasks = tasks;
           });
         },
       );
 
-      importantResult.fold(
+      weekRecurringResult.fold(
         (failure) {
           if (_error == null) {
             setState(() {
@@ -218,7 +258,22 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         },
         (tasks) {
           setState(() {
-            _importantTasks = tasks;
+            _weekRecurringTasks = tasks;
+          });
+        },
+      );
+
+      weekIrregularResult.fold(
+        (failure) {
+          if (_error == null) {
+            setState(() {
+              _error = _getErrorMessage(failure);
+            });
+          }
+        },
+        (tasks) {
+          setState(() {
+            _weekIrregularTasks = tasks;
           });
         },
       );
@@ -331,46 +386,31 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         ],
                       ),
                     )
-                  : Column(
-                      children: [
-                        Expanded(child: _buildTasksGrid()),
-                        // Кнопки навигации
-                        _buildNavigationButtons(),
-                      ],
-                    ),
-    );
-  }
-
-  /// Кнопки навигации (На предыдущую, На Главную)
-  Widget _buildNavigationButtons() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('На предыдущую'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
-            },
-            icon: const Icon(Icons.home),
-            label: const Text('На Главную'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
+                  : _buildTasksGrid(),
+      floatingActionButton: selectedBusiness != null
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Кнопка микрофона для голосовой записи
+                FloatingActionButton(
+                  heroTag: "voice_record",
+                  onPressed: () {
+                    _showVoiceTaskDialog(selectedBusiness.id);
+                  },
+                  child: const Icon(Icons.mic),
+                ),
+                const SizedBox(height: 16),
+                // Кнопка плюсика для создания задачи
+                FloatingActionButton(
+                  heroTag: "create_task",
+                  onPressed: () {
+                    _showCreateTaskDialog();
+                  },
+                  child: const Icon(Icons.add),
+                ),
+              ],
+            )
+          : null,
     );
   }
 
@@ -424,20 +464,20 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
       children: [
-        // Левый верхний: Регулярные задачи на сегодня
-        _buildRecurringTasksBlock(),
-        // Правый верхний: Нерегулярные задачи на сегодня
-        _buildIrregularTasksBlock(),
-        // Левый нижний: Важные задачи
-        _buildImportantTasksBlock(),
-        // Правый нижний: Точки контроля
+        // Левый верхний: Все задачи на сегодня (регулярные + нерегулярные, разделены вертикально)
+        _buildTodayTasksBlock(),
+        // Правый верхний: Все задачи на неделе (регулярные + нерегулярные)
+        _buildWeekTasksBlock(),
+        // Левый нижний: Точки контроля со свитчером
         _buildControlPointsBlock(),
+        // Правый нижний: Аналитика
+        _buildAnalyticsBlock(),
       ],
     );
   }
 
-  /// Блок регулярных задач на сегодня
-  Widget _buildRecurringTasksBlock() {
+  /// Блок задач на сегодня (разделен горизонтально на регулярные и нерегулярные)
+  Widget _buildTodayTasksBlock() {
     return Card(
       color: Colors.green.shade50,
       child: Stack(
@@ -448,175 +488,220 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Задачи регулярные на сегодня',
+                  'Задачи на сегодня',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Список задач
+                // Разделение на две части горизонтально (в ряд)
                 Expanded(
-                  child: _recurringTasks.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Нет задач',
-                            style: TextStyle(color: Colors.grey),
+                  child: Column(
+                    children: [
+                      // Верхняя половина: Регулярные задачи
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.black),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _recurringTasks.length,
-                          itemBuilder: (context, index) {
-                            final task = _recurringTasks[index];
-                            return _buildTaskItem(task);
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-          // Маленький плюсик в верхнем правом углу
-          Positioned(
-            top: 4,
-            right: 4,
-            child: InkWell(
-              onTap: () => _showCreateTaskDialog(isRecurring: true),
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black, width: 1),
-                ),
-                child: const Center(
-                  child: Text(
-                    '+',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Блок нерегулярных задач на сегодня
-  Widget _buildIrregularTasksBlock() {
-    return Card(
-      color: Colors.green.shade50,
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Задачи нерегулярные на сегодня',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Список задач
-                Expanded(
-                  child: _irregularTasks.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Нет задач',
-                            style: TextStyle(color: Colors.grey),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Регулярные',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Expanded(
+                                child: _todayRecurringTasks.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'Нет задач',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _todayRecurringTasks.length,
+                                        itemBuilder: (context, index) {
+                                          final task = _todayRecurringTasks[index];
+                                          return Container(
+                                            margin: const EdgeInsets.only(right: 8),
+                                            child: _buildTaskItem(task),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _irregularTasks.length,
-                          itemBuilder: (context, index) {
-                            final task = _irregularTasks[index];
-                            return _buildTaskItem(task);
-                          },
                         ),
-                ),
-              ],
-            ),
-          ),
-          // Маленький плюсик в верхнем правом углу
-          Positioned(
-            top: 4,
-            right: 4,
-            child: InkWell(
-              onTap: () => _showCreateTaskDialog(isRecurring: false),
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black, width: 1),
-                ),
-                child: const Center(
-                  child: Text(
-                    '+',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Блок важных задач (целиком)
-  Widget _buildImportantTasksBlock() {
-    return Card(
-      color: Colors.green.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Важные задачи!',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Список важных задач
-            Expanded(
-              child: _importantTasks.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Нет важных задач',
-                        style: TextStyle(color: Colors.grey),
                       ),
-                    )
-                  : ListView.builder(
-                      itemCount: _importantTasks.length,
-                      itemBuilder: (context, index) {
-                        final task = _importantTasks[index];
-                        return _buildTaskItem(task);
-                      },
-                    ),
+                      const SizedBox(height: 8),
+                      // Нижняя половина: Нерегулярные задачи
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.black),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Нерегулярные',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Expanded(
+                                child: _todayIrregularTasks.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'Нет задач',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _todayIrregularTasks.length,
+                                        itemBuilder: (context, index) {
+                                          final task = _todayIrregularTasks[index];
+                                          return Container(
+                                            margin: const EdgeInsets.only(right: 8),
+                                            child: _buildTaskItem(task),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Маленький плюсик в верхнем правом углу
+          Positioned(
+            top: 4,
+            right: 4,
+            child: InkWell(
+              onTap: () => _showCreateTaskDialog(),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black, width: 1),
+                ),
+                child: const Center(
+                  child: Text(
+                    '+',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Блок точек контроля (разделен на две части)
+  /// Блок задач на неделе (регулярные + нерегулярные)
+  Widget _buildWeekTasksBlock() {
+    // Объединяем регулярные и нерегулярные задачи на неделе
+    final allWeekTasks = [
+      ..._weekRecurringTasks,
+      ..._weekIrregularTasks,
+    ];
+
+    return Card(
+      color: Colors.blue.shade50,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Задачи на неделе',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Список всех задач на неделе
+                Expanded(
+                  child: allWeekTasks.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Нет задач',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: allWeekTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = allWeekTasks[index];
+                            return _buildTaskItem(task);
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          // Маленький плюсик в верхнем правом углу
+          Positioned(
+            top: 4,
+            right: 4,
+            child: InkWell(
+              onTap: () => _showCreateTaskDialog(),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black, width: 1),
+                ),
+                child: const Center(
+                  child: Text(
+                    '+',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Блок точек контроля со свитчером "Управление | Задачи"
   Widget _buildControlPointsBlock() {
     final canViewControlPoints = _canViewAllTasks();
     
@@ -627,98 +712,142 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Свитчер "Управление | Задачи" (только для гендиректора/управленца)
+            if (canViewControlPoints)
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showControlPointManagement = true;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: _showControlPointManagement ? Colors.yellow.shade200 : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: _showControlPointManagement ? Colors.blue : Colors.grey,
+                            width: _showControlPointManagement ? 2 : 1,
+                          ),
+                        ),
+                        child: const Text(
+                          'Управление',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showControlPointManagement = false;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: !_showControlPointManagement ? Colors.yellow.shade200 : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: !_showControlPointManagement ? Colors.blue : Colors.grey,
+                            width: !_showControlPointManagement ? 2 : 1,
+                          ),
+                        ),
+                        child: const Text(
+                          'Задачи',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              const Text(
+                'Точки контроля',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            const SizedBox(height: 8),
+            // Контент в зависимости от выбранного режима
+            Expanded(
+              child: canViewControlPoints && _showControlPointManagement
+                  ? _controlPoints.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Нет точек контроля',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _controlPoints.length,
+                          itemBuilder: (context, index) {
+                            final controlPoint = _controlPoints[index];
+                            return _buildControlPointEntityItem(controlPoint, index + 1);
+                          },
+                        )
+                  : _controlPointTasks.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Нет задач',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _controlPointTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = _controlPointTasks[index];
+                            return _buildControlPointItem(task, index + 1);
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Блок аналитики со ссылками
+  Widget _buildAnalyticsBlock() {
+    return Card(
+      color: Colors.purple.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             const Text(
-              'Точки контроля',
+              'Аналитика',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            // Разделение на две части
             Expanded(
-              child: Row(
+              child: ListView(
                 children: [
-                  // Левая половина: Истинные точки контроля (только для гендиректора)
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.yellow.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.black),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Точки контроля',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Expanded(
-                            child: !canViewControlPoints
-                                ? const Center(
-                                    child: Text(
-                                      'Доступно только гендиректору',
-                                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                                    ),
-                                  )
-                                : _controlPoints.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'Нет точек контроля',
-                                          style: TextStyle(fontSize: 10, color: Colors.grey),
-                                        ),
-                                      )
-                                    : ListView.builder(
-                                        itemCount: _controlPoints.length,
-                                        itemBuilder: (context, index) {
-                                          final controlPoint = _controlPoints[index];
-                                          return _buildControlPointEntityItem(controlPoint, index + 1);
-                                        },
-                                      ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Правая половина: Задачи из точек контроля
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Задачи из ТК',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Expanded(
-                          child: _controlPointTasks.isEmpty
-                              ? const Center(
-                                  child: Text(
-              'Нет задач',
-                                    style: TextStyle(fontSize: 10, color: Colors.grey),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  itemCount: _controlPointTasks.length,
-                                  itemBuilder: (context, index) {
-                                    final task = _controlPointTasks[index];
-                                    return _buildControlPointItem(task, index + 1);
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildAnalyticsLink('Задачи все в этом месяце', '/tasks/analytics/month'),
+                  _buildAnalyticsLink('Задачи не выполнены', '/tasks/analytics/not-completed'),
+                  _buildAnalyticsLink('Задачи выполнены с опозданием', '/tasks/analytics/overdue'),
+                  _buildAnalyticsLink('Точки контроля в этом месяце', '/tasks/analytics/control-points-month'),
+                  _buildAnalyticsLink('Точки контроля выполнены', '/tasks/analytics/control-points-completed'),
+                  _buildAnalyticsLink('Точки контроля не выполнены', '/tasks/analytics/control-points-not-completed'),
                 ],
               ),
             ),
@@ -728,19 +857,44 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     );
   }
 
-  /// Получает текст частоты для точки контроля
-  String _getFrequencyText(Task task) {
-    if (task.recurrence == null) return '';
-    switch (task.recurrence!.frequency) {
-      case RecurrenceFrequency.daily:
-        return 'ежедневные';
-      case RecurrenceFrequency.weekly:
-        return 'еженедельные';
-      case RecurrenceFrequency.monthly:
-        return 'ежемесячные';
-      case RecurrenceFrequency.yearly:
-        return 'ежегодные';
-    }
+  /// Ссылка в блоке аналитики
+  Widget _buildAnalyticsLink(String title, String route) {
+    return InkWell(
+      onTap: () {
+        // TODO: Реализовать навигацию на страницы аналитики
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Переход на: $title'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.analytics, size: 16, color: Colors.purple),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Элемент задачи в списке (маленькая строка)
@@ -750,8 +904,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        constraints: const BoxConstraints(minWidth: 120),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -839,6 +993,21 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     );
   }
 
+  /// Получает текст частоты для точки контроля
+  String _getFrequencyText(Task task) {
+    if (task.recurrence == null) return '';
+    switch (task.recurrence!.frequency) {
+      case RecurrenceFrequency.daily:
+        return 'ежедневные';
+      case RecurrenceFrequency.weekly:
+        return 'еженедельные';
+      case RecurrenceFrequency.monthly:
+        return 'ежемесячные';
+      case RecurrenceFrequency.yearly:
+        return 'ежегодные';
+    }
+  }
+
   /// Получает текст частоты для истинной точки контроля
   String _getControlPointFrequencyText(ControlPoint controlPoint) {
     switch (controlPoint.frequency) {
@@ -853,8 +1022,26 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     }
   }
 
+  /// Показывает диалог голосового создания задачи
+  void _showVoiceTaskDialog(String businessId) {
+    final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
+    final userRepository = Provider.of<UserRepository>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => VoiceTaskDialog(
+        businessId: businessId,
+        userRepository: userRepository,
+        createTaskUseCase: createTaskUseCase,
+      ),
+    ).then((_) {
+      // Обновляем список задач после закрытия диалога
+      _loadAllTasks();
+    });
+  }
+
   /// Показывает диалог создания задачи
-  void _showCreateTaskDialog({bool? isRecurring}) {
+  void _showCreateTaskDialog({TaskModel? initialTaskData}) {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final selectedBusiness = profileProvider.selectedBusiness;
     final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
@@ -870,7 +1057,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         businessId: selectedBusiness.id,
         userRepository: userRepository,
         createTaskUseCase: createTaskUseCase,
-        isRecurring: isRecurring,
+        initialTaskData: initialTaskData,
         onSuccess: () {
           _loadAllTasks();
         },
@@ -885,14 +1072,14 @@ class _CreateTaskDialog extends StatefulWidget {
   final UserRepository userRepository;
   final CreateTask createTaskUseCase;
   final VoidCallback onSuccess;
-  final bool? isRecurring;
+  final TaskModel? initialTaskData;
 
   const _CreateTaskDialog({
     required this.businessId,
     required this.userRepository,
     required this.createTaskUseCase,
     required this.onSuccess,
-    this.isRecurring,
+    this.initialTaskData,
   });
 
   @override
@@ -954,16 +1141,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
               child: CreateTaskForm(
                 businessId: widget.businessId,
                 userRepository: widget.userRepository,
-                initialTaskData: widget.isRecurring == true
-                    ? TaskModel(
-                        id: '',
-                        businessId: widget.businessId,
-                        title: '',
-                        isRecurring: true,
-                        createdAt: DateTime.now(),
-                        updatedAt: DateTime.now(),
-                      )
-                    : null,
+                initialTaskData: widget.initialTaskData,
                 error: _error,
                 validationErrors: _validationErrors,
                 onError: (error) {

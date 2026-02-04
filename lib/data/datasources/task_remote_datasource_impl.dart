@@ -142,6 +142,8 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
     DateTime? scheduledDate,
     bool? deadlineToday,
     DateTime? deadlineDate,
+    DateTime? deadlineFrom,
+    DateTime? deadlineTo,
     String? recurringTaskId,
     String? controlPointId,
     bool? showAll,
@@ -189,6 +191,16 @@ class TaskRemoteDataSourceImpl extends TaskRemoteDataSource {
         // Форматируем дату в формат YYYY-MM-DD
         queryParams['deadlineDate'] = 
             '${deadlineDate.year}-${deadlineDate.month.toString().padLeft(2, '0')}-${deadlineDate.day.toString().padLeft(2, '0')}';
+      }
+      if (deadlineFrom != null) {
+        // Форматируем дату в формат YYYY-MM-DD
+        queryParams['deadlineFrom'] = 
+            '${deadlineFrom.year}-${deadlineFrom.month.toString().padLeft(2, '0')}-${deadlineFrom.day.toString().padLeft(2, '0')}';
+      }
+      if (deadlineTo != null) {
+        // Форматируем дату в формат YYYY-MM-DD
+        queryParams['deadlineTo'] = 
+            '${deadlineTo.year}-${deadlineTo.month.toString().padLeft(2, '0')}-${deadlineTo.day.toString().padLeft(2, '0')}';
       }
       if (recurringTaskId != null) {
         queryParams['recurringTaskId'] = recurringTaskId;

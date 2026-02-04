@@ -27,6 +27,8 @@ abstract class TaskRemoteDataSource extends DataSource {
     DateTime? scheduledDate,
     bool? deadlineToday,
     DateTime? deadlineDate,
+    DateTime? deadlineFrom,
+    DateTime? deadlineTo,
     String? recurringTaskId,
     String? controlPointId,
     bool? showAll,

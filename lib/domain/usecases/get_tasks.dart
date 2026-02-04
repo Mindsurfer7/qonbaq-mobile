@@ -20,6 +20,8 @@ class GetTasksParams {
   final DateTime? scheduledDate;
   final bool? deadlineToday;
   final DateTime? deadlineDate;
+  final DateTime? deadlineFrom;
+  final DateTime? deadlineTo;
   final String? recurringTaskId;
   final String? controlPointId;
   final bool? showAll;
@@ -41,6 +43,8 @@ class GetTasksParams {
     this.scheduledDate,
     this.deadlineToday,
     this.deadlineDate,
+    this.deadlineFrom,
+    this.deadlineTo,
     this.recurringTaskId,
     this.controlPointId,
     this.showAll,
@@ -72,6 +76,8 @@ class GetTasks implements UseCase<List<Task>, GetTasksParams> {
       scheduledDate: params.scheduledDate,
       deadlineToday: params.deadlineToday,
       deadlineDate: params.deadlineDate,
+      deadlineFrom: params.deadlineFrom,
+      deadlineTo: params.deadlineTo,
       recurringTaskId: params.recurringTaskId,
       controlPointId: params.controlPointId,
       showAll: params.showAll,
