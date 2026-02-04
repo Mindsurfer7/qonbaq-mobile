@@ -337,37 +337,121 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          // Фильтр для гендиректора/начальника департамента
-          if (canViewAll)
-            Switch(
-              value: _showAll,
-              onChanged: (value) {
-                setState(() {
-                  _showAll = value;
-                });
-                _loadAllTasks();
-              },
-            ),
-          if (canViewAll)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Center(
-                child: Text(
-                  _showAll ? 'Все' : 'Мои',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-            ),
+          // Иконка обновления
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadAllTasks,
             tooltip: 'Обновить',
           ),
+          // Свитчер с текстом внутри для гендиректора/начальника департамента
+          if (canViewAll)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showAll = !_showAll;
+                });
+                _loadAllTasks();
+              },
+              child: Container(
+                width: 80,
+                height: 32,
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  color:
+                      _showAll
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.5),
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Текст "Все" слева (когда включен)
+                    if (_showAll)
+                      Positioned(
+                        left: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: Text(
+                            'Все',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                      ),
+                    // Текст "Мои" справа (когда выключен)
+                    if (!_showAll)
+                      Positioned(
+                        right: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: Text(
+                            'Мои',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    // Переключатель (справа когда включен, слева когда выключен)
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      left: _showAll ? 48 : 2,
+                      right: _showAll ? 2 : 48,
+                      top: 2,
+                      bottom: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outline,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // Иконка плюсика (уменьшенная)
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.add),
+            iconSize: 20,
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              _showCreateTaskDialog();
             },
+            tooltip: 'Создать задачу',
+          ),
+          // Иконка микрофона (уменьшенная, вместо домика)
+          IconButton(
+            icon: const Icon(Icons.mic),
+            iconSize: 20,
+            onPressed:
+                selectedBusiness != null
+                    ? () {
+                      _showVoiceTaskDialog(selectedBusiness.id);
+                    }
+                    : null,
+            tooltip: 'Создать голосовым сообщением',
           ),
         ],
       ),
@@ -401,31 +485,6 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 ),
               )
               : _buildTasksGrid(),
-      floatingActionButton:
-          selectedBusiness != null
-              ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Кнопка микрофона для голосовой записи
-                  FloatingActionButton(
-                    heroTag: "voice_record",
-                    onPressed: () {
-                      _showVoiceTaskDialog(selectedBusiness.id);
-                    },
-                    child: const Icon(Icons.mic),
-                  ),
-                  const SizedBox(height: 16),
-                  // Кнопка плюсика для создания задачи
-                  FloatingActionButton(
-                    heroTag: "create_task",
-                    onPressed: () {
-                      _showCreateTaskDialog();
-                    },
-                    child: const Icon(Icons.add),
-                  ),
-                ],
-              )
-              : null,
     );
   }
 
@@ -894,7 +953,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     return Card(
       color: Colors.yellow.shade50,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -902,7 +961,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
               'Аналитика',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -954,8 +1013,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -963,8 +1022,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
         child: Row(
           children: [
-            Icon(Icons.analytics, size: 16, color: Colors.yellow.shade700),
-            const SizedBox(width: 8),
+            Icon(Icons.analytics, size: 14, color: Colors.yellow.shade700),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 title,
