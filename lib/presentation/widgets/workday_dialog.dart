@@ -16,14 +16,20 @@ class WorkDayDialog extends StatefulWidget {
 }
 
 class _WorkDayDialogState extends State<WorkDayDialog> {
-  final TextEditingController _reasonController = TextEditingController();
+  String? _selectedReason;
   bool _isLoading = false;
   String? _error;
   WorkDayAction? _selectedAction;
 
+  // Опции для причины отсутствия
+  static const List<String> _absenceReasons = [
+    'Отпуск',
+    'Больничный',
+    'Без содержания',
+  ];
+
   @override
   void dispose() {
-    _reasonController.dispose();
     super.dispose();
   }
 
@@ -42,9 +48,9 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
 
     // Если выбрано отсутствие, проверяем наличие причины
     if (action == WorkDayAction.absent) {
-      if (_reasonController.text.trim().isEmpty) {
+      if (_selectedReason == null || _selectedReason!.isEmpty) {
         setState(() {
-          _error = 'Укажите причину отсутствия';
+          _error = 'Выберите причину отсутствия';
         });
         return;
       }
@@ -142,7 +148,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
           final result = await markAbsent.call(
             MarkAbsentParams(
               businessId: businessId,
-              reason: _reasonController.text.trim(),
+              reason: _selectedReason!,
             ),
           );
           result.fold(
@@ -249,15 +255,26 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
             ),
             if (_selectedAction == WorkDayAction.absent) ...[
               const SizedBox(height: 16),
-              TextField(
-                controller: _reasonController,
+              DropdownButtonFormField<String>(
+                value: _selectedReason,
                 decoration: const InputDecoration(
                   labelText: 'Причина отсутствия',
-                  hintText: 'Введите причину отсутствия',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
-                enabled: !_isLoading,
+                items: _absenceReasons.map((reason) {
+                  return DropdownMenuItem<String>(
+                    value: reason,
+                    child: Text(reason),
+                  );
+                }).toList(),
+                onChanged: _isLoading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedReason = value;
+                          _error = null;
+                        });
+                      },
               ),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -303,6 +320,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               if (action == WorkDayAction.absent) {
                 setState(() {
                   _selectedAction = action;
+                  _selectedReason = null;
                   _error = null;
                 });
               } else {
