@@ -26,7 +26,7 @@ class OperationalTasksPage extends StatefulWidget {
 class _OperationalTasksPageState extends State<OperationalTasksPage> {
   bool _isLoading = false;
   String? _error;
-  
+
   // Данные для блоков
   List<Task> _todayRecurringTasks = [];
   List<Task> _todayIrregularTasks = [];
@@ -34,11 +34,11 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
   List<Task> _weekIrregularTasks = [];
   List<Task> _controlPointTasks = [];
   List<ControlPoint> _controlPoints = []; // Истинные точки контроля
-  
+
   // Фильтр для гендиректора/начальника департамента
   bool _showAll = false;
-  
-  // Свитчер для блока точек контроля: true = Управление, false = Задачи
+
+  // Свитчер для блока точек контроля: true = Контроль, false = Задачи
   bool _showControlPointManagement = true;
 
   @override
@@ -84,7 +84,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       listen: false,
     );
     final selectedBusiness = profileProvider.selectedBusiness;
-    
+
     if (selectedBusiness == null) {
       return;
     }
@@ -100,22 +100,32 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final profile = profileProvider.profile;
 
     // Определяем параметры для запросов
-    final isAdminOrDirector = currentUser?.isAdmin == true ||
+    final isAdminOrDirector =
+        currentUser?.isAdmin == true ||
         profile?.orgStructure.isGeneralDirector == true ||
         profile?.orgStructure.isDepartmentHead == true;
-    
+
     final showAll = isAdminOrDirector && _showAll;
-    final assignedTo = (isAdminOrDirector && !_showAll) ? currentUser?.id : null;
-    
+    final assignedTo =
+        (isAdminOrDirector && !_showAll) ? currentUser?.id : null;
+
     // Получаем сегодняшнюю дату
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     // Получаем диапазон недели
     final startOfWeek = _getStartOfWeek(todayDate);
     final endOfWeek = _getEndOfWeek(todayDate);
-    final startOfWeekDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-    final endOfWeekDate = DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day);
+    final startOfWeekDate = DateTime(
+      startOfWeek.year,
+      startOfWeek.month,
+      startOfWeek.day,
+    );
+    final endOfWeekDate = DateTime(
+      endOfWeek.year,
+      endOfWeek.month,
+      endOfWeek.day,
+    );
 
     try {
       // 1. Регулярные задачи на сегодня
@@ -361,56 +371,61 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           ),
         ],
       ),
-      body: selectedBusiness == null
-          ? _buildBusinessSelectionView(profileProvider)
-          : _isLoading
+      body:
+          selectedBusiness == null
+              ? _buildBusinessSelectionView(profileProvider)
+              : _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline,
-                              size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text(
-                            _error!,
-                            style: const TextStyle(color: Colors.red),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _loadAllTasks,
-                            child: const Text('Повторить'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _buildTasksGrid(),
-      floatingActionButton: selectedBusiness != null
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Кнопка микрофона для голосовой записи
-                FloatingActionButton(
-                  heroTag: "voice_record",
-                  onPressed: () {
-                    _showVoiceTaskDialog(selectedBusiness.id);
-                  },
-                  child: const Icon(Icons.mic),
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadAllTasks,
+                      child: const Text('Повторить'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                // Кнопка плюсика для создания задачи
-                FloatingActionButton(
-                  heroTag: "create_task",
-                  onPressed: () {
-                    _showCreateTaskDialog();
-                  },
-                  child: const Icon(Icons.add),
-                ),
-              ],
-            )
-          : null,
+              )
+              : _buildTasksGrid(),
+      floatingActionButton:
+          selectedBusiness != null
+              ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Кнопка микрофона для голосовой записи
+                  FloatingActionButton(
+                    heroTag: "voice_record",
+                    onPressed: () {
+                      _showVoiceTaskDialog(selectedBusiness.id);
+                    },
+                    child: const Icon(Icons.mic),
+                  ),
+                  const SizedBox(height: 16),
+                  // Кнопка плюсика для создания задачи
+                  FloatingActionButton(
+                    heroTag: "create_task",
+                    onPressed: () {
+                      _showCreateTaskDialog();
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              )
+              : null,
     );
   }
 
@@ -518,10 +533,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
               children: [
                 const Text(
                   'Задачи на сегодня',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 // Разделение на две части горизонтально (в ряд)
@@ -549,24 +561,34 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               ),
                               const SizedBox(height: 4),
                               Expanded(
-                                child: _todayRecurringTasks.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'Нет задач',
-                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                child:
+                                    _todayRecurringTasks.isEmpty
+                                        ? const Center(
+                                          child: Text(
+                                            'Нет задач',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        )
+                                        : SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children:
+                                                _todayRecurringTasks.map((
+                                                  task,
+                                                ) {
+                                                  return Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          right: 8,
+                                                        ),
+                                                    child: _buildTaskItem(task),
+                                                  );
+                                                }).toList(),
+                                          ),
                                         ),
-                                      )
-                                    : SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          children: _todayRecurringTasks.map((task) {
-                                            return Container(
-                                              margin: const EdgeInsets.only(right: 8),
-                                              child: _buildTaskItem(task),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
                               ),
                             ],
                           ),
@@ -594,24 +616,34 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               ),
                               const SizedBox(height: 4),
                               Expanded(
-                                child: _todayIrregularTasks.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'Нет задач',
-                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                child:
+                                    _todayIrregularTasks.isEmpty
+                                        ? const Center(
+                                          child: Text(
+                                            'Нет задач',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        )
+                                        : SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children:
+                                                _todayIrregularTasks.map((
+                                                  task,
+                                                ) {
+                                                  return Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          right: 8,
+                                                        ),
+                                                    child: _buildTaskItem(task),
+                                                  );
+                                                }).toList(),
+                                          ),
                                         ),
-                                      )
-                                    : SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          children: _todayIrregularTasks.map((task) {
-                                            return Container(
-                                              margin: const EdgeInsets.only(right: 8),
-                                              child: _buildTaskItem(task),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
                               ),
                             ],
                           ),
@@ -640,10 +672,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 child: const Center(
                   child: Text(
                     '+',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -657,10 +686,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
   /// Блок задач на неделе (регулярные + нерегулярные)
   Widget _buildWeekTasksBlock() {
     // Объединяем регулярные и нерегулярные задачи на неделе
-    final allWeekTasks = [
-      ..._weekRecurringTasks,
-      ..._weekIrregularTasks,
-    ];
+    final allWeekTasks = [..._weekRecurringTasks, ..._weekIrregularTasks];
 
     return Card(
       color: Colors.blue.shade50,
@@ -673,26 +699,27 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
               children: [
                 const Text(
                   'Задачи на неделе',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 // Список всех задач на неделе
                 Expanded(
-                  child: allWeekTasks.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Нет задач',
-                            style: TextStyle(color: Colors.grey),
+                  child:
+                      allWeekTasks.isEmpty
+                          ? const Center(
+                            child: Text(
+                              'Нет задач',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                          : SingleChildScrollView(
+                            child: Column(
+                              children:
+                                  allWeekTasks
+                                      .map((task) => _buildTaskItem(task))
+                                      .toList(),
+                            ),
                           ),
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: allWeekTasks.map((task) => _buildTaskItem(task)).toList(),
-                          ),
-                        ),
                 ),
               ],
             ),
@@ -714,10 +741,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 child: const Center(
                   child: Text(
                     '+',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -728,10 +752,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     );
   }
 
-  /// Блок точек контроля со свитчером "Управление | Задачи"
+  /// Блок точек контроля со свитчером "Контроль | Задачи"
   Widget _buildControlPointsBlock() {
     final canViewControlPoints = _canViewAllTasks();
-    
+
     return Card(
       color: Colors.purple.shade50,
       child: Padding(
@@ -742,13 +766,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
             // Заголовок блока
             const Text(
               'Контроль',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            // Свитчер "Управление | Задачи" (только для гендиректора/управленца)
+            // Свитчер "Контроль | Задачи" (только для гендиректора/управленца)
             if (canViewControlPoints)
               Row(
                 children: [
@@ -760,17 +781,20 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: _showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
+                          color:
+                              _showControlPointManagement
+                                  ? Colors.purple.shade200
+                                  : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors.grey,
-                            width: 1,
-                          ),
+                          border: Border.all(color: Colors.grey, width: 1),
                         ),
                         child: const Text(
-                          'Управление',
+                          'Контроль',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 10,
@@ -789,14 +813,17 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: !_showControlPointManagement ? Colors.purple.shade200 : Colors.transparent,
+                          color:
+                              !_showControlPointManagement
+                                  ? Colors.purple.shade200
+                                  : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors.grey,
-                            width: 1,
-                          ),
+                          border: Border.all(color: Colors.grey, width: 1),
                         ),
                         child: const Text(
                           'Задачи',
@@ -814,35 +841,47 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
             const SizedBox(height: 8),
             // Контент в зависимости от выбранного режима
             Expanded(
-              child: canViewControlPoints && _showControlPointManagement
-                  ? _controlPoints.isEmpty
+              child:
+                  canViewControlPoints && _showControlPointManagement
+                      ? _controlPoints.isEmpty
+                          ? const Center(
+                            child: Text(
+                              'Нет точек контроля',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                          : SingleChildScrollView(
+                            child: Column(
+                              children:
+                                  _controlPoints.asMap().entries.map((entry) {
+                                    return _buildControlPointEntityItem(
+                                      entry.value,
+                                      entry.key + 1,
+                                    );
+                                  }).toList(),
+                            ),
+                          )
+                      : _controlPointTasks.isEmpty
                       ? const Center(
-                          child: Text(
-                            'Нет точек контроля',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: _controlPoints.asMap().entries.map((entry) {
-                              return _buildControlPointEntityItem(entry.value, entry.key + 1);
-                            }).toList(),
-                          ),
-                        )
-                  : _controlPointTasks.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Нет задач',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: _controlPointTasks.asMap().entries.map((entry) {
-                              return _buildControlPointItem(entry.value, entry.key + 1);
-                            }).toList(),
-                          ),
+                        child: Text(
+                          'Нет задач',
+                          style: TextStyle(fontSize: 10, color: Colors.grey),
                         ),
+                      )
+                      : SingleChildScrollView(
+                        child: Column(
+                          children:
+                              _controlPointTasks.asMap().entries.map((entry) {
+                                return _buildControlPointItem(
+                                  entry.value,
+                                  entry.key + 1,
+                                );
+                              }).toList(),
+                        ),
+                      ),
             ),
           ],
         ),
@@ -861,22 +900,37 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           children: [
             const Text(
               'Аналитика',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    _buildAnalyticsLink('Задачи все в этом месяце', '/tasks/analytics/month'),
-                    _buildAnalyticsLink('Задачи не выполнены', '/tasks/analytics/not-completed'),
-                    _buildAnalyticsLink('Задачи выполнены с опозданием', '/tasks/analytics/overdue'),
-                    _buildAnalyticsLink('Точки контроля в этом месяце', '/tasks/analytics/control-points-month'),
-                    _buildAnalyticsLink('Точки контроля выполнены', '/tasks/analytics/control-points-completed'),
-                    _buildAnalyticsLink('Точки контроля не выполнены', '/tasks/analytics/control-points-not-completed'),
+                    _buildAnalyticsLink(
+                      'Задачи: этот месяц',
+                      '/tasks/analytics/month',
+                    ),
+                    _buildAnalyticsLink(
+                      'Не сделаны',
+                      '/tasks/analytics/not-completed',
+                    ),
+                    _buildAnalyticsLink(
+                      'Задачи: просрок',
+                      '/tasks/analytics/overdue',
+                    ),
+                    _buildAnalyticsLink(
+                      'ТК в этом месяце',
+                      '/tasks/analytics/control-points-month',
+                    ),
+                    _buildAnalyticsLink(
+                      'ТК сделаны',
+                      '/tasks/analytics/control-points-completed',
+                    ),
+                    _buildAnalyticsLink(
+                      'ТК не сделаны',
+                      '/tasks/analytics/control-points-not-completed',
+                    ),
                   ],
                 ),
               ),
@@ -945,12 +999,14 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           task.title,
           style: TextStyle(
             fontSize: 11,
-            decoration: task.status == TaskStatus.completed
-                ? TextDecoration.lineThrough
-                : null,
-            color: task.status == TaskStatus.completed
-                ? Colors.grey
-                : Colors.black87,
+            decoration:
+                task.status == TaskStatus.completed
+                    ? TextDecoration.lineThrough
+                    : null,
+            color:
+                task.status == TaskStatus.completed
+                    ? Colors.grey
+                    : Colors.black87,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -978,12 +1034,14 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           '$index. ${task.title} $frequencyText',
           style: TextStyle(
             fontSize: 10,
-            decoration: task.status == TaskStatus.completed
-                ? TextDecoration.lineThrough
-                : null,
-            color: task.status == TaskStatus.completed
-                ? Colors.grey
-                : Colors.black87,
+            decoration:
+                task.status == TaskStatus.completed
+                    ? TextDecoration.lineThrough
+                    : null,
+            color:
+                task.status == TaskStatus.completed
+                    ? Colors.grey
+                    : Colors.black87,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -997,10 +1055,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final frequencyText = _getControlPointFrequencyText(controlPoint);
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed(
-          '/control-points/detail',
-          arguments: controlPoint.id,
-        );
+        Navigator.of(
+          context,
+        ).pushNamed('/control-points/detail', arguments: controlPoint.id);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
@@ -1059,11 +1116,12 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
 
     showDialog(
       context: context,
-      builder: (context) => VoiceTaskDialog(
-        businessId: businessId,
-        userRepository: userRepository,
-        createTaskUseCase: createTaskUseCase,
-      ),
+      builder:
+          (context) => VoiceTaskDialog(
+            businessId: businessId,
+            userRepository: userRepository,
+            createTaskUseCase: createTaskUseCase,
+          ),
     ).then((_) {
       // Обновляем список задач после закрытия диалога
       _loadAllTasks();
@@ -1072,7 +1130,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
 
   /// Показывает диалог создания задачи
   void _showCreateTaskDialog({TaskModel? initialTaskData}) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final selectedBusiness = profileProvider.selectedBusiness;
     final createTaskUseCase = Provider.of<CreateTask>(context, listen: false);
     final userRepository = Provider.of<UserRepository>(context, listen: false);
@@ -1083,15 +1144,16 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
 
     showDialog(
       context: context,
-      builder: (context) => _CreateTaskDialog(
-        businessId: selectedBusiness.id,
-        userRepository: userRepository,
-        createTaskUseCase: createTaskUseCase,
-        initialTaskData: initialTaskData,
-        onSuccess: () {
-          _loadAllTasks();
-        },
-      ),
+      builder:
+          (context) => _CreateTaskDialog(
+            businessId: selectedBusiness.id,
+            userRepository: userRepository,
+            createTaskUseCase: createTaskUseCase,
+            initialTaskData: initialTaskData,
+            onSuccess: () {
+              _loadAllTasks();
+            },
+          ),
     );
   }
 }
