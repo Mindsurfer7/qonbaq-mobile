@@ -1081,8 +1081,6 @@ class _CreateApprovalDialog extends StatefulWidget {
 
 class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   final _formKey = GlobalKey<FormBuilderState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   List<ApprovalTemplate> _templates = [];
   ApprovalTemplate? _selectedTemplate;
   bool _isLoadingTemplates = true;
@@ -1098,29 +1096,12 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
   /// Применяет данные из voice-assist к форме
   void _applyVoiceAssistData(Map<String, dynamic> formData) {
     if (_formKey.currentState == null) return;
-
-    // Если есть title, заполняем его
-    if (formData.containsKey('title') && formData['title'] != null) {
-      final title = formData['title'].toString();
-      _titleController.text = title;
-      _formKey.currentState?.fields['title']?.didChange(title);
-    }
-
-    // Если есть description, заполняем его
-    if (formData.containsKey('description') &&
-        formData['description'] != null) {
-      final description = formData['description'].toString();
-      _descriptionController.text = description;
-      _formKey.currentState?.fields['description']?.didChange(description);
-    }
 
     // Применяем данные к полям динамической формы
     // Данные могут быть вложенными по блокам (например, {"block_name": {"field": "value"}})
@@ -1131,7 +1112,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       final fieldName = entry.key;
       final value = entry.value;
 
-      // Пропускаем title и description, так как они уже обработаны
+      // Пропускаем title и description - они не используются в форме
       if (fieldName == 'title' || fieldName == 'description') continue;
 
       final field = _formKey.currentState?.fields[fieldName];
@@ -1262,7 +1243,10 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
         var value = entry.value;
 
         // Пропускаем поле template - оно уже установлено
-        if (fieldName == 'template') continue;
+        // Пропускаем title и description - они не используются в форме
+        if (fieldName == 'template' || 
+            fieldName == 'title' || 
+            fieldName == 'description') continue;
 
         if (value is String && _isIso8601Date(value)) {
           // Восстанавливаем DateTime из строки
@@ -1271,12 +1255,6 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
         final field = _formKey.currentState?.fields[fieldName];
         if (field != null && value != null) {
-          // Для контроллеров текстовых полей обновляем контроллер
-          if (fieldName == 'title' && value is String) {
-            _titleController.text = value;
-          } else if (fieldName == 'description' && value is String) {
-            _descriptionController.text = value;
-          }
           // Обновляем значение поля напрямую через FormBuilderState
           // Это не вызовет onChanged, так как мы устанавливаем флаг _isUpdatingTemplate
           field.didChange(value);
@@ -1358,11 +1336,6 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       return;
     }
 
-    // Получаем title и description из формы
-    // title теперь опциональное - если не указано, бэкенд использует название шаблона
-    final title = (formValues['title'] as String?)?.trim();
-    final description = (formValues['description'] as String?)?.trim();
-
     // Извлекаем paymentDueDate из formValues
     // Ищем поле с учетом префиксов блоков (main.paymentDueDate, transaction.paymentDueDate и т.д.)
     DateTime? paymentDueDate;
@@ -1432,11 +1405,8 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       id: '', // Будет создан на сервере
       businessId: widget.businessId,
       templateCode: selectedTemplate.code, // Используем код шаблона
-      title:
-          title ??
-          selectedTemplate
-              .name, // Если title не указан, используем название шаблона (бэкенд тоже так сделает)
-      description: description?.isEmpty ?? true ? null : description,
+      title: selectedTemplate.name, // Всегда используем название шаблона
+      description: null, // Description не используется
       status: ApprovalStatus.pending,
       createdBy: widget.currentUserId,
       paymentDueDate: paymentDueDate,
@@ -1687,20 +1657,6 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                           _selectedTemplate = value;
                           _error = null; // Очищаем ошибку при выборе
 
-                          // Автоматически заполняем title из нового шаблона
-                          // Если title был пустым или совпадал со старым шаблоном, обновляем его
-                          if (value != null) {
-                            final currentTitle = _titleController.text.trim();
-                            if (currentTitle.isEmpty ||
-                                (oldTemplate != null &&
-                                    currentTitle == oldTemplate.name)) {
-                              _titleController.text = value.name;
-                              // Обновляем значение в форме
-                              _formKey.currentState?.fields['title']
-                                  ?.didChange(value.name);
-                            }
-                          }
-
                           // Очищаем значения полей динамической формы при смене шаблона
                           if (oldTemplate != null &&
                               oldTemplate != value &&
@@ -1765,28 +1721,6 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
                       },
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  FormBuilderTextField(
-                    name: 'title',
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Название',
-                      border: OutlineInputBorder(),
-                      helperText:
-                          'Оставьте пустым, чтобы использовать название из шаблона',
-                    ),
-                    // title теперь опциональное - валидация не требуется
-                  ),
-                  const SizedBox(height: 16),
-                  FormBuilderTextField(
-                    name: 'description',
-                    controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Описание',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 4,
-                  ),
                   // Динамическая форма на основе formSchema
                   if (_selectedTemplate?.formSchema != null) ...[
                     const SizedBox(height: 16),

@@ -281,27 +281,6 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
         title: const Text('Выберите пространство'),
         automaticallyImplyLeading: false,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final provider = Provider.of<ProfileProvider>(context, listen: false);
-          final result = await showDialog<Business>(
-            context: context,
-            builder:
-                (context) =>
-                    const CreateBusinessDialog(type: BusinessType.business),
-          );
-
-          if (result != null && mounted) {
-            // Перезагружаем список бизнесов
-            await provider.loadBusinesses();
-            // Автоматически выбираем созданный бизнес
-            await _selectWorkspace(result);
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Создать бизнес'),
-        backgroundColor: Colors.blue,
-      ),
       body: Consumer<ProfileProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -427,6 +406,21 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                                   screenHeight: MediaQuery.of(context).size.height,
                                   notificationCount: 0, // TODO: заменить на данные из endpoint
                                   pinCount: 5, // TODO: заменить на данные из endpoint
+                                  onCreateBusinessTap: () async {
+                                    final result = await showDialog<Business>(
+                                      context: context,
+                                      builder:
+                                          (context) =>
+                                              const CreateBusinessDialog(type: BusinessType.business),
+                                    );
+
+                                    if (result != null && mounted) {
+                                      // Перезагружаем список бизнесов
+                                      await provider.loadBusinesses();
+                                      // Автоматически выбираем созданный бизнес
+                                      await _selectWorkspace(result);
+                                    }
+                                  },
                                 ),
                                 const SizedBox(height: 12),
                                 _buildVoiceMicrophoneButton(
@@ -529,6 +523,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     required double screenHeight,
     required int notificationCount,
     required int pinCount,
+    VoidCallback? onCreateBusinessTap,
   }) {
     final darkerColor = Color.fromRGBO(
       (color.red * 0.7).round(),
@@ -550,70 +545,105 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Верхняя часть: иконка и название
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          children: [
+            // Основной контент кнопки
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(icon, color: Colors.white, size: 32),
-                    const SizedBox(height: 8),
-                    Text(
-                      title,
-                      style: const TextStyle(
+                    // Верхняя часть: иконка и название (центрированы)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(icon, color: Colors.white, size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Нижняя часть: индикаторы
+                    Column(
+                      children: [
+                        // Индикатор уведомлений
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Icon(Icons.notifications, color: Colors.white, size: 20),
+                            Text(
+                              notificationCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Индикатор PIN
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Icon(Icons.push_pin, color: Colors.white, size: 20),
+                            Text(
+                              pinCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Кнопка создания бизнеса в верхнем правом углу (только для бизнеса)
+            if (onCreateBusinessTap != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCreateBusinessTap,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.add,
                         color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        size: 18,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                // Нижняя часть: индикаторы
-                Column(
-                  children: [
-                    // Индикатор уведомлений
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Icon(Icons.notifications, color: Colors.white, size: 20),
-                        Text(
-                          notificationCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Индикатор PIN
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Icon(Icons.push_pin, color: Colors.white, size: 20),
-                        Text(
-                          pinCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
       ),
     );
