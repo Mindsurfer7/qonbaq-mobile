@@ -73,16 +73,23 @@ class _FileUploadFieldState extends State<FileUploadField> {
   Future<void> _selectFile() async {
     if (!widget.enabled || _isUploading) return;
 
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📁 FILE SELECTION START');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🌐 Platform: ${kIsWeb ? "Web" : "Mobile"}');
+
     try {
       FilePickerResult? result;
 
       if (kIsWeb) {
+        print('📂 Opening file picker (Web) with withData: true');
         result = await FilePicker.platform.pickFiles(
           type: FileType.any,
           allowMultiple: false,
           withData: true,
         );
       } else {
+        print('📂 Opening file picker (Mobile)');
         result = await FilePicker.platform.pickFiles(
           type: FileType.any,
           allowMultiple: false,
@@ -92,9 +99,14 @@ class _FileUploadFieldState extends State<FileUploadField> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
         final fileName = file.name;
+        print('✅ File selected: $fileName');
+        print('   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)');
+        print('   Extension: ${file.extension ?? "unknown"}');
 
         if (kIsWeb) {
+          print('   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}');
           if (file.bytes != null) {
+            print('✅ File bytes loaded successfully');
             setState(() {
               _selectedFilePath = null;
               _selectedFileBytes = file.bytes;
@@ -106,14 +118,19 @@ class _FileUploadFieldState extends State<FileUploadField> {
 
             await _uploadFile();
           } else {
+            print('❌ File bytes are null!');
+            print('   File size from picker: ${file.size} bytes');
+            print('   This might be a file_picker issue in production');
             setState(() {
               _uploadError =
-                  'Не удалось загрузить файл. Попробуйте выбрать другой файл.';
+                  'Не удалось загрузить файл (размер: ${(file.size / 1024).toStringAsFixed(2)} KB). Попробуйте выбрать другой файл.';
             });
           }
         } else {
+          print('   Path: ${file.path ?? "null"}');
           if (file.path != null) {
             final filePath = file.path!;
+            print('✅ File path obtained successfully');
 
             setState(() {
               _selectedFilePath = filePath;
@@ -126,14 +143,26 @@ class _FileUploadFieldState extends State<FileUploadField> {
 
             await _uploadFile();
           } else {
+            print('❌ File path is null');
             setState(() {
               _uploadError =
                   'Не удалось получить файл. Попробуйте выбрать другой файл.';
             });
           }
         }
+      } else {
+        print('ℹ️ File selection cancelled or empty');
       }
-    } catch (e) {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e, stackTrace) {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('❌ FILE SELECTION ERROR');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('💥 Error type: ${e.runtimeType}');
+      print('💥 Error message: $e');
+      print('📚 Stack trace:');
+      print('$stackTrace');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       setState(() {
         _uploadError = 'Ошибка выбора файла: ${e.toString()}';
       });
@@ -143,8 +172,18 @@ class _FileUploadFieldState extends State<FileUploadField> {
   Future<void> _uploadFile() async {
     if ((_selectedFilePath == null && _selectedFileBytes == null) ||
         !mounted) {
+      print('⚠️ Upload cancelled: no file data or widget not mounted');
+      print('   _selectedFilePath: ${_selectedFilePath ?? "null"}');
+      print('   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}');
+      print('   mounted: $mounted');
       return;
     }
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🚀 FILE UPLOAD START (Widget)');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📋 File name: ${_selectedFileName ?? "unknown"}');
+    print('📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}');
 
     setState(() {
       _isUploading = true;
@@ -153,6 +192,8 @@ class _FileUploadFieldState extends State<FileUploadField> {
 
     try {
       final uploadFileUseCase = Provider.of<UploadFile>(context, listen: false);
+      print('✅ UploadFile use case obtained');
+      
       final uploadResult = await uploadFileUseCase.call(
         UploadFileParams(
           file: _selectedFilePath,
@@ -162,10 +203,14 @@ class _FileUploadFieldState extends State<FileUploadField> {
         ),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        print('⚠️ Widget unmounted during upload');
+        return;
+      }
 
       uploadResult.fold(
         (failure) {
+          print('❌ Upload failed: ${failure.message}');
           setState(() {
             _uploadError = failure.message;
             _isUploading = false;
@@ -175,6 +220,7 @@ class _FileUploadFieldState extends State<FileUploadField> {
           _updateFormField(null);
         },
         (uploadResponse) {
+          print('✅ Upload successful! File ID: ${uploadResponse.fileId}');
           setState(() {
             _uploadedFileId = uploadResponse.fileId;
             _isUploading = false;
@@ -184,8 +230,20 @@ class _FileUploadFieldState extends State<FileUploadField> {
           _updateFormField(uploadResponse.fileId);
         },
       );
-    } catch (e) {
-      if (!mounted) return;
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e, stackTrace) {
+      if (!mounted) {
+        print('⚠️ Widget unmounted during error handling');
+        return;
+      }
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('❌ FILE UPLOAD ERROR (Widget)');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('💥 Error type: ${e.runtimeType}');
+      print('💥 Error message: $e');
+      print('📚 Stack trace:');
+      print('$stackTrace');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       setState(() {
         _uploadError = 'Ошибка загрузки файла: $e';
         _isUploading = false;
