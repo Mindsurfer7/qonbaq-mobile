@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/usecases/upload_file.dart';
+
+// Условный импорт для веба
+import 'dart:html' as html show FileUploadInputElement, FileReader;
+import 'dart:typed_data' show Uint8List;
 
 /// Виджет для загрузки файла в динамической форме
 /// Сохраняет fileId в поле формы через FormBuilder
@@ -70,6 +75,90 @@ class _FileUploadFieldState extends State<FileUploadField> {
     }
   }
 
+  /// Нативный HTML input для веба - обходит проблему LateInitializationError в production
+  Future<FilePickerResult?> _pickFileWebNative() async {
+    if (!kIsWeb) return null;
+
+    final completer = Completer<FilePickerResult?>();
+    Timer? timeoutTimer;
+
+    try {
+      final input =
+          html.FileUploadInputElement()
+            ..accept = '*/*'
+            ..multiple = false;
+
+      input.onChange.listen((e) {
+        timeoutTimer?.cancel();
+        final files = input.files;
+        if (files != null && files.isNotEmpty) {
+          final file = files[0];
+          print(
+            '📁 File selected via native input: ${file.name} (${file.size} bytes)',
+          );
+
+          final reader = html.FileReader();
+
+          reader.onLoadEnd.listen((e) {
+            try {
+              final bytes = reader.result as Uint8List?;
+              if (bytes != null) {
+                print('✅ File bytes read successfully: ${bytes.length} bytes');
+                completer.complete(
+                  FilePickerResult([
+                    PlatformFile(
+                      name: file.name,
+                      size: file.size,
+                      bytes: bytes,
+                    ),
+                  ]),
+                );
+              } else {
+                print('❌ FileReader result is null');
+                completer.complete(null);
+              }
+            } catch (e) {
+              print('❌ Error processing file: $e');
+              completer.completeError('Failed to process file: $e');
+            }
+          });
+
+          reader.onError.listen((e) {
+            timeoutTimer?.cancel();
+            print('❌ FileReader error: $e');
+            completer.completeError('Failed to read file');
+          });
+
+          print('📖 Reading file as ArrayBuffer...');
+          reader.readAsArrayBuffer(file);
+        } else {
+          print('ℹ️ No file selected');
+          completer.complete(null);
+        }
+      });
+
+      // Таймаут на случай, если пользователь не выберет файл
+      timeoutTimer = Timer(const Duration(seconds: 30), () {
+        if (!completer.isCompleted) {
+          print('⏱️ File selection timeout');
+          completer.complete(null);
+        }
+      });
+
+      print('🖱️ Triggering file input click...');
+      input.click();
+
+      return completer.future;
+    } catch (e) {
+      timeoutTimer?.cancel();
+      print('❌ Error in native file picker: $e');
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _selectFile() async {
     if (!widget.enabled || _isUploading) return;
 
@@ -82,12 +171,27 @@ class _FileUploadFieldState extends State<FileUploadField> {
       FilePickerResult? result;
 
       if (kIsWeb) {
-        print('📂 Opening file picker (Web) with withData: true');
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
-          allowMultiple: false,
-          withData: true,
-        );
+        print('📂 Opening file picker (Web) - using native HTML input');
+
+        // Используем нативный HTML input для обхода проблемы LateInitializationError в production
+        try {
+          result = await _pickFileWebNative();
+        } catch (e) {
+          print('⚠️ Native HTML input failed: $e');
+          print('🔄 Falling back to FilePicker...');
+
+          // Fallback на FilePicker (на случай если нативный подход не сработал)
+          try {
+            result = await FilePicker.platform.pickFiles(
+              type: FileType.any,
+              allowMultiple: false,
+              withData: true,
+            );
+          } catch (e2) {
+            print('❌ FilePicker fallback also failed: $e2');
+            rethrow;
+          }
+        }
       } else {
         print('📂 Opening file picker (Mobile)');
         result = await FilePicker.platform.pickFiles(
@@ -100,11 +204,15 @@ class _FileUploadFieldState extends State<FileUploadField> {
         final file = result.files.single;
         final fileName = file.name;
         print('✅ File selected: $fileName');
-        print('   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)');
+        print(
+          '   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)',
+        );
         print('   Extension: ${file.extension ?? "unknown"}');
 
         if (kIsWeb) {
-          print('   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}');
+          print(
+            '   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}',
+          );
           if (file.bytes != null) {
             print('✅ File bytes loaded successfully');
             setState(() {
@@ -170,11 +278,12 @@ class _FileUploadFieldState extends State<FileUploadField> {
   }
 
   Future<void> _uploadFile() async {
-    if ((_selectedFilePath == null && _selectedFileBytes == null) ||
-        !mounted) {
+    if ((_selectedFilePath == null && _selectedFileBytes == null) || !mounted) {
       print('⚠️ Upload cancelled: no file data or widget not mounted');
       print('   _selectedFilePath: ${_selectedFilePath ?? "null"}');
-      print('   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}');
+      print(
+        '   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}',
+      );
       print('   mounted: $mounted');
       return;
     }
@@ -183,7 +292,9 @@ class _FileUploadFieldState extends State<FileUploadField> {
     print('🚀 FILE UPLOAD START (Widget)');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('📋 File name: ${_selectedFileName ?? "unknown"}');
-    print('📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}');
+    print(
+      '📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}',
+    );
 
     setState(() {
       _isUploading = true;
@@ -193,7 +304,7 @@ class _FileUploadFieldState extends State<FileUploadField> {
     try {
       final uploadFileUseCase = Provider.of<UploadFile>(context, listen: false);
       print('✅ UploadFile use case obtained');
-      
+
       final uploadResult = await uploadFileUseCase.call(
         UploadFileParams(
           file: _selectedFilePath,
@@ -306,9 +417,10 @@ class _FileUploadFieldState extends State<FileUploadField> {
             decoration: BoxDecoration(
               color: _isFileUploaded ? Colors.green[50] : Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
-              border: _isFileUploaded
-                  ? Border.all(color: Colors.green, width: 2)
-                  : null,
+              border:
+                  _isFileUploaded
+                      ? Border.all(color: Colors.green, width: 2)
+                      : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,10 +459,7 @@ class _FileUploadFieldState extends State<FileUploadField> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       'Файл загружен',
-                      style: TextStyle(
-                        color: Colors.green[700],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.green[700], fontSize: 12),
                     ),
                   ),
               ],
@@ -393,14 +502,15 @@ class _FileUploadFieldState extends State<FileUploadField> {
             }
             return const SizedBox.shrink();
           },
-          validator: widget.isRequired
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Поле "${widget.label}" обязательно';
+          validator:
+              widget.isRequired
+                  ? (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Поле "${widget.label}" обязательно';
+                    }
+                    return null;
                   }
-                  return null;
-                }
-              : null,
+                  : null,
         ),
       ],
     );

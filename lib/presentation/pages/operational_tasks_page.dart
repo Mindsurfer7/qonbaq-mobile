@@ -852,7 +852,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               Expanded(
                                 child:
                                     _isLoadingTodayRecurring
-                                        ? const TaskSkeleton(count: 3)
+                                        ? TaskSkeleton(count: 3)
                                         : _todayRecurringTasks.isEmpty
                                         ? const Center(
                                           child: Text(
@@ -913,7 +913,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               Expanded(
                                 child:
                                     _isLoadingTodayIrregular
-                                        ? const TaskSkeleton(count: 3)
+                                        ? TaskSkeleton(count: 3)
                                         : _todayIrregularTasks.isEmpty
                                         ? const Center(
                                           child: Text(
@@ -1004,7 +1004,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 Expanded(
                   child:
                       _isLoadingWeekRecurring || _isLoadingWeekIrregular
-                          ? const TaskSkeleton(count: 5)
+                          ? TaskSkeleton(count: 5)
                           : allWeekTasks.isEmpty
                           ? const Center(
                             child: Text(
@@ -1144,7 +1144,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
               child:
                   canViewControlPoints && _showControlPointManagement
                       ? _isLoadingControlPoints
-                          ? const TaskSkeleton(count: 5)
+                          ? TaskSkeleton(count: 5)
                           : _controlPoints.isEmpty
                           ? const Center(
                             child: Text(
@@ -1167,7 +1167,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                             ),
                           )
                       : _isLoadingControlPointTasks
-                      ? const TaskSkeleton(count: 5)
+                      ? TaskSkeleton(count: 5)
                       : _controlPointTasks.isEmpty
                       ? const Center(
                         child: Text(

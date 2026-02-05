@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../domain/usecases/upload_file.dart';
+
+// Условный импорт для веба
+import 'dart:html' as html show FileUploadInputElement, FileReader;
+import 'dart:typed_data' show Uint8List;
 
 /// Диалог для ввода результата выполнения задачи и загрузки файла
 class TaskCompletionDialog extends StatefulWidget {
@@ -32,6 +37,90 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     super.dispose();
   }
 
+  /// Нативный HTML input для веба - обходит проблему LateInitializationError в production
+  Future<FilePickerResult?> _pickFileWebNative() async {
+    if (!kIsWeb) return null;
+
+    final completer = Completer<FilePickerResult?>();
+    Timer? timeoutTimer;
+
+    try {
+      final input =
+          html.FileUploadInputElement()
+            ..accept = '*/*'
+            ..multiple = false;
+
+      input.onChange.listen((e) {
+        timeoutTimer?.cancel();
+        final files = input.files;
+        if (files != null && files.isNotEmpty) {
+          final file = files[0];
+          print(
+            '📁 File selected via native input: ${file.name} (${file.size} bytes)',
+          );
+
+          final reader = html.FileReader();
+
+          reader.onLoadEnd.listen((e) {
+            try {
+              final bytes = reader.result as Uint8List?;
+              if (bytes != null) {
+                print('✅ File bytes read successfully: ${bytes.length} bytes');
+                completer.complete(
+                  FilePickerResult([
+                    PlatformFile(
+                      name: file.name,
+                      size: file.size,
+                      bytes: bytes,
+                    ),
+                  ]),
+                );
+              } else {
+                print('❌ FileReader result is null');
+                completer.complete(null);
+              }
+            } catch (e) {
+              print('❌ Error processing file: $e');
+              completer.completeError('Failed to process file: $e');
+            }
+          });
+
+          reader.onError.listen((e) {
+            timeoutTimer?.cancel();
+            print('❌ FileReader error: $e');
+            completer.completeError('Failed to read file');
+          });
+
+          print('📖 Reading file as ArrayBuffer...');
+          reader.readAsArrayBuffer(file);
+        } else {
+          print('ℹ️ No file selected');
+          completer.complete(null);
+        }
+      });
+
+      // Таймаут на случай, если пользователь не выберет файл
+      timeoutTimer = Timer(const Duration(seconds: 30), () {
+        if (!completer.isCompleted) {
+          print('⏱️ File selection timeout');
+          completer.complete(null);
+        }
+      });
+
+      print('🖱️ Triggering file input click...');
+      input.click();
+
+      return completer.future;
+    } catch (e) {
+      timeoutTimer?.cancel();
+      print('❌ Error in native file picker: $e');
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _selectFile() async {
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('📁 FILE SELECTION START (Task Completion Dialog)');
@@ -42,14 +131,27 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
       FilePickerResult? result;
 
       if (kIsWeb) {
-        // На вебе используем withData: true для загрузки данных сразу
-        // Это помогает избежать проблем с инициализацией
-        print('📂 Opening file picker (Web) with withData: true');
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
-          allowMultiple: false,
-          withData: true, // Важно для веба - загружаем данные сразу
-        );
+        print('📂 Opening file picker (Web) - using native HTML input');
+
+        // Используем нативный HTML input для обхода проблемы LateInitializationError в production
+        try {
+          result = await _pickFileWebNative();
+        } catch (e) {
+          print('⚠️ Native HTML input failed: $e');
+          print('🔄 Falling back to FilePicker...');
+
+          // Fallback на FilePicker (на случай если нативный подход не сработал)
+          try {
+            result = await FilePicker.platform.pickFiles(
+              type: FileType.any,
+              allowMultiple: false,
+              withData: true,
+            );
+          } catch (e2) {
+            print('❌ FilePicker fallback also failed: $e2');
+            rethrow;
+          }
+        }
       } else {
         // Для мобильных платформ
         print('📂 Opening file picker (Mobile)');
@@ -63,12 +165,16 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
         final file = result.files.single;
         final fileName = file.name;
         print('✅ File selected: $fileName');
-        print('   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)');
+        print(
+          '   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)',
+        );
         print('   Extension: ${file.extension ?? "unknown"}');
 
         if (kIsWeb) {
           // На вебе всегда используем bytes
-          print('   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}');
+          print(
+            '   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}',
+          );
           if (file.bytes != null) {
             final fileBytes = file.bytes!;
             print('✅ File bytes loaded successfully');
@@ -139,7 +245,9 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     if (_selectedFilePath == null && _selectedFileBytes == null) {
       print('⚠️ Upload cancelled: no file data');
       print('   _selectedFilePath: ${_selectedFilePath ?? "null"}');
-      print('   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}');
+      print(
+        '   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}',
+      );
       return;
     }
 
@@ -147,7 +255,9 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     print('🚀 FILE UPLOAD START (Task Completion Dialog)');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('📋 File name: ${_selectedFileName ?? "unknown"}');
-    print('📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}');
+    print(
+      '📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}',
+    );
 
     setState(() {
       _isUploading = true;
@@ -157,7 +267,7 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     try {
       final uploadFileUseCase = Provider.of<UploadFile>(context, listen: false);
       print('✅ UploadFile use case obtained');
-      
+
       final uploadResult = await uploadFileUseCase.call(
         UploadFileParams(
           file: _selectedFilePath,
