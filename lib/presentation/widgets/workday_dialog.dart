@@ -28,6 +28,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
     'Без содержания',
   ];
 
+
   @override
   void dispose() {
     super.dispose();
@@ -106,7 +107,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
         case WorkDayAction.end:
           final endWorkDay = Provider.of<EndWorkDay>(context, listen: false);
           final result = await endWorkDay.call(
-            EndWorkDayParams(businessId: businessId),
+            EndWorkDayParams(businessId: businessId, action: 'complete'),
           );
           result.fold(
             (failure) {
@@ -120,23 +121,61 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
               await profileProvider.loadProfile();
               
-              // Показываем локальное уведомление
-              final endTimeStr = _formatTime(workDay.endTime);
-              await LocalNotificationService().showWorkDayEndedNotification(
-                endTime: endTimeStr,
-              );
+              Navigator.of(context).pop(true);
+              
+              if (context.mounted) {
+                // Если день завершен (не на паузе), показываем уведомление и переходим на страницу табелирования
+                if (workDay.status == WorkDayStatus.completed) {
+                  final endTimeStr = _formatTime(workDay.endTime);
+                  await LocalNotificationService().showWorkDayEndedNotification(
+                    endTime: endTimeStr,
+                  );
+                  Navigator.of(context).pushNamed('/business/admin/timesheet');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Рабочий день завершен в $endTimeStr',
+                      ),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                } else {
+                  // Если день на паузе, просто показываем сообщение
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Рабочий день поставлен на паузу'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              }
+            },
+          );
+          break;
+        case WorkDayAction.pause:
+          final endWorkDay = Provider.of<EndWorkDay>(context, listen: false);
+          final result = await endWorkDay.call(
+            EndWorkDayParams(businessId: businessId, action: 'pause'),
+          );
+          result.fold(
+            (failure) {
+              setState(() {
+                _error = failure.message;
+                _isLoading = false;
+              });
+            },
+            (workDay) async {
+              // Обновляем профиль, чтобы получить актуальный workDay
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              await profileProvider.loadProfile();
               
               Navigator.of(context).pop(true);
               
-              // Навигация на страницу табелирования
               if (context.mounted) {
-                Navigator.of(context).pushNamed('/business/admin/timesheet');
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Рабочий день завершен в $endTimeStr',
-                    ),
-                    backgroundColor: Colors.blue,
+                  const SnackBar(
+                    content: Text('Рабочий день поставлен на паузу'),
+                    backgroundColor: Colors.orange,
                   ),
                 );
               }
@@ -187,7 +226,9 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final workDay = profileProvider.profile?.workDay;
-    final isStarted = workDay?.status == WorkDayStatus.started;
+    final status = workDay?.status;
+    final isStarted = status == WorkDayStatus.started;
+    final isPaused = status == WorkDayStatus.paused;
     
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -224,8 +265,8 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               ),
               const SizedBox(height: 16),
             ],
-            // Показываем кнопку "Начать рабочий день" только если день не начат
-            if (!isStarted) ...[
+            // Показываем кнопку "Начать рабочий день" только если день не начат и не на паузе
+            if (!isStarted && !isPaused) ...[
               _buildActionButton(
                 context,
                 'Начать рабочий день',
@@ -235,14 +276,49 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
               ),
               const SizedBox(height: 12),
             ],
-            // Показываем кнопку "Завершить рабочий день" только если день начат
-            if (isStarted) ...[
+            // Показываем кнопку "Возобновить" если день на паузе
+            if (isPaused) ...[
+              _buildActionButton(
+                context,
+                'Возобновить рабочий день',
+                Icons.play_arrow,
+                Colors.green,
+                WorkDayAction.start,
+              ),
+              const SizedBox(height: 12),
               _buildActionButton(
                 context,
                 'Завершить рабочий день',
                 Icons.stop,
                 Colors.red,
                 WorkDayAction.end,
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Показываем две кнопки "Пауза" и "Завершить" только если день начат
+            if (isStarted) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      'Пауза',
+                      Icons.pause,
+                      Colors.orange,
+                      WorkDayAction.pause,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      'Завершить',
+                      Icons.stop,
+                      Colors.red,
+                      WorkDayAction.end,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
             ],
@@ -344,6 +420,7 @@ class _WorkDayDialogState extends State<WorkDayDialog> {
 /// Действия для рабочего дня
 enum WorkDayAction {
   start,
+  pause,
   end,
   absent,
 }

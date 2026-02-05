@@ -6,8 +6,8 @@ abstract class WorkDayRemoteDataSource extends DataSource {
   /// Начать рабочий день
   Future<WorkDayModel> startWorkDay(String businessId);
 
-  /// Завершить рабочий день
-  Future<WorkDayModel> endWorkDay(String businessId);
+  /// Завершить рабочий день или поставить на паузу
+  Future<WorkDayModel> endWorkDay(String businessId, {String? action});
 
   /// Отметить отсутствие
   Future<WorkDayModel> markAbsent(String businessId, String reason);

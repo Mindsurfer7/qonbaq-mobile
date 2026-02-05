@@ -32,9 +32,9 @@ class WorkDayRepositoryImpl extends RepositoryImpl implements WorkDayRepository 
   }
 
   @override
-  Future<Either<Failure, WorkDay>> endWorkDay(String businessId) async {
+  Future<Either<Failure, WorkDay>> endWorkDay(String businessId, {String? action}) async {
     try {
-      final workDay = await remoteDataSource.endWorkDay(businessId);
+      final workDay = await remoteDataSource.endWorkDay(businessId, action: action);
       return Right(workDay.toEntity());
     } on ValidationException catch (e) {
       return Left(ValidationFailure(

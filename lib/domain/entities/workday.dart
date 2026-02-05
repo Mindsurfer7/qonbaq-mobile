@@ -3,6 +3,7 @@ import '../entities/entity.dart';
 /// Статус рабочего дня
 enum WorkDayStatus {
   started,
+  paused,
   completed,
   absent,
 }

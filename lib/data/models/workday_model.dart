@@ -33,6 +33,8 @@ class WorkDayModel extends WorkDay implements Model {
     switch (status.toUpperCase()) {
       case 'STARTED':
         return WorkDayStatus.started;
+      case 'PAUSED':
+        return WorkDayStatus.paused;
       case 'COMPLETED':
         return WorkDayStatus.completed;
       case 'ABSENT':
@@ -46,6 +48,8 @@ class WorkDayModel extends WorkDay implements Model {
     switch (status) {
       case WorkDayStatus.started:
         return 'STARTED';
+      case WorkDayStatus.paused:
+        return 'PAUSED';
       case WorkDayStatus.completed:
         return 'COMPLETED';
       case WorkDayStatus.absent:

@@ -89,12 +89,16 @@ class WorkDayRemoteDataSourceImpl extends WorkDayRemoteDataSource {
   }
 
   @override
-  Future<WorkDayModel> endWorkDay(String businessId) async {
+  Future<WorkDayModel> endWorkDay(String businessId, {String? action}) async {
     try {
+      final body = <String, dynamic>{'businessId': businessId};
+      if (action != null) {
+        body['action'] = action;
+      }
       final response = await apiClient.post(
         '/api/workday/end',
         headers: _getAuthHeaders(),
-        body: {'businessId': businessId},
+        body: body,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

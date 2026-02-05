@@ -9,8 +9,8 @@ abstract class WorkDayRepository extends Repository {
   /// Начать рабочий день
   Future<Either<Failure, WorkDay>> startWorkDay(String businessId);
 
-  /// Завершить рабочий день
-  Future<Either<Failure, WorkDay>> endWorkDay(String businessId);
+  /// Завершить рабочий день или поставить на паузу
+  Future<Either<Failure, WorkDay>> endWorkDay(String businessId, {String? action});
 
   /// Отметить отсутствие
   Future<Either<Failure, WorkDay>> markAbsent(String businessId, String reason);

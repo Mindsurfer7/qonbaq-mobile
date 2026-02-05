@@ -158,24 +158,39 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Selector<ProfileProvider, bool?>(
+                Selector<ProfileProvider, WorkDayStatus?>(
                   selector: (context, provider) {
-                    final workDay = provider.profile?.workDay;
-                    return workDay?.status == WorkDayStatus.started;
+                    return provider.profile?.workDay?.status;
                   },
-                  builder: (context, isStarted, child) {
-                    final label = isStarted == true 
-                        ? 'Завершить рабочий день' 
-                        : 'Начать рабочий день';
-                    final icon = isStarted == true ? Icons.stop : Icons.play_arrow;
-                    
-                    return _buildWorkDayButton(
-                      context,
-                      label,
-                      icon,
-                      isStarted == true,
-                      onTap: () => _showWorkDayDialog(context),
-                    );
+                  builder: (context, status, child) {
+                    if (status == WorkDayStatus.started) {
+                      // Когда день начат, показываем одну кнопку "Завершить / Пауза"
+                      return _buildWorkDayButton(
+                        context,
+                        'Завершить / Пауза',
+                        Icons.stop,
+                        true,
+                        onTap: () => _showWorkDayDialog(context),
+                      );
+                    } else if (status == WorkDayStatus.paused) {
+                      // Когда день на паузе, показываем кнопку "Возобновить"
+                      return _buildWorkDayButton(
+                        context,
+                        'Возобновить',
+                        Icons.play_arrow,
+                        false,
+                        onTap: () => _showWorkDayDialog(context),
+                      );
+                    } else {
+                      // Когда день не начат, показываем одну кнопку "Начать"
+                      return _buildWorkDayButton(
+                        context,
+                        'Начать рабочий день',
+                        Icons.play_arrow,
+                        false,
+                        onTap: () => _showWorkDayDialog(context),
+                      );
+                    }
                   },
                 ),
                 _buildTopNavItem(
@@ -405,7 +420,18 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 20, color: color),
+                // Если день начат, показываем иконку паузы и красный квадрат
+                if (isStarted)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.pause, size: 20, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Icon(icon, size: 20, color: color),
+                    ],
+                  )
+                else
+                  Icon(icon, size: 20, color: color),
                 const SizedBox(height: 4),
                 Flexible(
                   child: Text(
