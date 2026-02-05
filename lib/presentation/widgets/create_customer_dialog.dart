@@ -10,10 +10,12 @@ import '../providers/profile_provider.dart';
 /// Диалог для создания клиента
 class CreateCustomerDialog extends StatefulWidget {
   final SalesFunnelStage? initialStage;
+  final VoidCallback? onCustomerCreated;
 
   const CreateCustomerDialog({
     super.key,
     this.initialStage,
+    this.onCustomerCreated,
   });
 
   @override
@@ -177,6 +179,10 @@ class _CreateCustomerDialogState extends State<CreateCustomerDialog> {
         Navigator.of(context).pop();
         // Обновляем список клиентов для соответствующего статуса
         crmProvider.refreshCustomersStage(businessId, createdCustomer.salesFunnelStage ?? SalesFunnelStage.unprocessed);
+        // Вызываем callback, если он передан (для обновления списка всех клиентов)
+        if (widget.onCustomerCreated != null) {
+          widget.onCustomerCreated!();
+        }
       },
     );
   }

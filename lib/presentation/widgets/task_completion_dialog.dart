@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../domain/usecases/upload_file.dart';
 
 /// Диалог для ввода результата выполнения задачи и загрузки файла
 class TaskCompletionDialog extends StatefulWidget {
   final String taskTitle;
 
-  const TaskCompletionDialog({
-    super.key,
-    required this.taskTitle,
-  });
+  const TaskCompletionDialog({super.key, required this.taskTitle});
 
   @override
   State<TaskCompletionDialog> createState() => _TaskCompletionDialogState();
@@ -19,7 +17,7 @@ class TaskCompletionDialog extends StatefulWidget {
 class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
   final TextEditingController _resultTextController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   String? _selectedFilePath;
   List<int>? _selectedFileBytes;
   String? _selectedFileName;
@@ -36,55 +34,75 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
   Future<void> _selectFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
-      );
+      FilePickerResult? result;
+
+      if (kIsWeb) {
+        // На вебе используем withData: true для загрузки данных сразу
+        // Это помогает избежать проблем с инициализацией
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: false,
+          withData: true, // Важно для веба - загружаем данные сразу
+        );
+      } else {
+        // Для мобильных платформ
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: false,
+        );
+      }
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
         final fileName = file.name;
-        
-        // На вебе используем bytes, на мобильных платформах - path
-        if (file.bytes != null) {
-          // Для веба используем bytes
-          final fileBytes = file.bytes!;
-          
-          setState(() {
-            _selectedFilePath = null;
-            _selectedFileBytes = fileBytes;
-            _selectedFileName = fileName;
-            _isFileUploaded = false;
-            _uploadedFileId = null;
-            _uploadError = null;
-          });
 
-          // Сразу загружаем файл после выбора
-          await _uploadFile();
-        } else if (file.path != null) {
-          // Для мобильных платформ используем path
-          final filePath = file.path!;
-          
-          setState(() {
-            _selectedFilePath = filePath;
-            _selectedFileName = fileName;
-            _selectedFileBytes = null;
-            _isFileUploaded = false;
-            _uploadedFileId = null;
-            _uploadError = null;
-          });
+        if (kIsWeb) {
+          // На вебе всегда используем bytes
+          if (file.bytes != null) {
+            final fileBytes = file.bytes!;
 
-          // Сразу загружаем файл после выбора
-          await _uploadFile();
+            setState(() {
+              _selectedFilePath = null;
+              _selectedFileBytes = fileBytes;
+              _selectedFileName = fileName;
+              _isFileUploaded = false;
+              _uploadedFileId = null;
+              _uploadError = null;
+            });
+
+            await _uploadFile();
+          } else {
+            setState(() {
+              _uploadError =
+                  'Не удалось загрузить файл. Попробуйте выбрать другой файл.';
+            });
+          }
         } else {
-          setState(() {
-            _uploadError = 'Не удалось получить файл. Попробуйте выбрать другой файл.';
-          });
+          // Для мобильных платформ используем path
+          if (file.path != null) {
+            final filePath = file.path!;
+
+            setState(() {
+              _selectedFilePath = filePath;
+              _selectedFileName = fileName;
+              _selectedFileBytes = null;
+              _isFileUploaded = false;
+              _uploadedFileId = null;
+              _uploadError = null;
+            });
+
+            await _uploadFile();
+          } else {
+            setState(() {
+              _uploadError =
+                  'Не удалось получить файл. Попробуйте выбрать другой файл.';
+            });
+          }
         }
       }
     } catch (e) {
       setState(() {
-        _uploadError = 'Ошибка выбора файла: $e';
+        _uploadError = 'Ошибка выбора файла: ${e.toString()}';
       });
     }
   }
@@ -155,7 +173,8 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     }
 
     // Если файл выбран, но еще не загружен, загружаем его
-    if ((_selectedFilePath != null || _selectedFileBytes != null) && !_isFileUploaded) {
+    if ((_selectedFilePath != null || _selectedFileBytes != null) &&
+        !_isFileUploaded) {
       await _uploadFile();
       // Если загрузка не удалась, не продолжаем
       if (!_isFileUploaded) {
@@ -164,10 +183,9 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
     }
 
     // Возвращаем результат
-    Navigator.of(context).pop({
-      'resultText': resultText,
-      'resultFileId': _uploadedFileId,
-    });
+    Navigator.of(
+      context,
+    ).pop({'resultText': resultText, 'resultFileId': _uploadedFileId});
   }
 
   @override
@@ -182,7 +200,8 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
               title: const Text('Завершить задачу'),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: _isUploading ? null : () => Navigator.of(context).pop(),
+                onPressed:
+                    _isUploading ? null : () => Navigator.of(context).pop(),
               ),
             ),
             Flexible(
@@ -224,11 +243,15 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _isFileUploaded ? Colors.green[50] : Colors.grey[200],
+                            color:
+                                _isFileUploaded
+                                    ? Colors.green[50]
+                                    : Colors.grey[200],
                             borderRadius: BorderRadius.circular(8),
-                            border: _isFileUploaded
-                                ? Border.all(color: Colors.green, width: 2)
-                                : null,
+                            border:
+                                _isFileUploaded
+                                    ? Border.all(color: Colors.green, width: 2)
+                                    : null,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,18 +259,21 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
                               Row(
                                 children: [
                                   Icon(
-                                    _isFileUploaded ? Icons.check_circle : Icons.attach_file,
-                                    color: _isFileUploaded ? Colors.green : null,
+                                    _isFileUploaded
+                                        ? Icons.check_circle
+                                        : Icons.attach_file,
+                                    color:
+                                        _isFileUploaded ? Colors.green : null,
                                   ),
                                   const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(_selectedFileName!),
-                                  ),
+                                  Expanded(child: Text(_selectedFileName!)),
                                   if (_isUploading)
                                     const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   else
                                     IconButton(
@@ -304,23 +330,25 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isUploading
-                        ? null
-                        : () => Navigator.of(context).pop(),
+                    onPressed:
+                        _isUploading ? null : () => Navigator.of(context).pop(),
                     child: const Text('Отмена'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: (_isUploading || (_selectedFileName != null && !_isFileUploaded))
-                        ? null
-                        : _handleSubmit,
-                    child: _isUploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Завершить'),
+                    onPressed:
+                        (_isUploading ||
+                                (_selectedFileName != null && !_isFileUploaded))
+                            ? null
+                            : _handleSubmit,
+                    child:
+                        _isUploading
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('Завершить'),
                   ),
                 ],
               ),

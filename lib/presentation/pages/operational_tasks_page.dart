@@ -15,6 +15,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/business_selector_widget.dart';
 import '../widgets/create_task_form.dart';
 import '../widgets/voice_task_dialog.dart';
+import '../widgets/task_skeleton.dart';
 
 /// Страница задач операционного блока с 4 блоками
 class OperationalTasksPage extends StatefulWidget {
@@ -25,8 +26,15 @@ class OperationalTasksPage extends StatefulWidget {
 }
 
 class _OperationalTasksPageState extends State<OperationalTasksPage> {
-  bool _isLoading = false;
   String? _error;
+
+  // Флаги загрузки для каждой категории
+  bool _isLoadingTodayRecurring = false;
+  bool _isLoadingTodayIrregular = false;
+  bool _isLoadingWeekRecurring = false;
+  bool _isLoadingWeekIrregular = false;
+  bool _isLoadingControlPointTasks = false;
+  bool _isLoadingControlPoints = false;
 
   // Данные для блоков
   List<Task> _todayRecurringTasks = [];
@@ -91,8 +99,14 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     }
 
     setState(() {
-      _isLoading = true;
       _error = null;
+      // Устанавливаем флаги загрузки для всех категорий
+      _isLoadingTodayRecurring = true;
+      _isLoadingTodayIrregular = true;
+      _isLoadingWeekRecurring = true;
+      _isLoadingWeekIrregular = true;
+      _isLoadingControlPointTasks = true;
+      _isLoadingControlPoints = true;
     });
 
     final getTasksUseCase = Provider.of<GetTasks>(context, listen: false);
@@ -126,11 +140,85 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       endOfWeek.day,
     );
 
+    // Загружаем все задачи параллельно
     try {
-      // 1. Регулярные задачи на сегодня
-      final todayRecurringResult = await getTasksUseCase.call(
+      final futures = <Future<void>>[
+        // 1. Регулярные задачи на сегодня
+        _loadTodayRecurringTasks(
+          getTasksUseCase,
+          selectedBusiness.id,
+          assignedTo,
+          showAll,
+          todayDate,
+        ),
+        // 2. Нерегулярные задачи на сегодня
+        _loadTodayIrregularTasks(
+          getTasksUseCase,
+          selectedBusiness.id,
+          assignedTo,
+          showAll,
+        ),
+        // 3. Регулярные задачи на неделе
+        _loadWeekRecurringTasks(
+          getTasksUseCase,
+          selectedBusiness.id,
+          assignedTo,
+          showAll,
+          tomorrowDate,
+        ),
+        // 4. Нерегулярные задачи на неделе
+        _loadWeekIrregularTasks(
+          getTasksUseCase,
+          selectedBusiness.id,
+          assignedTo,
+          showAll,
+          tomorrowDate,
+          endOfWeekDate,
+        ),
+        // 5. Точки контроля (задачи из точек контроля)
+        _loadControlPointTasks(
+          getTasksUseCase,
+          selectedBusiness.id,
+          assignedTo,
+          showAll,
+        ),
+      ];
+
+      // 6. Истинные точки контроля (только для гендиректора/начальника департамента)
+      if (isAdminOrDirector) {
+        futures.add(
+          _loadControlPoints(selectedBusiness.id, showAll, currentUser?.id),
+        );
+      } else {
+        // Для обычных пользователей сразу сбрасываем флаг загрузки
+        setState(() {
+          _isLoadingControlPoints = false;
+          _controlPoints = [];
+        });
+      }
+
+      await Future.wait(futures);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Ошибка при загрузке задач: $e';
+        });
+      }
+    }
+  }
+
+  /// Загружает регулярные задачи на сегодня
+  Future<void> _loadTodayRecurringTasks(
+    GetTasks getTasksUseCase,
+    String businessId,
+    String? assignedTo,
+    bool showAll,
+    DateTime todayDate,
+  ) async {
+    try {
+      final result = await getTasksUseCase.call(
         GetTasksParams(
-          businessId: selectedBusiness.id,
+          businessId: businessId,
           assignedTo: assignedTo,
           hasRecurringTask: true,
           scheduledDate: todayDate,
@@ -139,10 +227,44 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 2. Нерегулярные задачи на сегодня
-      final todayIrregularResult = await getTasksUseCase.call(
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          setState(() {
+            _isLoadingTodayRecurring = false;
+            if (_error == null) {
+              _error = _getErrorMessage(failure);
+            }
+          });
+        },
+        (tasks) {
+          setState(() {
+            _isLoadingTodayRecurring = false;
+            _todayRecurringTasks = tasks;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTodayRecurring = false;
+        });
+      }
+    }
+  }
+
+  /// Загружает нерегулярные задачи на сегодня
+  Future<void> _loadTodayIrregularTasks(
+    GetTasks getTasksUseCase,
+    String businessId,
+    String? assignedTo,
+    bool showAll,
+  ) async {
+    try {
+      final result = await getTasksUseCase.call(
         GetTasksParams(
-          businessId: selectedBusiness.id,
+          businessId: businessId,
           assignedTo: assignedTo,
           hasRecurringTask: false,
           hasControlPoint: false,
@@ -152,13 +274,45 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 3. Регулярные задачи на неделе
-      // Начинаем с завтрашнего дня, чтобы не дублировать с задачами на сегодня
-      // Примечание: API не поддерживает диапазон для scheduledDate,
-      // поэтому загружаем задачи с завтрашнего дня
-      final weekRecurringResult = await getTasksUseCase.call(
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          setState(() {
+            _isLoadingTodayIrregular = false;
+            if (_error == null) {
+              _error = _getErrorMessage(failure);
+            }
+          });
+        },
+        (tasks) {
+          setState(() {
+            _isLoadingTodayIrregular = false;
+            _todayIrregularTasks = tasks;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTodayIrregular = false;
+        });
+      }
+    }
+  }
+
+  /// Загружает регулярные задачи на неделе
+  Future<void> _loadWeekRecurringTasks(
+    GetTasks getTasksUseCase,
+    String businessId,
+    String? assignedTo,
+    bool showAll,
+    DateTime tomorrowDate,
+  ) async {
+    try {
+      final result = await getTasksUseCase.call(
         GetTasksParams(
-          businessId: selectedBusiness.id,
+          businessId: businessId,
           assignedTo: assignedTo,
           hasRecurringTask: true,
           scheduledDate: tomorrowDate,
@@ -167,11 +321,46 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 4. Нерегулярные задачи на неделе
-      // Начинаем с завтрашнего дня, чтобы не дублировать с задачами на сегодня
-      final weekIrregularResult = await getTasksUseCase.call(
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          setState(() {
+            _isLoadingWeekRecurring = false;
+            if (_error == null) {
+              _error = _getErrorMessage(failure);
+            }
+          });
+        },
+        (tasks) {
+          setState(() {
+            _isLoadingWeekRecurring = false;
+            _weekRecurringTasks = tasks;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingWeekRecurring = false;
+        });
+      }
+    }
+  }
+
+  /// Загружает нерегулярные задачи на неделе
+  Future<void> _loadWeekIrregularTasks(
+    GetTasks getTasksUseCase,
+    String businessId,
+    String? assignedTo,
+    bool showAll,
+    DateTime tomorrowDate,
+    DateTime endOfWeekDate,
+  ) async {
+    try {
+      final result = await getTasksUseCase.call(
         GetTasksParams(
-          businessId: selectedBusiness.id,
+          businessId: businessId,
           assignedTo: assignedTo,
           hasRecurringTask: false,
           hasControlPoint: false,
@@ -182,10 +371,44 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 5. Точки контроля (задачи из точек контроля)
-      final controlPointResult = await getTasksUseCase.call(
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          setState(() {
+            _isLoadingWeekIrregular = false;
+            if (_error == null) {
+              _error = _getErrorMessage(failure);
+            }
+          });
+        },
+        (tasks) {
+          setState(() {
+            _isLoadingWeekIrregular = false;
+            _weekIrregularTasks = tasks;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingWeekIrregular = false;
+        });
+      }
+    }
+  }
+
+  /// Загружает задачи из точек контроля
+  Future<void> _loadControlPointTasks(
+    GetTasks getTasksUseCase,
+    String businessId,
+    String? assignedTo,
+    bool showAll,
+  ) async {
+    try {
+      final result = await getTasksUseCase.call(
         GetTasksParams(
-          businessId: selectedBusiness.id,
+          businessId: businessId,
           assignedTo: assignedTo,
           hasControlPoint: true,
           showAll: showAll,
@@ -193,125 +416,79 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         ),
       );
 
-      // 6. Истинные точки контроля (только для гендиректора/начальника департамента)
-      if (isAdminOrDirector) {
-        final getControlPointsUseCase = Provider.of<GetControlPoints>(
-          context,
-          listen: false,
-        );
-        final controlPointsResult = await getControlPointsUseCase.call(
-          GetControlPointsParams(
-            businessId: selectedBusiness.id,
-            assignedTo: showAll ? null : currentUser?.id,
-            isActive: true,
-            showAll: showAll,
-            page: 1,
-            limit: 100,
-          ),
-        );
+      if (!mounted) return;
 
-        controlPointsResult.fold(
-          (failure) {
-            // Ошибки не критичны, очищаем список
-            setState(() {
-              _controlPoints = [];
-            });
-          },
-          (paginatedResult) {
-            setState(() {
-              _controlPoints = paginatedResult.items;
-            });
-          },
-        );
-      } else {
-        // Для обычных пользователей очищаем список точек контроля
-        setState(() {
-          _controlPoints = [];
-        });
-      }
-
-      // Обрабатываем результаты
-      todayRecurringResult.fold(
+      result.fold(
         (failure) {
           setState(() {
-            _error = _getErrorMessage(failure);
-          });
-        },
-        (tasks) {
-          setState(() {
-            _todayRecurringTasks = tasks;
-          });
-        },
-      );
-
-      todayIrregularResult.fold(
-        (failure) {
-          if (_error == null) {
-            setState(() {
+            _isLoadingControlPointTasks = false;
+            if (_error == null) {
               _error = _getErrorMessage(failure);
-            });
-          }
-        },
-        (tasks) {
-          setState(() {
-            _todayIrregularTasks = tasks;
+            }
           });
         },
-      );
-
-      weekRecurringResult.fold(
-        (failure) {
-          if (_error == null) {
-            setState(() {
-              _error = _getErrorMessage(failure);
-            });
-          }
-        },
         (tasks) {
           setState(() {
-            _weekRecurringTasks = tasks;
-          });
-        },
-      );
-
-      weekIrregularResult.fold(
-        (failure) {
-          if (_error == null) {
-            setState(() {
-              _error = _getErrorMessage(failure);
-            });
-          }
-        },
-        (tasks) {
-          setState(() {
-            _weekIrregularTasks = tasks;
-          });
-        },
-      );
-
-      controlPointResult.fold(
-        (failure) {
-          if (_error == null) {
-            setState(() {
-              _error = _getErrorMessage(failure);
-            });
-          }
-        },
-        (tasks) {
-          setState(() {
+            _isLoadingControlPointTasks = false;
             _controlPointTasks = tasks;
           });
         },
       );
-
-      setState(() {
-        _isLoading = false;
-      });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Ошибка при загрузке задач: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingControlPointTasks = false;
+        });
+      }
+    }
+  }
+
+  /// Загружает истинные точки контроля
+  Future<void> _loadControlPoints(
+    String businessId,
+    bool showAll,
+    String? userId,
+  ) async {
+    try {
+      final getControlPointsUseCase = Provider.of<GetControlPoints>(
+        context,
+        listen: false,
+      );
+      final result = await getControlPointsUseCase.call(
+        GetControlPointsParams(
+          businessId: businessId,
+          assignedTo: showAll ? null : userId,
+          isActive: true,
+          showAll: showAll,
+          page: 1,
+          limit: 100,
+        ),
+      );
+
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          // Ошибки не критичны, очищаем список
+          setState(() {
+            _isLoadingControlPoints = false;
+            _controlPoints = [];
+          });
+        },
+        (paginatedResult) {
+          setState(() {
+            _isLoadingControlPoints = false;
+            _controlPoints = paginatedResult.items;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingControlPoints = false;
+          _controlPoints = [];
+        });
+      }
     }
   }
 
@@ -510,8 +687,6 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       body:
           selectedBusiness == null
               ? _buildBusinessSelectionView(profileProvider)
-              : _isLoading
-              ? const Center(child: CircularProgressIndicator())
               : _error != null
               ? Center(
                 child: Column(
@@ -673,7 +848,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               const SizedBox(height: 4),
                               Expanded(
                                 child:
-                                    _todayRecurringTasks.isEmpty
+                                    _isLoadingTodayRecurring
+                                        ? const TaskSkeleton(count: 3)
+                                        : _todayRecurringTasks.isEmpty
                                         ? const Center(
                                           child: Text(
                                             'Нет задач',
@@ -727,7 +904,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               const SizedBox(height: 4),
                               Expanded(
                                 child:
-                                    _todayIrregularTasks.isEmpty
+                                    _isLoadingTodayIrregular
+                                        ? const TaskSkeleton(count: 3)
+                                        : _todayIrregularTasks.isEmpty
                                         ? const Center(
                                           child: Text(
                                             'Нет задач',
@@ -814,7 +993,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                 // Список всех задач на неделе
                 Expanded(
                   child:
-                      allWeekTasks.isEmpty
+                      _isLoadingWeekRecurring || _isLoadingWeekIrregular
+                          ? const TaskSkeleton(count: 5)
+                          : allWeekTasks.isEmpty
                           ? const Center(
                             child: Text(
                               'Нет задач',
@@ -874,7 +1055,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
           children: [
             // Заголовок блока
             const Text(
-              'Контроль',
+              'Точки Контроля',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -952,7 +1133,9 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
             Expanded(
               child:
                   canViewControlPoints && _showControlPointManagement
-                      ? _controlPoints.isEmpty
+                      ? _isLoadingControlPoints
+                          ? const TaskSkeleton(count: 5)
+                          : _controlPoints.isEmpty
                           ? const Center(
                             child: Text(
                               'Нет точек контроля',
@@ -973,6 +1156,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                   }).toList(),
                             ),
                           )
+                      : _isLoadingControlPointTasks
+                      ? const TaskSkeleton(count: 5)
                       : _controlPointTasks.isEmpty
                       ? const Center(
                         child: Text(

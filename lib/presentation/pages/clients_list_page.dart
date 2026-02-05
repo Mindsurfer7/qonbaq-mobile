@@ -4,6 +4,7 @@ import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/entities/customer.dart';
+import '../widgets/create_customer_dialog.dart';
 import 'customer_detail_page.dart';
 
 /// Страница списка клиентов
@@ -89,6 +90,23 @@ class _ClientsListPageState extends State<ClientsListPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              if (businessId != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => CreateCustomerDialog(
+                    onCustomerCreated: () {
+                      // Обновляем список всех клиентов после создания
+                      _loadCustomers();
+                    },
+                  ),
+                );
+              }
+            },
+            tooltip: 'Добавить клиента',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
