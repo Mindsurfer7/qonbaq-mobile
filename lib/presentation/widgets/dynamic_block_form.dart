@@ -3,6 +3,7 @@ import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'file_upload_field.dart';
 
 /// Callback для уведомления об изменениях полей формы
 typedef OnFieldChanged = void Function(String fieldName, dynamic value);
@@ -458,22 +459,14 @@ class _DynamicBlockFormState extends State<DynamicBlockForm> {
                       : null,
             );
           } else if (fieldFormat == 'file') {
-            // TODO: Реализовать загрузку файлов
-            field = FormBuilderTextField(
+            // Виджет для загрузки файлов
+            field = FileUploadField(
               name: actualFieldName,
+              label: fieldTitle,
+              helperText: description,
+              isRequired: isRequired,
               initialValue: initialValue?.toString(),
               enabled: !readOnly,
-              decoration: InputDecoration(
-                labelText: isRequired ? '$fieldTitle *' : fieldTitle,
-                border: const OutlineInputBorder(),
-                helperText: description ?? 'Загрузка файлов будет реализована',
-              ),
-              validator:
-                  isRequired
-                      ? FormBuilderValidators.required(
-                        errorText: 'Поле "$fieldTitle" обязательно',
-                      )
-                      : null,
             );
           } else {
             // Обычное текстовое поле
@@ -781,12 +774,14 @@ class _ElementFormSwitcherState extends State<ElementFormSwitcher> {
           initialValue: initialValue ?? defaultValue,
         );
 
+      case 'file':
       case 'files':
-        // TODO: Реализовать загрузку файлов
-        return _buildTextField(
-          label: label,
+        return FileUploadField(
+          name: _fieldName,
+          label: label ?? '',
           isRequired: isRequired,
-          initialValue: initialValue ?? defaultValue,
+          initialValue: initialValue?.toString() ?? defaultValue?.toString(),
+          enabled: widget.element['readOnly'] != true,
         );
 
       default:

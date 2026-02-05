@@ -535,9 +535,9 @@ class _ApprovalsPageState extends State<ApprovalsPage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => RoleAssignmentStepperDialog(
-        businessId: selectedBusiness.id,
-      ),
+      builder:
+          (dialogContext) =>
+              RoleAssignmentStepperDialog(businessId: selectedBusiness.id),
     );
   }
 
@@ -1086,7 +1086,8 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
   bool _isLoadingTemplates = true;
   bool _isLoading = false;
   String? _error;
-  bool _isUpdatingTemplate = false; // Флаг для предотвращения циклических обновлений
+  bool _isUpdatingTemplate =
+      false; // Флаг для предотвращения циклических обновлений
 
   @override
   void initState() {
@@ -1244,9 +1245,10 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
         // Пропускаем поле template - оно уже установлено
         // Пропускаем title и description - они не используются в форме
-        if (fieldName == 'template' || 
-            fieldName == 'title' || 
-            fieldName == 'description') continue;
+        if (fieldName == 'template' ||
+            fieldName == 'title' ||
+            fieldName == 'description')
+          continue;
 
         if (value is String && _isIso8601Date(value)) {
           // Восстанавливаем DateTime из строки
@@ -1679,7 +1681,9 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
 
                         // Загружаем данные из кэша для нового шаблона
                         if (value != null) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          WidgetsBinding.instance.addPostFrameCallback((
+                            _,
+                          ) async {
                             await _loadFormFromCache(value.code);
                             // Снимаем флаг после загрузки
                             if (mounted) {

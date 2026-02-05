@@ -378,9 +378,12 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                                         familyBusiness,
                                         provider,
                                       ),
-                                  screenHeight: MediaQuery.of(context).size.height,
-                                  notificationCount: 0, // TODO: заменить на данные из endpoint
-                                  pinCount: 3, // TODO: заменить на данные из endpoint
+                                  screenHeight:
+                                      MediaQuery.of(context).size.height,
+                                  notificationCount:
+                                      0, // TODO: заменить на данные из endpoint
+                                  pinCount:
+                                      3, // TODO: заменить на данные из endpoint
                                 ),
                                 const SizedBox(height: 12),
                                 _buildVoiceMicrophoneButton(
@@ -403,15 +406,20 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                                         businessList,
                                         provider,
                                       ),
-                                  screenHeight: MediaQuery.of(context).size.height,
-                                  notificationCount: 0, // TODO: заменить на данные из endpoint
-                                  pinCount: 5, // TODO: заменить на данные из endpoint
+                                  screenHeight:
+                                      MediaQuery.of(context).size.height,
+                                  notificationCount:
+                                      0, // TODO: заменить на данные из endpoint
+                                  pinCount:
+                                      5, // TODO: заменить на данные из endpoint
                                   onCreateBusinessTap: () async {
                                     final result = await showDialog<Business>(
                                       context: context,
                                       builder:
                                           (context) =>
-                                              const CreateBusinessDialog(type: BusinessType.business),
+                                              const CreateBusinessDialog(
+                                                type: BusinessType.business,
+                                              ),
                                     );
 
                                     if (result != null && mounted) {
@@ -580,7 +588,11 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.notifications, color: Colors.white, size: 20),
+                            Icon(
+                              Icons.notifications,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                             Text(
                               notificationCount.toString(),
                               style: const TextStyle(
@@ -648,7 +660,6 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
       ),
     );
   }
-
 
   /// Кнопка микрофона для голосового создания задачи
   Widget _buildVoiceMicrophoneButton({
