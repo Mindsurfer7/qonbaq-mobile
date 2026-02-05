@@ -388,30 +388,52 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                       Row(
                         children: [
                           Expanded(
-                            child: _buildActionButton(
-                              title: 'Семья',
-                              icon: Icons.people,
-                              color: Colors.green,
-                              onTap:
-                                  () => _handleFamilyAction(
-                                    familyBusiness,
-                                    provider,
-                                  ),
-                              screenHeight: MediaQuery.of(context).size.height,
+                            child: Column(
+                              children: [
+                                _buildActionButton(
+                                  title: 'Семья',
+                                  icon: Icons.people,
+                                  color: Colors.green,
+                                  onTap:
+                                      () => _handleFamilyAction(
+                                        familyBusiness,
+                                        provider,
+                                      ),
+                                  screenHeight: MediaQuery.of(context).size.height,
+                                  notificationCount: 0, // TODO: заменить на данные из endpoint
+                                  pinCount: 3, // TODO: заменить на данные из endpoint
+                                ),
+                                const SizedBox(height: 12),
+                                _buildVoiceMicrophoneButton(
+                                  isFamily: true,
+                                  familyBusiness: familyBusiness,
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: _buildActionButton(
-                              title: 'Бизнес',
-                              icon: Icons.business,
-                              color: Colors.blue,
-                              onTap:
-                                  () => _handleBusinessAction(
-                                    businessList,
-                                    provider,
-                                  ),
-                              screenHeight: MediaQuery.of(context).size.height,
+                            child: Column(
+                              children: [
+                                _buildActionButton(
+                                  title: 'Бизнес',
+                                  icon: Icons.business,
+                                  color: Colors.blue,
+                                  onTap:
+                                      () => _handleBusinessAction(
+                                        businessList,
+                                        provider,
+                                      ),
+                                  screenHeight: MediaQuery.of(context).size.height,
+                                  notificationCount: 0, // TODO: заменить на данные из endpoint
+                                  pinCount: 5, // TODO: заменить на данные из endpoint
+                                ),
+                                const SizedBox(height: 12),
+                                _buildVoiceMicrophoneButton(
+                                  isFamily: false,
+                                  businessList: businessList,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -425,47 +447,6 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                             child: _buildAnimatedBusinessList(businessList),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Индикаторы и плашечка "Показать все" для бизнеса
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      // Индикаторы семьи с микрофоном
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildIndicatorsColumn(isFamily: true),
-                            const SizedBox(height: 12),
-                            _buildVoiceMicrophoneButton(
-                              isFamily: true,
-                              familyBusiness: familyBusiness,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Индикаторы бизнеса с микрофоном
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildIndicatorsColumn(
-                              isFamily: false,
-                              businessList: businessList,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildVoiceMicrophoneButton(
-                              isFamily: false,
-                              businessList: businessList,
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -546,6 +527,8 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     required Color color,
     required VoidCallback onTap,
     required double screenHeight,
+    required int notificationCount,
+    required int pinCount,
   }) {
     final darkerColor = Color.fromRGBO(
       (color.red * 0.7).round(),
@@ -571,19 +554,62 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.all(16),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: Colors.white, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                // Верхняя часть: иконка и название
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                // Нижняя часть: индикаторы
+                Column(
+                  children: [
+                    // Индикатор уведомлений
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(Icons.notifications, color: Colors.white, size: 20),
+                        Text(
+                          notificationCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Индикатор PIN
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(Icons.push_pin, color: Colors.white, size: 20),
+                        Text(
+                          pinCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -593,60 +619,6 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     );
   }
 
-  Widget _buildIndicatorsColumn({
-    required bool isFamily,
-    List<Business>? businessList,
-  }) {
-    return Column(
-      children: [
-        // Индикаторы (колокольчик и пин)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              // Первый flex-ряд: иконка слева, цифра справа
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(Icons.notifications, color: Colors.black, size: 20),
-                  Text(
-                    '0', // TODO: заменить на данные из endpoint
-                    style: TextStyle(
-                      color: Colors.brown.shade700,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Второй flex-ряд: иконка слева, цифра справа
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(Icons.push_pin, color: Colors.black, size: 20),
-                  Text(
-                    isFamily
-                        ? '3'
-                        : '5', // TODO: заменить на данные из endpoint
-                    style: TextStyle(
-                      color: Colors.brown.shade700,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   /// Кнопка микрофона для голосового создания задачи
   Widget _buildVoiceMicrophoneButton({
