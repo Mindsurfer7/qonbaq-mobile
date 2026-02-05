@@ -397,6 +397,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                                     familyBusiness,
                                     provider,
                                   ),
+                              screenHeight: MediaQuery.of(context).size.height,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -410,6 +411,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
                                     businessList,
                                     provider,
                                   ),
+                              screenHeight: MediaQuery.of(context).size.height,
                             ),
                           ),
                         ],
@@ -543,6 +545,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required double screenHeight,
   }) {
     final darkerColor = Color.fromRGBO(
       (color.red * 0.7).round(),
@@ -550,7 +553,10 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
       (color.blue * 0.7).round(),
       1.0,
     );
+    // Высота кнопки - минимум треть экрана
+    final buttonHeight = screenHeight / 3;
     return Container(
+      height: buttonHeight,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [color, darkerColor],
@@ -566,16 +572,16 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
+                Icon(icon, color: Colors.white, size: 32),
+                const SizedBox(height: 8),
                 Text(
                   title,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
