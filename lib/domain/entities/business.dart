@@ -19,6 +19,8 @@ class Business extends Entity {
   final BusinessType? type;
   final bool autoAssignDepartments; // Автоматическое распределение сотрудников по департаментам
   final String? slug; // Персональная ссылка для бизнеса
+  final bool requiresApprovalAuthorizer; // Нужен ли доверенный approver
+  final bool requiresMoneyIssuer; // Нужен ли money issuer
 
   const Business({
     required this.id,
@@ -32,6 +34,8 @@ class Business extends Entity {
     this.type,
     this.autoAssignDepartments = true, // По умолчанию true
     this.slug,
+    this.requiresApprovalAuthorizer = true, // По умолчанию true
+    this.requiresMoneyIssuer = true, // По умолчанию true
   });
 
   @override

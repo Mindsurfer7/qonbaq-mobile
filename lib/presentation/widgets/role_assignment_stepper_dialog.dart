@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/employment_with_role.dart';
 import '../../domain/usecases/assign_functional_roles.dart';
+import '../../data/models/business_model.dart';
 import '../providers/role_assignment_form_provider.dart';
 import '../providers/roles_provider.dart';
+import '../providers/profile_provider.dart';
 import '../widgets/searchable_dropdown.dart';
 
 /// Многошаговый диалог для назначения функциональных ролей
 class RoleAssignmentStepperDialog extends StatefulWidget {
   final String businessId;
 
-  const RoleAssignmentStepperDialog({
-    super.key,
-    required this.businessId,
-  });
+  const RoleAssignmentStepperDialog({super.key, required this.businessId});
 
   @override
   State<RoleAssignmentStepperDialog> createState() =>
@@ -24,13 +23,16 @@ class _RoleAssignmentStepperDialogState
     extends State<RoleAssignmentStepperDialog> {
   int _currentStep = 0;
   bool _isSubmitting = false;
+  bool _isUpdatingBusiness = false;
+  bool _showEmployeeSelector =
+      false; // Показывать ли селектор сотрудника на первом шаге
   final List<String> _roleTitles = [
+    'Кто ответственен за согласования?',
     'Кто отвечает за выдачу денег?',
-    'Кто подписывает согласования вместо гендиректора?',
   ];
   final List<String> _roleDescriptions = [
-    'Выберите сотрудника, который будет отвечать за выдачу денег. Это может быть бухгалтер или другое назначенное лицо.',
-    'Выберите сотрудника, который будет подписывать согласования вместо генерального директора.',
+    'Если вы будете утверждать все финансовые и не финансовые согласования самостоятельно, то нажмите "Следующий шаг". Если это будет делать ваше доверенное лицо, нажмите "Выбрать сотрудника".',
+    'Выберите сотрудника, который будет отвечать за выдачу денег. Это может быть бухгалтер или другой сотрудник.',
   ];
   final List<String?> _selectedEmploymentIds = [null, null];
   final List<GlobalKey<FormFieldState>> _formFieldKeys = [
@@ -56,15 +58,133 @@ class _RoleAssignmentStepperDialogState
       _selectedEmploymentIds[stepIndex] = employmentId;
     });
 
-    final formProvider =
-        Provider.of<RoleAssignmentFormProvider>(context, listen: false);
+    final formProvider = Provider.of<RoleAssignmentFormProvider>(
+      context,
+      listen: false,
+    );
     switch (stepIndex) {
       case 0:
-        formProvider.setMoneyIssuer(employmentId);
-        break;
-      case 1:
         formProvider.setApprovalAuthorize(employmentId);
         break;
+      case 1:
+        formProvider.setMoneyIssuer(employmentId);
+        break;
+    }
+  }
+
+  Future<void> _skipApprovalAuthorizer() async {
+    // Пользователь выбрал утверждать согласования самостоятельно
+    if (_isUpdatingBusiness) return;
+
+    setState(() {
+      _isUpdatingBusiness = true;
+    });
+
+    try {
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
+
+      // Отправляем только поле requiresApprovalAuthorizer
+      final updates = BusinessModel.toPartialUpdateJson(
+        requiresApprovalAuthorizer: false,
+      );
+
+      final result = await profileProvider.updateBusinessPartialCall(
+        widget.businessId,
+        updates,
+      );
+
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(failure.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isUpdatingBusiness = false;
+          });
+        },
+        (_) {
+          // Успешно обновлено, переходим к следующему шагу
+          setState(() {
+            _isUpdatingBusiness = false;
+            _currentStep++;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+        setState(() {
+          _isUpdatingBusiness = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectEmployeeForApproval() async {
+    // Пользователь выбрал выбрать сотрудника для согласований
+    if (_isUpdatingBusiness) return;
+
+    setState(() {
+      _isUpdatingBusiness = true;
+    });
+
+    try {
+      final profileProvider = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      );
+
+      // Отправляем только поле requiresApprovalAuthorizer
+      final updates = BusinessModel.toPartialUpdateJson(
+        requiresApprovalAuthorizer: true,
+      );
+
+      final result = await profileProvider.updateBusinessPartialCall(
+        widget.businessId,
+        updates,
+      );
+
+      if (!mounted) return;
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(failure.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isUpdatingBusiness = false;
+          });
+        },
+        (_) {
+          // Успешно обновлено, показываем селектор сотрудника
+          setState(() {
+            _isUpdatingBusiness = false;
+            _showEmployeeSelector = true;
+          });
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+        setState(() {
+          _isUpdatingBusiness = false;
+        });
+      }
     }
   }
 
@@ -81,6 +201,7 @@ class _RoleAssignmentStepperDialogState
     if (_currentStep < 1) {
       setState(() {
         _currentStep++;
+        _showEmployeeSelector = false; // Сбрасываем флаг для следующего шага
       });
     }
   }
@@ -94,11 +215,13 @@ class _RoleAssignmentStepperDialogState
   }
 
   bool _canProceedToNext() {
+    // Для первого шага (согласования) - если выбран сотрудник
+    if (_currentStep == 0) {
+      return _showEmployeeSelector &&
+          _selectedEmploymentIds[_currentStep] != null;
+    }
+    // Для второго шага (выдача денег) - если выбран сотрудник
     return _selectedEmploymentIds[_currentStep] != null;
-  }
-
-  bool _isLastStep() {
-    return _currentStep == 1;
   }
 
   Future<void> _submit() async {
@@ -118,15 +241,18 @@ class _RoleAssignmentStepperDialogState
     });
 
     try {
-      final formProvider =
-          Provider.of<RoleAssignmentFormProvider>(context, listen: false);
+      final formProvider = Provider.of<RoleAssignmentFormProvider>(
+        context,
+        listen: false,
+      );
       final assignments = formProvider.getAssignments();
 
-      if (assignments.isEmpty) {
+      // Проверяем, что если мы на втором шаге, то должен быть выбран сотрудник для выдачи денег
+      if (_currentStep == 1 && _selectedEmploymentIds[1] == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Необходимо назначить все роли'),
+              content: Text('Необходимо выбрать сотрудника для выдачи денег'),
               backgroundColor: Colors.red,
             ),
           );
@@ -137,9 +263,28 @@ class _RoleAssignmentStepperDialogState
         return;
       }
 
-      final assignFunctionalRoles =
-          Provider.of<AssignFunctionalRoles>(context, listen: false);
-      
+      // Если нет назначений, но мы дошли до финального шага, это нормально
+      // (например, если пользователь пропустил первый шаг и не выбрал сотрудника для второго)
+      if (assignments.isEmpty && _selectedEmploymentIds[1] == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Необходимо выбрать сотрудника для выдачи денег'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      final assignFunctionalRoles = Provider.of<AssignFunctionalRoles>(
+        context,
+        listen: false,
+      );
+
       final result = await assignFunctionalRoles.call(
         AssignFunctionalRolesParams(
           businessId: widget.businessId,
@@ -176,10 +321,7 @@ class _RoleAssignmentStepperDialogState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
         );
         setState(() {
           _isSubmitting = false;
@@ -244,13 +386,12 @@ class _RoleAssignmentStepperDialogState
                 children: List.generate(2, (index) {
                   return Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(
-                        right: index < 1 ? 4 : 0,
-                      ),
+                      margin: EdgeInsets.only(right: index < 1 ? 4 : 0),
                       decoration: BoxDecoration(
-                        color: index <= _currentStep
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey.shade300,
+                        color:
+                            index <= _currentStep
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -274,59 +415,179 @@ class _RoleAssignmentStepperDialogState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _roleDescriptions[_currentStep],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Consumer<RolesProvider>(
-                      builder: (context, rolesProvider, child) {
-                        if (rolesProvider.isLoading &&
-                            rolesProvider.employments == null) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32.0),
-                              child: CircularProgressIndicator(),
+                    _currentStep == 0
+                        ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Если вы будете утверждать все финансовые и не финансовые согласования самостоятельно, то нажмите "Следующий шаг".',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                          );
-                        }
-
-                        if (rolesProvider.error != null &&
-                            rolesProvider.employments == null) {
-                          return Column(
-                            children: [
-                              Text(
-                                rolesProvider.error!,
-                                style: const TextStyle(color: Colors.red),
-                                textAlign: TextAlign.center,
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: Text(
+                                'Если это будет делать ваше доверенное лицо, нажмите "Выбрать сотрудника".',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  rolesProvider.loadEmployments(
-                                    widget.businessId,
-                                  );
-                                },
-                                child: const Text('Повторить'),
+                            ),
+                          ],
+                        )
+                        : Text(
+                          _roleDescriptions[_currentStep],
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    const SizedBox(height: 24),
+                    // Для первого шага показываем кнопки выбора или селектор
+                    if (_currentStep == 0) ...[
+                      if (!_showEmployeeSelector) ...[
+                        // Показываем две кнопки выбора
+                        ElevatedButton(
+                          onPressed:
+                              _isUpdatingBusiness
+                                  ? null
+                                  : _skipApprovalAuthorizer,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                          ),
+                          child:
+                              _isUpdatingBusiness
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Text('Следующий шаг'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed:
+                              _isUpdatingBusiness
+                                  ? null
+                                  : _selectEmployeeForApproval,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                          ),
+                          child:
+                              _isUpdatingBusiness
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Text('Выбрать сотрудника'),
+                        ),
+                      ] else ...[
+                        // Показываем селектор сотрудника
+                        Consumer<RolesProvider>(
+                          builder: (context, rolesProvider, child) {
+                            if (rolesProvider.isLoading &&
+                                rolesProvider.employments == null) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(32.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+
+                            if (rolesProvider.error != null &&
+                                rolesProvider.employments == null) {
+                              return Column(
+                                children: [
+                                  Text(
+                                    rolesProvider.error!,
+                                    style: const TextStyle(color: Colors.red),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      rolesProvider.loadEmployments(
+                                        widget.businessId,
+                                      );
+                                    },
+                                    child: const Text('Повторить'),
+                                  ),
+                                ],
+                              );
+                            }
+
+                            final employments = rolesProvider.employments;
+                            if (employments == null || employments.isEmpty) {
+                              return const Text('Нет доступных сотрудников');
+                            }
+
+                            return _buildEmployeeSelector(
+                              employments,
+                              _currentStep,
+                            );
+                          },
+                        ),
+                      ],
+                    ] else ...[
+                      // Для второго шага всегда показываем селектор
+                      Consumer<RolesProvider>(
+                        builder: (context, rolesProvider, child) {
+                          if (rolesProvider.isLoading &&
+                              rolesProvider.employments == null) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: CircularProgressIndicator(),
                               ),
-                            ],
+                            );
+                          }
+
+                          if (rolesProvider.error != null &&
+                              rolesProvider.employments == null) {
+                            return Column(
+                              children: [
+                                Text(
+                                  rolesProvider.error!,
+                                  style: const TextStyle(color: Colors.red),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    rolesProvider.loadEmployments(
+                                      widget.businessId,
+                                    );
+                                  },
+                                  child: const Text('Повторить'),
+                                ),
+                              ],
+                            );
+                          }
+
+                          final employments = rolesProvider.employments;
+                          if (employments == null || employments.isEmpty) {
+                            return const Text('Нет доступных сотрудников');
+                          }
+
+                          return _buildEmployeeSelector(
+                            employments,
+                            _currentStep,
                           );
-                        }
-
-                        final employments = rolesProvider.employments;
-                        if (employments == null || employments.isEmpty) {
-                          return const Text('Нет доступных сотрудников');
-                        }
-
-                        return _buildEmployeeSelector(
-                          employments,
-                          _currentStep,
-                        );
-                      },
-                    ),
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -335,9 +596,7 @@ class _RoleAssignmentStepperDialogState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade300),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey.shade300)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -349,20 +608,48 @@ class _RoleAssignmentStepperDialogState
                     )
                   else
                     const SizedBox.shrink(),
-                  ElevatedButton(
-                    onPressed: (_isSubmitting || !_canProceedToNext())
-                        ? null
-                        : (_isLastStep() ? _submit : _nextStep),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(_isLastStep() ? 'Завершить' : 'Далее'),
-                  ),
+                  // Для первого шага кнопка "Далее" показывается только если выбран сотрудник
+                  if (_currentStep == 0 && _showEmployeeSelector) ...[
+                    ElevatedButton(
+                      onPressed:
+                          (_isSubmitting ||
+                                  _isUpdatingBusiness ||
+                                  !_canProceedToNext())
+                              ? null
+                              : _nextStep,
+                      child:
+                          _isSubmitting || _isUpdatingBusiness
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Далее'),
+                    ),
+                  ] else if (_currentStep == 1) ...[
+                    // Для второго шага показываем кнопку "Завершить"
+                    ElevatedButton(
+                      onPressed:
+                          (_isSubmitting || !_canProceedToNext())
+                              ? null
+                              : _submit,
+                      child:
+                          _isSubmitting
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Завершить'),
+                    ),
+                  ] else ...[
+                    // Для первого шага без выбора сотрудника кнопка не нужна
+                    const SizedBox.shrink(),
+                  ],
                 ],
               ),
             ),
@@ -419,11 +706,13 @@ class _RoleAssignmentStepperDialogState
               },
               filterFunction: (employment, query) {
                 final fullName = employment.fullName.toLowerCase();
-                final firstName = employment.user.firstName?.toLowerCase() ?? '';
+                final firstName =
+                    employment.user.firstName?.toLowerCase() ?? '';
                 final lastName = employment.user.lastName?.toLowerCase() ?? '';
-                final patronymic = employment.user.patronymic?.toLowerCase() ?? '';
+                final patronymic =
+                    employment.user.patronymic?.toLowerCase() ?? '';
                 final position = employment.position?.toLowerCase() ?? '';
-                
+
                 return fullName.contains(query) ||
                     firstName.contains(query) ||
                     lastName.contains(query) ||
@@ -432,7 +721,10 @@ class _RoleAssignmentStepperDialogState
               },
               itemBuilder: (context, employment) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -463,10 +755,7 @@ class _RoleAssignmentStepperDialogState
               const SizedBox(height: 8),
               Text(
                 field.errorText ?? '',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12),
               ),
             ],
           ],

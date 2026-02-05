@@ -77,6 +77,7 @@ import 'package:qonbaq/domain/usecases/get_user_businesses.dart';
 import 'package:qonbaq/domain/usecases/get_user_profile.dart';
 import 'package:qonbaq/domain/usecases/create_business.dart';
 import 'package:qonbaq/domain/usecases/update_business.dart';
+import 'package:qonbaq/domain/usecases/update_business_partial.dart';
 import 'package:qonbaq/data/datasources/task_remote_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/task_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/task_repository.dart';
@@ -306,6 +307,7 @@ class MyApp extends StatelessWidget {
     final getUserProfile = GetUserProfile(userRepository);
     final createBusiness = CreateBusiness(userRepository);
     final updateBusiness = UpdateBusiness(userRepository);
+    final updateBusinessPartial = UpdateBusinessPartial(userRepository);
     
     // Инициализация зависимостей для ролей (нужно для ProfileProvider и RolesProvider)
     final employmentRemoteDataSource = EmploymentRemoteDataSourceImpl(
@@ -326,6 +328,7 @@ class MyApp extends StatelessWidget {
       getUserProfile: getUserProfile,
       createBusiness: createBusiness,
       updateBusiness: updateBusiness,
+      updateBusinessPartial: updateBusinessPartial,
       userRepository: userRepository,
       getBusinessEmploymentsWithRoles: getBusinessEmploymentsWithRoles,
       // currentUserId будет установлен после авторизации через AuthProvider

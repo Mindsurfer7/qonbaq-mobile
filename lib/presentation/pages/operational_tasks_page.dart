@@ -813,7 +813,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       child: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -821,7 +821,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                   'Задачи на сегодня',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 // Разделение на две части горизонтально (в ряд)
                 Expanded(
                   child: Column(
@@ -829,7 +829,10 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                       // Верхняя половина: Регулярные задачи
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(4),
@@ -841,11 +844,11 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               const Text(
                                 'Регулярные',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Expanded(
                                 child:
                                     _isLoadingTodayRecurring
@@ -862,6 +865,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                         )
                                         : SingleChildScrollView(
                                           child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
                                             children:
                                                 _todayRecurringTasks.map((
                                                   task,
@@ -881,11 +886,14 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 2),
                       // Нижняя половина: Нерегулярные задачи
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(4),
@@ -897,11 +905,11 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                               const Text(
                                 'Нерегулярные',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Expanded(
                                 child:
                                     _isLoadingTodayIrregular
@@ -918,6 +926,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                                         )
                                         : SingleChildScrollView(
                                           child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
                                             children:
                                                 _todayIrregularTasks.map((
                                                   task,
@@ -1282,8 +1292,8 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
       },
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        constraints: const BoxConstraints(minWidth: 120),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(6),

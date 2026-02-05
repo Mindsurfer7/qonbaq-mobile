@@ -30,4 +30,7 @@ abstract class UserRemoteDataSource extends DataSource {
 
   /// Обновить бизнес
   Future<BusinessModel> updateBusiness(String id, BusinessModel business);
+
+  /// Частичное обновление бизнеса (только указанные поля)
+  Future<BusinessModel> updateBusinessPartial(String id, Map<String, dynamic> updates);
 }

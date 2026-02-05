@@ -34,4 +34,10 @@ abstract class UserRepository extends Repository {
 
   /// Обновить бизнес
   Future<Either<Failure, Business>> updateBusiness(String id, Business business);
+
+  /// Частичное обновление бизнеса (только указанные поля)
+  Future<Either<Failure, Business>> updateBusinessPartial(
+    String id,
+    Map<String, dynamic> updates,
+  );
 }

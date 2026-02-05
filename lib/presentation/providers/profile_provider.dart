@@ -9,6 +9,7 @@ import '../../domain/usecases/get_user_businesses.dart';
 import '../../domain/usecases/get_user_profile.dart';
 import '../../domain/usecases/create_business.dart';
 import '../../domain/usecases/update_business.dart';
+import '../../domain/usecases/update_business_partial.dart';
 import '../../domain/usecases/get_business_employments_with_roles.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../core/error/failures.dart';
@@ -20,6 +21,7 @@ class ProfileProvider with ChangeNotifier {
   final GetUserProfile getUserProfile;
   final CreateBusiness createBusiness;
   final UpdateBusiness updateBusiness;
+  final UpdateBusinessPartial updateBusinessPartial;
   final UserRepository userRepository;
   final GetBusinessEmploymentsWithRoles getBusinessEmploymentsWithRoles;
   final String?
@@ -30,6 +32,7 @@ class ProfileProvider with ChangeNotifier {
     required this.getUserProfile,
     required this.createBusiness,
     required this.updateBusiness,
+    required this.updateBusinessPartial,
     required this.userRepository,
     required this.getBusinessEmploymentsWithRoles,
     this.currentUserId,
@@ -323,6 +326,51 @@ class ProfileProvider with ChangeNotifier {
 
     final result = await updateBusiness.call(
       UpdateBusinessParams(id: businessId, business: business),
+    );
+
+    result.fold(
+      (failure) {
+        _error = _getErrorMessage(failure);
+        _isLoading = false;
+        notifyListeners();
+      },
+      (updatedBusiness) {
+        // Обновляем бизнес в списке
+        if (_businesses != null) {
+          final index = _businesses!.indexWhere(
+            (b) => b.id == updatedBusiness.id,
+          );
+          if (index != -1) {
+            _businesses![index] = updatedBusiness;
+          }
+        }
+        // Обновляем выбранный бизнес, если это он
+        if (_selectedBusiness?.id == updatedBusiness.id) {
+          _selectedBusiness = updatedBusiness;
+        }
+        if (_selectedWorkspace?.id == updatedBusiness.id) {
+          _selectedWorkspace = updatedBusiness;
+        }
+        _isLoading = false;
+        _error = null;
+        notifyListeners();
+      },
+    );
+
+    return result;
+  }
+
+  /// Частичное обновление бизнеса (только указанные поля)
+  Future<Either<Failure, Business>> updateBusinessPartialCall(
+    String businessId,
+    Map<String, dynamic> updates,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final result = await updateBusinessPartial.call(
+      UpdateBusinessPartialParams(id: businessId, updates: updates),
     );
 
     result.fold(

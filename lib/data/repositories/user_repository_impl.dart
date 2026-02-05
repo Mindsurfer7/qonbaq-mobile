@@ -149,4 +149,23 @@ class UserRepositoryImpl extends RepositoryImpl implements UserRepository {
       return Left(ServerFailure('Ошибка при обновлении бизнеса: $e'));
     }
   }
+
+  @override
+  Future<Either<Failure, Business>> updateBusinessPartial(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
+    try {
+      final updatedBusiness = await remoteDataSource.updateBusinessPartial(id, updates);
+      return Right(updatedBusiness.toEntity());
+    } on ValidationException catch (e) {
+      return Left(ValidationFailure(
+        e.validationResponse.message ?? e.validationResponse.error,
+        e.validationResponse.details,
+        serverMessage: e.validationResponse.message,
+      ));
+    } catch (e) {
+      return Left(ServerFailure('Ошибка при обновлении бизнеса: $e'));
+    }
+  }
 }

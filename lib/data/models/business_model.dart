@@ -16,6 +16,8 @@ class BusinessModel extends Business implements Model {
     super.type,
     super.autoAssignDepartments = true,
     super.slug,
+    super.requiresApprovalAuthorizer = true,
+    super.requiresMoneyIssuer = true,
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
@@ -61,6 +63,8 @@ class BusinessModel extends Business implements Model {
       type: type,
       autoAssignDepartments: json['autoAssignDepartments'] as bool? ?? true,
       slug: json['slug'] as String?,
+      requiresApprovalAuthorizer: json['requiresApprovalAuthorizer'] as bool? ?? true,
+      requiresMoneyIssuer: json['requiresMoneyIssuer'] as bool? ?? true,
     );
   }
 
@@ -78,6 +82,8 @@ class BusinessModel extends Business implements Model {
       if (type != null) 'type': type == BusinessType.family ? 'Family' : 'Business',
       'autoAssignDepartments': autoAssignDepartments,
       if (slug != null) 'slug': slug,
+      'requiresApprovalAuthorizer': requiresApprovalAuthorizer,
+      'requiresMoneyIssuer': requiresMoneyIssuer,
     };
   }
 
@@ -103,6 +109,8 @@ class BusinessModel extends Business implements Model {
       type: type,
       autoAssignDepartments: autoAssignDepartments,
       slug: slug,
+      requiresApprovalAuthorizer: requiresApprovalAuthorizer,
+      requiresMoneyIssuer: requiresMoneyIssuer,
     );
   }
 
@@ -119,6 +127,8 @@ class BusinessModel extends Business implements Model {
       type: business.type,
       autoAssignDepartments: business.autoAssignDepartments,
       slug: business.slug,
+      requiresApprovalAuthorizer: business.requiresApprovalAuthorizer,
+      requiresMoneyIssuer: business.requiresMoneyIssuer,
     );
   }
 
@@ -129,7 +139,43 @@ class BusinessModel extends Business implements Model {
       if (description != null) 'description': description,
       'autoAssignDepartments': autoAssignDepartments,
       'slug': slug, // slug может быть null для удаления
+      'requiresApprovalAuthorizer': requiresApprovalAuthorizer,
+      'requiresMoneyIssuer': requiresMoneyIssuer,
     };
+  }
+
+  /// JSON для частичного обновления бизнеса
+  /// Принимает только те поля, которые нужно обновить
+  static Map<String, dynamic> toPartialUpdateJson({
+    String? name,
+    String? description,
+    bool? autoAssignDepartments,
+    String? slug,
+    bool? requiresApprovalAuthorizer,
+    bool? requiresMoneyIssuer,
+  }) {
+    final Map<String, dynamic> json = {};
+
+    if (name != null && name.isNotEmpty) {
+      json['name'] = name;
+    }
+    if (description != null) {
+      json['description'] = description;
+    }
+    if (autoAssignDepartments != null) {
+      json['autoAssignDepartments'] = autoAssignDepartments;
+    }
+    if (slug != null) {
+      json['slug'] = slug;
+    }
+    if (requiresApprovalAuthorizer != null) {
+      json['requiresApprovalAuthorizer'] = requiresApprovalAuthorizer;
+    }
+    if (requiresMoneyIssuer != null) {
+      json['requiresMoneyIssuer'] = requiresMoneyIssuer;
+    }
+
+    return json;
   }
 }
 

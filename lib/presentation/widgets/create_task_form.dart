@@ -563,19 +563,21 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                   ),
             const SizedBox(height: 16),
 
-            // Крайний срок
-            FormBuilderDateTimePicker(
-              name: 'deadline',
-              decoration: InputDecoration(
-                labelText: 'Крайний срок',
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.event),
-                errorText: _fieldErrors['deadline'],
-                errorMaxLines: 2,
+            // Крайний срок (показывается только для обычных задач, не регулярных и не точек контроля)
+            if (!_isRecurring && !_isControlPoint) ...[
+              FormBuilderDateTimePicker(
+                name: 'deadline',
+                decoration: InputDecoration(
+                  labelText: 'Крайний срок',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: const Icon(Icons.event),
+                  errorText: _fieldErrors['deadline'],
+                  errorMaxLines: 2,
+                ),
+                inputType: InputType.both,
               ),
-              inputType: InputType.both,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // Важная задача
             FormBuilderCheckbox(
@@ -605,6 +607,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                     _formKey.currentState?.fields['isControlPoint']?.didChange(false);
                   }
                   _isRecurring = newValue;
+                  // Очищаем deadline при включении регулярной задачи
+                  if (_isRecurring) {
+                    _formKey.currentState?.fields['deadline']?.didChange(null);
+                  }
                   // Очищаем параметры регулярности при выключении
                   if (!_isRecurring) {
                     _recurrenceFrequency = null;
@@ -931,6 +937,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                     _formKey.currentState?.fields['deadlineOffset']?.didChange(null);
                   }
                   _isControlPoint = newValue;
+                  // Очищаем deadline при включении точки контроля
+                  if (_isControlPoint) {
+                    _formKey.currentState?.fields['deadline']?.didChange(null);
+                  }
                   // Очищаем метрики при выключении
                   if (!_isControlPoint) {
                     _metrics.clear();
