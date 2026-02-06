@@ -987,7 +987,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final allWeekTasks = [..._weekRecurringTasks, ..._weekIrregularTasks];
 
     return Card(
-      color: Colors.blue.shade50,
+      color: Colors.green.shade50,
       child: Stack(
         children: [
           Padding(
@@ -1057,7 +1057,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final canViewControlPoints = _canViewAllTasks();
 
     return Card(
-      color: Colors.purple.shade50,
+      color: Colors.green.shade50,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -1088,7 +1088,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         decoration: BoxDecoration(
                           color:
                               _showControlPointManagement
-                                  ? Colors.purple.shade200
+                                  ? Colors.green.shade200
                                   : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: Colors.grey, width: 1),
@@ -1120,7 +1120,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
                         decoration: BoxDecoration(
                           color:
                               !_showControlPointManagement
-                                  ? Colors.purple.shade200
+                                  ? Colors.green.shade200
                                   : Colors.transparent,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: Colors.grey, width: 1),

@@ -55,17 +55,12 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
         final files = input.files;
         if (files != null && files.isNotEmpty) {
           final file = files[0];
-          print(
-            '📁 File selected via native input: ${file.name} (${file.size} bytes)',
-          );
-
           final reader = html.FileReader();
 
           reader.onLoadEnd.listen((e) {
             try {
               final bytes = reader.result as Uint8List?;
               if (bytes != null) {
-                print('✅ File bytes read successfully: ${bytes.length} bytes');
                 completer.complete(
                   FilePickerResult([
                     PlatformFile(
@@ -76,25 +71,20 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
                   ]),
                 );
               } else {
-                print('❌ FileReader result is null');
                 completer.complete(null);
               }
             } catch (e) {
-              print('❌ Error processing file: $e');
               completer.completeError('Failed to process file: $e');
             }
           });
 
           reader.onError.listen((e) {
             timeoutTimer?.cancel();
-            print('❌ FileReader error: $e');
             completer.completeError('Failed to read file');
           });
 
-          print('📖 Reading file as ArrayBuffer...');
           reader.readAsArrayBuffer(file);
         } else {
-          print('ℹ️ No file selected');
           completer.complete(null);
         }
       });
@@ -102,18 +92,15 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
       // Таймаут на случай, если пользователь не выберет файл
       timeoutTimer = Timer(const Duration(seconds: 30), () {
         if (!completer.isCompleted) {
-          print('⏱️ File selection timeout');
           completer.complete(null);
         }
       });
 
-      print('🖱️ Triggering file input click...');
       input.click();
 
       return completer.future;
     } catch (e) {
       timeoutTimer?.cancel();
-      print('❌ Error in native file picker: $e');
       if (!completer.isCompleted) {
         completer.completeError(e);
       }
@@ -122,24 +109,14 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
   }
 
   Future<void> _selectFile() async {
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📁 FILE SELECTION START (Task Completion Dialog)');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🌐 Platform: ${kIsWeb ? "Web" : "Mobile"}');
-
     try {
       FilePickerResult? result;
 
       if (kIsWeb) {
-        print('📂 Opening file picker (Web) - using native HTML input');
-
         // Используем нативный HTML input для обхода проблемы LateInitializationError в production
         try {
           result = await _pickFileWebNative();
         } catch (e) {
-          print('⚠️ Native HTML input failed: $e');
-          print('🔄 Falling back to FilePicker...');
-
           // Fallback на FilePicker (на случай если нативный подход не сработал)
           try {
             result = await FilePicker.platform.pickFiles(
@@ -148,13 +125,11 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
               withData: true,
             );
           } catch (e2) {
-            print('❌ FilePicker fallback also failed: $e2');
             rethrow;
           }
         }
       } else {
         // Для мобильных платформ
-        print('📂 Opening file picker (Mobile)');
         result = await FilePicker.platform.pickFiles(
           type: FileType.any,
           allowMultiple: false,
@@ -164,20 +139,11 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
         final fileName = file.name;
-        print('✅ File selected: $fileName');
-        print(
-          '   Size: ${file.size} bytes (${(file.size / 1024).toStringAsFixed(2)} KB)',
-        );
-        print('   Extension: ${file.extension ?? "unknown"}');
 
         if (kIsWeb) {
           // На вебе всегда используем bytes
-          print(
-            '   Bytes: ${file.bytes != null ? "${file.bytes!.length} bytes" : "null"}',
-          );
           if (file.bytes != null) {
             final fileBytes = file.bytes!;
-            print('✅ File bytes loaded successfully');
 
             setState(() {
               _selectedFilePath = null;
@@ -190,8 +156,6 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
             await _uploadFile();
           } else {
-            print('❌ File bytes are null!');
-            print('   File size from picker: ${file.size} bytes');
             setState(() {
               _uploadError =
                   'Не удалось загрузить файл (размер: ${(file.size / 1024).toStringAsFixed(2)} KB). Попробуйте выбрать другой файл.';
@@ -199,10 +163,8 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
           }
         } else {
           // Для мобильных платформ используем path
-          print('   Path: ${file.path ?? "null"}');
           if (file.path != null) {
             final filePath = file.path!;
-            print('✅ File path obtained successfully');
 
             setState(() {
               _selectedFilePath = filePath;
@@ -215,26 +177,14 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
             await _uploadFile();
           } else {
-            print('❌ File path is null');
             setState(() {
               _uploadError =
                   'Не удалось получить файл. Попробуйте выбрать другой файл.';
             });
           }
         }
-      } else {
-        print('ℹ️ File selection cancelled or empty');
       }
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } catch (e, stackTrace) {
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('❌ FILE SELECTION ERROR (Task Completion Dialog)');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('💥 Error type: ${e.runtimeType}');
-      print('💥 Error message: $e');
-      print('📚 Stack trace:');
-      print('$stackTrace');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e) {
       setState(() {
         _uploadError = 'Ошибка выбора файла: ${e.toString()}';
       });
@@ -243,21 +193,8 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
   Future<void> _uploadFile() async {
     if (_selectedFilePath == null && _selectedFileBytes == null) {
-      print('⚠️ Upload cancelled: no file data');
-      print('   _selectedFilePath: ${_selectedFilePath ?? "null"}');
-      print(
-        '   _selectedFileBytes: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "null"}',
-      );
       return;
     }
-
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('🚀 FILE UPLOAD START (Task Completion Dialog)');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📋 File name: ${_selectedFileName ?? "unknown"}');
-    print(
-      '📦 File size: ${_selectedFileBytes != null ? "${_selectedFileBytes!.length} bytes" : "path: $_selectedFilePath"}',
-    );
 
     setState(() {
       _isUploading = true;
@@ -266,7 +203,6 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
     try {
       final uploadFileUseCase = Provider.of<UploadFile>(context, listen: false);
-      print('✅ UploadFile use case obtained');
 
       final uploadResult = await uploadFileUseCase.call(
         UploadFileParams(
@@ -279,7 +215,6 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
 
       uploadResult.fold(
         (failure) {
-          print('❌ Upload failed: ${failure.message}');
           setState(() {
             _uploadError = failure.message;
             _isUploading = false;
@@ -288,7 +223,6 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
           });
         },
         (uploadResponse) {
-          print('✅ Upload successful! File ID: ${uploadResponse.fileId}');
           setState(() {
             _uploadedFileId = uploadResponse.fileId;
             _isUploading = false;
@@ -297,16 +231,7 @@ class _TaskCompletionDialogState extends State<TaskCompletionDialog> {
           });
         },
       );
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } catch (e, stackTrace) {
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('❌ FILE UPLOAD ERROR (Task Completion Dialog)');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('💥 Error type: ${e.runtimeType}');
-      print('💥 Error message: $e');
-      print('📚 Stack trace:');
-      print('$stackTrace');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (e) {
       setState(() {
         _uploadError = 'Ошибка загрузки файла: $e';
         _isUploading = false;
