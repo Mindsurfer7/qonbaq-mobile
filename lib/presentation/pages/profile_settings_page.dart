@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/utils/responsive_utils.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -108,41 +107,22 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Центральная кнопка "На главную" и "Орг структура"
+          // Центральная кнопка "На главную"
           Center(
             child: Container(
               margin: const EdgeInsets.only(bottom: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      context.go('/business');
-                    },
-                    icon: const Icon(Icons.home),
-                    label: const Text('На главную'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                    ),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  context.go('/business');
+                },
+                icon: const Icon(Icons.home),
+                label: const Text('На главную'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
                   ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      context.go('/organizational_structure');
-                    },
-                    icon: const Icon(Icons.account_tree),
-                    label: const Text('Орг структура'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

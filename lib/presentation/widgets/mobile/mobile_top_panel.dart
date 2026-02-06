@@ -8,6 +8,7 @@ import '../../widgets/workday_dialog.dart';
 /// - Рабочий день
 /// - Чаты
 /// - Календарь
+/// - Орг структура
 /// - Профиль
 class MobileTopPanel extends StatelessWidget {
   const MobileTopPanel({super.key});
@@ -49,6 +50,12 @@ class MobileTopPanel extends StatelessWidget {
               'Календарь',
               Icons.calendar_today,
               () => context.go('/calendar'),
+            ),
+            _buildButton(
+              context,
+              'Орг структура',
+              Icons.account_tree,
+              () => context.go('/organizational_structure'),
             ),
             _buildButton(
               context,

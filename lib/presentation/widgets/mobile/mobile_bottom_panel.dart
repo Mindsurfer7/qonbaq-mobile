@@ -6,6 +6,7 @@ import '../../providers/pending_confirmations_provider.dart';
 /// Нижняя панель для mobile версии
 /// 
 /// Содержит кнопки:
+/// - Главная
 /// - Задачи
 /// - Согласования (с индикатором количества)
 /// - Заметки на ходу
@@ -30,6 +31,12 @@ class MobileBottomPanel extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
+            _buildButton(
+              context,
+              'Главная',
+              Icons.home,
+              () => context.go('/business'),
+            ),
             _buildButton(
               context,
               'Задачи',

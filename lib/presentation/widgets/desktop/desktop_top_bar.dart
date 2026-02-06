@@ -10,7 +10,7 @@ import '../../../domain/entities/workday.dart';
 /// 
 /// Содержит:
 /// - Логотип приложения слева
-/// - Кнопки действий в центре (начать рабочий день, чаты, календарь, новости)
+/// - Кнопки действий в центре (начать рабочий день, чаты, календарь, орг структура)
 /// - Аватарку и имя пользователя справа
 /// - Переключатель темы
 class DesktopTopBar extends StatelessWidget {
@@ -107,6 +107,13 @@ class DesktopTopBar extends StatelessWidget {
           'Календарь',
           Icons.calendar_today,
           () => context.go('/calendar'),
+        ),
+        const SizedBox(width: 12),
+        _buildActionButton(
+          context,
+          'Орг структура',
+          Icons.account_tree,
+          () => context.go('/organizational_structure'),
         ),
       ],
     );
