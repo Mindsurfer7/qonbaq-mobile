@@ -95,8 +95,21 @@ class AdminAccordion extends StatelessWidget {
       ),
       dense: true,
       onTap: () {
-        debugPrint('🔗 Navigating to: $route');
+        final currentRoute = GoRouterState.of(context).uri.path;
+        debugPrint('🖱️ [AdminAccordion] Нажат пункт: "$title"');
+        debugPrint('📍 [AdminAccordion] Текущий route: $currentRoute');
+        debugPrint('🎯 [AdminAccordion] Целевой route: $route');
+        debugPrint('🔗 [AdminAccordion] Вызываю context.go($route)...');
         context.go(route);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final newRoute = GoRouterState.of(context).uri.path;
+          debugPrint('✅ [AdminAccordion] После навигации route: $newRoute');
+          if (newRoute == currentRoute) {
+            debugPrint('⚠️ [AdminAccordion] ВНИМАНИЕ: Route не изменился!');
+          } else {
+            debugPrint('✔️ [AdminAccordion] Успешно: route изменился');
+          }
+        });
       },
     );
   }

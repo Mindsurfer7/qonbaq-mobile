@@ -141,7 +141,12 @@ class _CrmPageState extends State<CrmPage> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          context.go('/business/operational/crm/sales_funnel');
+          final currentRoute = GoRouterState.of(context).uri.path;
+          const targetRoute = '/business/operational/crm/sales_funnel';
+          debugPrint('🖱️ [CrmPage] Нажата кнопка: "Воронка продаж"');
+          debugPrint('📍 [CrmPage] Текущий route: $currentRoute');
+          debugPrint('🎯 [CrmPage] Целевой route: $targetRoute');
+          context.go(targetRoute);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -220,7 +225,12 @@ class _CrmPageState extends State<CrmPage> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          context.go('/business/operational/crm/orders_funnel');
+          final currentRoute = GoRouterState.of(context).uri.path;
+          const targetRoute = '/business/operational/crm/orders_funnel';
+          debugPrint('🖱️ [CrmPage] Нажата кнопка: "Воронка заказов"');
+          debugPrint('📍 [CrmPage] Текущий route: $currentRoute');
+          debugPrint('🎯 [CrmPage] Целевой route: $targetRoute');
+          context.go(targetRoute);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -306,7 +316,7 @@ class _CrmPageState extends State<CrmPage> {
             Expanded(
               child: InkWell(
                 onTap: () {
-                  context.go('/business/operational/crm/tasks');
+                  context.go('/business/operational/crm/customer_tasks');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
@@ -355,7 +365,22 @@ class _CrmPageState extends State<CrmPage> {
             Expanded(
               child: InkWell(
                 onTap: () {
-                  context.go('/business/operational/crm/clients');
+                  final currentRoute = GoRouterState.of(context).uri.path;
+                  const targetRoute = '/business/operational/crm/clients';
+                  debugPrint('🖱️ [CrmPage] Нажата кнопка: "Клиенты"');
+                  debugPrint('📍 [CrmPage] Текущий route: $currentRoute');
+                  debugPrint('🎯 [CrmPage] Целевой route: $targetRoute');
+                  debugPrint('🔗 [CrmPage] Вызываю context.go($targetRoute)...');
+                  context.go(targetRoute);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final newRoute = GoRouterState.of(context).uri.path;
+                    debugPrint('✅ [CrmPage] После навигации route: $newRoute');
+                    if (newRoute == currentRoute) {
+                      debugPrint('⚠️ [CrmPage] ВНИМАНИЕ: Route не изменился!');
+                    } else {
+                      debugPrint('✔️ [CrmPage] Успешно: route изменился');
+                    }
+                  });
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(

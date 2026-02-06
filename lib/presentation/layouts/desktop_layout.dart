@@ -32,6 +32,8 @@ class DesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🏗️ [DesktopLayout] build вызван для route: $currentRoute');
+    debugPrint('   🔑 Key виджета child: ${ValueKey(currentRoute)}');
     return Scaffold(
       body: Column(
         children: [
@@ -48,6 +50,7 @@ class DesktopLayout extends StatelessWidget {
                 // Центральная область контента
                 Expanded(
                   child: Container(
+                    key: ValueKey(currentRoute),
                     color: Theme.of(context).colorScheme.surface,
                     child: child, // ← go_router рендерит страницы здесь
                   ),

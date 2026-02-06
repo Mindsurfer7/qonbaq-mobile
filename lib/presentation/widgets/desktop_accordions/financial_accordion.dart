@@ -62,8 +62,21 @@ class FinancialAccordion extends StatelessWidget {
       ),
       dense: true,
       onTap: () {
-        debugPrint('🔗 Navigating to: $route');
+        final currentRoute = GoRouterState.of(context).uri.path;
+        debugPrint('🖱️ [FinancialAccordion] Нажат пункт: "$title"');
+        debugPrint('📍 [FinancialAccordion] Текущий route: $currentRoute');
+        debugPrint('🎯 [FinancialAccordion] Целевой route: $route');
+        debugPrint('🔗 [FinancialAccordion] Вызываю context.go($route)...');
         context.go(route);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final newRoute = GoRouterState.of(context).uri.path;
+          debugPrint('✅ [FinancialAccordion] После навигации route: $newRoute');
+          if (newRoute == currentRoute) {
+            debugPrint('⚠️ [FinancialAccordion] ВНИМАНИЕ: Route не изменился!');
+          } else {
+            debugPrint('✔️ [FinancialAccordion] Успешно: route изменился');
+          }
+        });
       },
     );
   }

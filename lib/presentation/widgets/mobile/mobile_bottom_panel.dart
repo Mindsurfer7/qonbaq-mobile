@@ -63,7 +63,16 @@ class MobileBottomPanel extends StatelessWidget {
   ) {
     return Expanded(
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          final currentRoute = GoRouterState.of(context).uri.path;
+          debugPrint('🖱️ [MobileBottomPanel] Нажата кнопка: "$label"');
+          debugPrint('📍 [MobileBottomPanel] Текущий route: $currentRoute');
+          onTap();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final newRoute = GoRouterState.of(context).uri.path;
+            debugPrint('✅ [MobileBottomPanel] После навигации route: $newRoute');
+          });
+        },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
@@ -91,7 +100,18 @@ class MobileBottomPanel extends StatelessWidget {
           final count = provider.totalCount;
           
           return InkWell(
-            onTap: () => context.go('/approvals'),
+            onTap: () {
+              final currentRoute = GoRouterState.of(context).uri.path;
+              const targetRoute = '/approvals';
+              debugPrint('🖱️ [MobileBottomPanel] Нажата кнопка: "Согласования" (count: $count)');
+              debugPrint('📍 [MobileBottomPanel] Текущий route: $currentRoute');
+              debugPrint('🎯 [MobileBottomPanel] Целевой route: $targetRoute');
+              context.go(targetRoute);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final newRoute = GoRouterState.of(context).uri.path;
+                debugPrint('✅ [MobileBottomPanel] После навигации route: $newRoute');
+              });
+            },
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),

@@ -33,6 +33,9 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
     // Обновляем navigation provider когда route меняется
     // ВАЖНО: используем addPostFrameCallback чтобы не вызвать notifyListeners во время build
     if (oldWidget.currentRoute != widget.currentRoute) {
+      debugPrint('🔄 [AdaptiveAppShell] didUpdateWidget: route изменился');
+      debugPrint('   Старый route: ${oldWidget.currentRoute}');
+      debugPrint('   Новый route: ${widget.currentRoute}');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _updateNavigationProvider();
@@ -54,23 +57,28 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
 
   void _updateNavigationProvider() {
     if (!mounted) return;
+    debugPrint('🔄 [AdaptiveAppShell] _updateNavigationProvider вызван для route: ${widget.currentRoute}');
     try {
       final navProvider = Provider.of<DesktopNavigationProvider>(
         context,
         listen: false,
       );
       navProvider.setBlockFromRoute(widget.currentRoute);
+      debugPrint('✅ [AdaptiveAppShell] NavigationProvider успешно обновлен');
     } catch (e) {
       // Игнорируем ошибки если context уже недоступен
-      debugPrint('⚠️ AdaptiveAppShell: Could not update nav provider: $e');
+      debugPrint('⚠️ [AdaptiveAppShell] Could not update nav provider: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🏗️ [AdaptiveAppShell] build вызван для route: ${widget.currentRoute}');
     if (context.isDesktop) {
+      debugPrint('   📱 Режим: DESKTOP');
       return _buildDesktopShell(context);
     } else {
+      debugPrint('   📱 Режим: MOBILE');
       return _buildMobileShell(context);
     }
   }

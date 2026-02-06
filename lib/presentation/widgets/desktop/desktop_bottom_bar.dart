@@ -79,7 +79,16 @@ class DesktopBottomBar extends StatelessWidget {
     VoidCallback onTap,
   ) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        final currentRoute = GoRouterState.of(context).uri.path;
+        debugPrint('🖱️ [DesktopBottomBar] Нажата кнопка: "$label"');
+        debugPrint('📍 [DesktopBottomBar] Текущий route: $currentRoute');
+        onTap();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final newRoute = GoRouterState.of(context).uri.path;
+          debugPrint('✅ [DesktopBottomBar] После навигации route: $newRoute');
+        });
+      },
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -113,7 +122,18 @@ class DesktopBottomBar extends StatelessWidget {
         final hasPending = provider.hasPending;
         
         return InkWell(
-          onTap: () => context.go('/approvals'),
+          onTap: () {
+            final currentRoute = GoRouterState.of(context).uri.path;
+            const targetRoute = '/approvals';
+            debugPrint('🖱️ [DesktopBottomBar] Нажата кнопка: "Согласования" (pending: $totalCount)');
+            debugPrint('📍 [DesktopBottomBar] Текущий route: $currentRoute');
+            debugPrint('🎯 [DesktopBottomBar] Целевой route: $targetRoute');
+            context.go(targetRoute);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final newRoute = GoRouterState.of(context).uri.path;
+              debugPrint('✅ [DesktopBottomBar] После навигации route: $newRoute');
+            });
+          },
           borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -53,7 +53,7 @@ class AppRouter {
     return GoRouter(
       initialLocation: '/',
       debugLogDiagnostics: true,
-      
+
       // Redirect для аутентификации
       // ВАЖНО: StartPage сама делает проверку токенов и редиректы,
       // поэтому здесь только базовая защита для прямых переходов
@@ -61,49 +61,61 @@ class AppRouter {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final isLoggedIn = authProvider.isAuthenticated;
         final location = state.matchedLocation;
-        
+        final uriPath = state.uri.path;
+
+        debugPrint('🔄 [Router] Глобальный redirect вызван');
+        debugPrint('   matchedLocation: $location');
+        debugPrint('   uri.path: $uriPath');
+        debugPrint('   isLoggedIn: $isLoggedIn');
+
         // Публичные страницы - без редиректов
         final publicPages = ['/', '/auth', '/welcome', '/workspace-selector'];
         final isPublicPage = publicPages.contains(location);
-        
+
         // Если залогинен и идет на welcome → на business
         if (isLoggedIn && location == '/welcome') {
+          debugPrint('   → Редирект на /business (welcome → business)');
           return '/business';
         }
-        
+
         // Если не залогинен и идет на защищенную страницу → на start page
         // StartPage сама разберется куда редиректить
         if (!isLoggedIn && !isPublicPage) {
+          debugPrint('   → Редирект на / (не залогинен)');
           return '/';
         }
-        
+
+        debugPrint('   → Редирект не нужен, разрешаем переход');
         return null; // Разрешить переход
       },
-      
+
       routes: [
         // Публичные routes (без shell)
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const StartPage(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const StartPage()),
         GoRoute(
           path: '/welcome',
           builder: (context, state) => const WelcomePage(),
         ),
-        GoRoute(
-          path: '/auth',
-          builder: (context, state) => const AuthPage(),
-        ),
+        GoRoute(path: '/auth', builder: (context, state) => const AuthPage()),
         GoRoute(
           path: '/workspace-selector',
           builder: (context, state) => const WorkspaceSelectorPage(),
         ),
-        
+
         // ShellRoute для приложения со статичными панелями
         ShellRoute(
           builder: (context, state, child) {
+            // Используем uri.path вместо matchedLocation для полного пути
+            final fullPath = state.uri.path;
+            debugPrint('🛤️ [ShellRoute] builder вызван');
+            debugPrint('   matchedLocation: ${state.matchedLocation}');
+            debugPrint('   uri.path: $fullPath');
+            debugPrint('   uri.queryParameters: ${state.uri.queryParameters}');
+            debugPrint('   child widget type: ${child.runtimeType}');
+            // Key обеспечивает перестроение при смене route
             return AdaptiveAppShell(
-              currentRoute: state.matchedLocation,
+              key: ValueKey(fullPath),
+              currentRoute: fullPath,
               child: child,
             );
           },
@@ -120,30 +132,44 @@ class AppRouter {
               },
               builder: (context, state) => const BusinessMainPage(),
             ),
-            
+
             // Home
             GoRoute(
               path: '/home',
               builder: (context, state) => const HomePage(),
             ),
-            
+
             // Профиль
             GoRoute(
               path: '/profile_settings',
               builder: (context, state) => const ProfileSettingsPage(),
             ),
-            
+
             // Операционный блок
             GoRoute(
               path: '/business/operational',
               redirect: (context, state) {
                 // На desktop редирект на CRM, на mobile показываем 4 блока
-                if (state.matchedLocation == '/business/operational' && context.isDesktop) {
+                debugPrint('🔄 [Router] Redirect для /business/operational');
+                debugPrint('   matchedLocation: ${state.matchedLocation}');
+                debugPrint('   uri.path: ${state.uri.path}');
+                debugPrint('   isDesktop: ${context.isDesktop}');
+                // ВАЖНО: Проверяем uri.path, а не matchedLocation!
+                // matchedLocation всегда /business/operational для всех вложенных маршрутов
+                if (state.uri.path == '/business/operational' &&
+                    context.isDesktop) {
+                  debugPrint('   → Редирект на /business/operational/crm');
                   return '/business/operational/crm';
                 }
+                debugPrint('   → Редирект не нужен, возвращаем null');
                 return null;
               },
-              builder: (context, state) => const OperationalBlockPage(),
+              builder: (context, state) {
+                debugPrint('🏗️ [Router] Builder для /business/operational');
+                debugPrint('   matchedLocation: ${state.matchedLocation}');
+                debugPrint('   uri.path: ${state.uri.path}');
+                return const OperationalBlockPage();
+              },
               routes: [
                 // CRM
                 GoRoute(
@@ -163,18 +189,18 @@ class AppRouter {
                       builder: (context, state) => const ClientsListPage(),
                     ),
                     GoRoute(
-                      path: 'tasks',
+                      path: 'customer_tasks',
                       builder: (context, state) => const TasksCrmPage(),
                     ),
                   ],
                 ),
-                
+
                 // Client card (заглушка без параметров)
                 GoRoute(
                   path: 'client_card',
                   builder: (context, state) => const ClientCardPage(),
                 ),
-                
+
                 // Customer detail
                 GoRoute(
                   path: 'customer/:customerId',
@@ -183,13 +209,20 @@ class AppRouter {
                     return CustomerDetailPage(customerId: customerId);
                   },
                 ),
-                
+
                 // Tasks
                 GoRoute(
                   path: 'tasks',
-                  builder: (context, state) => const OperationalTasksPage(),
+                  builder: (context, state) {
+                    debugPrint(
+                      '🏗️ [Router] Builder для /business/operational/tasks',
+                    );
+                    debugPrint('   matchedLocation: ${state.matchedLocation}');
+                    debugPrint('   uri.path: ${state.uri.path}');
+                    return const OperationalTasksPage();
+                  },
                 ),
-                
+
                 // Task detail
                 GoRoute(
                   path: 'task/:taskId',
@@ -198,48 +231,92 @@ class AppRouter {
                     return TaskDetailPage(taskId: taskId);
                   },
                 ),
-                
+
                 // Task card (заглушка без параметров)
                 GoRoute(
                   path: 'task_card',
                   builder: (context, state) => const TaskCardPage(),
                 ),
-                
+
                 // Business processes
                 GoRoute(
                   path: 'business_processes',
-                  builder: (context, state) => const BusinessProcessesPage(),
+                  builder: (context, state) {
+                    debugPrint(
+                      '🏗️ [Router] Builder для /business/operational/business_processes',
+                    );
+                    debugPrint('   matchedLocation: ${state.matchedLocation}');
+                    debugPrint('   uri.path: ${state.uri.path}');
+                    return const BusinessProcessesPage();
+                  },
                 ),
-                
+
                 // Construction
                 GoRoute(
                   path: 'construction',
                   builder: (context, state) => const ConstructionPage(),
                 ),
-                
+
+                // Trade (заглушка)
+                GoRoute(
+                  path: 'trade',
+                  builder:
+                      (context, state) => const Scaffold(
+                        body: Center(child: Text('Торговля - в разработке')),
+                      ),
+                ),
+
+                // Logistics (заглушка)
+                GoRoute(
+                  path: 'logistics',
+                  builder:
+                      (context, state) => const Scaffold(
+                        body: Center(child: Text('Логистика - в разработке')),
+                      ),
+                ),
+
+                // Services (заглушка)
+                GoRoute(
+                  path: 'services',
+                  builder:
+                      (context, state) => const Scaffold(
+                        body: Center(child: Text('Сфера услуг - в разработке')),
+                      ),
+                ),
+
                 // Services Admin
                 GoRoute(
                   path: 'services-admin',
-                  builder: (context, state) => const ServicesAdminPage(),
+                  builder: (context, state) {
+                    debugPrint(
+                      '🏗️ [Router] Builder для /business/operational/services-admin',
+                    );
+                    debugPrint('   matchedLocation: ${state.matchedLocation}');
+                    debugPrint('   uri.path: ${state.uri.path}');
+                    return const ServicesAdminPage();
+                  },
                 ),
-                
+
                 // Control Points
                 GoRoute(
                   path: 'control_points',
                   builder: (context, state) => const ControlPointsPage(),
                 ),
-                
+
                 // Control Point Detail
                 GoRoute(
                   path: 'control_point/:controlPointId',
                   builder: (context, state) {
-                    final controlPointId = state.pathParameters['controlPointId']!;
-                    return ControlPointDetailPage(controlPointId: controlPointId);
+                    final controlPointId =
+                        state.pathParameters['controlPointId']!;
+                    return ControlPointDetailPage(
+                      controlPointId: controlPointId,
+                    );
                   },
                 ),
               ],
             ),
-            
+
             // Финансовый блок
             GoRoute(
               path: '/business/financial',
@@ -261,7 +338,7 @@ class AppRouter {
                 ),
               ],
             ),
-            
+
             // Админ-хоз блок
             GoRoute(
               path: '/business/admin',
@@ -302,13 +379,13 @@ class AppRouter {
                 ),
               ],
             ),
-            
+
             // Аналитика
             GoRoute(
               path: '/business/analytics',
               builder: (context, state) => const AnalyticsBlockPage(),
             ),
-            
+
             // Quick actions (доступны везде)
             GoRoute(
               path: '/approvals',
@@ -330,7 +407,7 @@ class AppRouter {
               path: '/calendar',
               builder: (context, state) => const CalendarPage(),
             ),
-            
+
             // Организационная структура
             GoRoute(
               path: '/organizational_structure',
@@ -343,7 +420,7 @@ class AppRouter {
                 return DepartmentDetailPage(departmentId: departmentId);
               },
             ),
-            
+
             // Roles assignment
             GoRoute(
               path: '/roles-assignment',
@@ -352,7 +429,7 @@ class AppRouter {
           ],
         ),
       ],
-      
+
       // Обработка ошибок 404
       errorBuilder: (context, state) {
         return Scaffold(
