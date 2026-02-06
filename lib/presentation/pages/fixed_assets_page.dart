@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/fixed_asset.dart';
@@ -326,7 +328,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
               trailing: Icon(Icons.chevron_right, color: theme.textSecondary),
               onTap: () {
                 Navigator.of(context)
-                    .pushNamed('/approvals/detail', arguments: approval.id)
+                    .pushNamed('/approvals/detail')
                     .then((_) => _refreshAll());
               },
             ),
@@ -546,7 +548,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
           title: const Text('Основные средства'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
           ),
         ),
         body: const Center(child: Text('Выберите компанию')),
@@ -558,7 +560,7 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
         title: const Text('Основные средства'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAssets),
@@ -655,9 +657,8 @@ class _FixedAssetsPageState extends State<FixedAssetsPage> {
                     (asset) => FixedAssetCard(
                       asset: asset,
                       onTap: () {
-                        Navigator.of(context).pushNamed(
+                        context.go(
                           '/business/admin/fixed_assets/detail',
-                          arguments: asset.id,
                         );
                       },
                     ),
@@ -876,7 +877,7 @@ class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -916,7 +917,7 @@ class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
                     (createdAsset) {
                       // Закрываем диалог и показываем успех
                       if (mounted) {
-                        Navigator.of(context).pop();
+                        context.pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Основное средство успешно создано'),
@@ -928,7 +929,7 @@ class _CreateFixedAssetDialogState extends State<_CreateFixedAssetDialog> {
                     },
                   );
                 },
-                onCancel: () => Navigator.of(context).pop(),
+                onCancel: () => context.pop(),
               ),
             ),
           ],
@@ -1137,7 +1138,7 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
       },
       (createdApproval) {
         // Закрываем диалог
-        Navigator.of(context).pop();
+        context.pop();
 
         // Вызываем onSuccess для обновления списка
         widget.onSuccess();
@@ -1246,7 +1247,7 @@ class _TransferFixedAssetDialogState extends State<_TransferFixedAssetDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

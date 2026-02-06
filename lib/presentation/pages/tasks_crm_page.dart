@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/customer.dart';
@@ -174,7 +176,7 @@ class _TasksCrmPageState extends State<TasksCrmPage> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
+          context.go('/business/operational/task/1');
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -334,7 +336,7 @@ class _TasksCrmPageState extends State<TasksCrmPage> {
         title: const Text('Задачи по клиентам CRM'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -345,7 +347,7 @@ class _TasksCrmPageState extends State<TasksCrmPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],

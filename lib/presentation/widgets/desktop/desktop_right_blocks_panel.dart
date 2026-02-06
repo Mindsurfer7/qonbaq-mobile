@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/desktop_navigation_provider.dart';
 
@@ -54,7 +55,7 @@ class DesktopRightBlocksPanel extends StatelessWidget {
                         Colors.green,
                         'operational',
                         navProvider.currentBlock == 'operational',
-                        () => navProvider.setBlock('operational'),
+                        () => context.go('/business/operational/crm'),
                       ),
                       const SizedBox(height: 12),
                       _buildBlockButton(
@@ -64,7 +65,7 @@ class DesktopRightBlocksPanel extends StatelessWidget {
                         Colors.blue,
                         'financial',
                         navProvider.currentBlock == 'financial',
-                        () => navProvider.setBlock('financial'),
+                        () => context.go('/business/financial/payment_requests'),
                       ),
                       const SizedBox(height: 12),
                       _buildBlockButton(
@@ -74,7 +75,7 @@ class DesktopRightBlocksPanel extends StatelessWidget {
                         Colors.grey,
                         'admin',
                         navProvider.currentBlock == 'admin',
-                        () => navProvider.setBlock('admin'),
+                        () => context.go('/business/admin/document_management'),
                       ),
                       const SizedBox(height: 12),
                       _buildBlockButton(
@@ -84,7 +85,7 @@ class DesktopRightBlocksPanel extends StatelessWidget {
                         Colors.amber,
                         'analytics',
                         navProvider.currentBlock == 'analytics',
-                        () => navProvider.setBlock('analytics'),
+                        () => context.go('/business/analytics'),
                       ),
                     ],
                   );

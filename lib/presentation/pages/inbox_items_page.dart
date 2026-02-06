@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -86,7 +88,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
               ElevatedButton(
@@ -107,7 +109,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                             : descriptionController.text.trim(),
                   );
                   if (mounted) {
-                    Navigator.of(context).pop();
+                    context.pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Успешно обновлено')),
@@ -140,7 +142,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
             content: const Text('Вы уверены, что хотите удалить этот элемент?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
               ElevatedButton(
@@ -151,7 +153,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                   );
                   final success = await inboxProvider.deleteItem(item.id);
                   if (mounted) {
-                    Navigator.of(context).pop();
+                    context.pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Успешно удалено')),
@@ -221,7 +223,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
               ElevatedButton(
@@ -242,7 +244,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
                             : descriptionController.text.trim(),
                   );
                   if (mounted) {
-                    Navigator.of(context).pop();
+                    context.pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Успешно создано')),
@@ -289,7 +291,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
           (context) => _VoiceRecordingDialog(
             businessId: selectedBusiness.id,
             onResult: (audioFile, audioBytes) async {
-              Navigator.of(context).pop();
+              context.pop();
 
               // Отправляем на backend
               final success = await inboxProvider.createItemFromVoice(
@@ -314,7 +316,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
               }
             },
             onError: (error) {
-              Navigator.of(context).pop();
+              context.pop();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(error), backgroundColor: Colors.red),
@@ -397,7 +399,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
         title: const Text('Заметки на ходу'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -418,7 +420,7 @@ class _InboxItemsPageState extends State<InboxItemsPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -671,7 +673,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
         }
       },
       (createdTask) {
-        Navigator.of(context).pop();
+        context.pop();
         widget.onSuccess();
         ScaffoldMessenger.of(
           context,
@@ -691,7 +693,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
               title: const Text('Создать задачу'),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
               ),
             ),
             Expanded(
@@ -699,7 +701,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                 businessId: widget.businessId,
                 userRepository: widget.userRepository,
                 onSubmit: _handleSubmit,
-                onCancel: () => Navigator.of(context).pop(),
+                onCancel: () => context.pop(),
                 error: _error,
                 validationErrors: _validationErrors,
                 onError: _handleError,
@@ -820,7 +822,7 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
       listen: false,
     );
     audioService.cancelRecording();
-    Navigator.of(context).pop();
+    context.pop();
   }
 
   @override

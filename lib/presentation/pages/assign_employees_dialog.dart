@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../providers/department_provider.dart';
@@ -34,7 +36,7 @@ class _AssignEmployeesDialogState extends State<AssignEmployeesDialog> {
         content: const Text('Компания не выбрана'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text('Закрыть'),
           ),
         ],
@@ -126,7 +128,7 @@ class _AssignEmployeesDialogState extends State<AssignEmployeesDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text('Отмена'),
         ),
         Consumer<DepartmentProvider>(
@@ -160,7 +162,7 @@ class _AssignEmployeesDialogState extends State<AssignEmployeesDialog> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pop();
+      context.pop();
       widget.onEmployeesAssigned();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

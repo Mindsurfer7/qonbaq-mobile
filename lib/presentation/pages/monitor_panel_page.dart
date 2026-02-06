@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 
 /// Страница монитор панели и админа
 class MonitorPanelPage extends StatelessWidget {
@@ -11,13 +13,13 @@ class MonitorPanelPage extends StatelessWidget {
         title: const Text('Монитор панель и админ'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],

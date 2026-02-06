@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../providers/department_provider.dart';
@@ -119,7 +121,7 @@ class _CreateDepartmentDialogState extends State<CreateDepartmentDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text('Отмена'),
         ),
         Consumer<DepartmentProvider>(
@@ -165,7 +167,7 @@ class _CreateDepartmentDialogState extends State<CreateDepartmentDialog> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pop();
+      context.pop();
       widget.onDepartmentCreated();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

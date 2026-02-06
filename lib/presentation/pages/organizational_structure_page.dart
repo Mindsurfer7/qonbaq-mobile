@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
@@ -54,13 +56,13 @@ class _OrganizationalStructurePageState
         title: const Text('Организационная структура'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -180,7 +182,7 @@ class _OrganizationalStructurePageState
                     padding: const EdgeInsets.all(16.0),
                     child: InkWell(
                       onTap: () {
-                        Navigator.of(context).pushNamed('/roles-assignment');
+                        context.go('/roles-assignment');
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
@@ -385,9 +387,8 @@ class _OrganizationalStructurePageState
               )
             : null,
         onTap: () {
-          Navigator.of(context).pushNamed(
+          context.go(
             '/department_detail',
-            arguments: department.id,
           );
         },
         trailing: Consumer<ProfileProvider>(
@@ -504,9 +505,8 @@ class _OrganizationalStructurePageState
       departments: tree,
       businessName: businessName,
       onDepartmentTap: (departmentId) {
-        Navigator.of(context).pushNamed(
+        context.go(
           '/department_detail',
-          arguments: departmentId,
         );
       },
     );
@@ -783,12 +783,12 @@ class _OrganizationalStructurePageState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text('Отмена'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              context.pop();
               final success = await provider.removeProject(project.id);
               if (success && context.mounted) {
                 provider.loadProjects(businessId);
@@ -852,12 +852,12 @@ class _OrganizationalStructurePageState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text('Отмена'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              context.pop();
               final success = await provider.removeDepartment(department.id);
               if (success && context.mounted) {
                 // Перезагружаем данные

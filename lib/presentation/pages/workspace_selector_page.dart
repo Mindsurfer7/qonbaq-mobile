@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/invite_provider.dart';
@@ -83,7 +85,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
     if (!mounted) return;
 
     // Переходим на главную страницу бизнеса
-    Navigator.of(context).pushReplacementNamed('/business');
+    context.go('/business');
   }
 
   /// Обработка действия для кнопки "Семья"
@@ -257,9 +259,9 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
   //             child: VoiceRecordWidget(
   //               context: VoiceContext.dontForget,
   //               onResultReceived: (result) {
-  //                 Navigator.of(context).pop();
+  //                 context.pop();
   //                 // Переходим на страницу "Не забыть" с результатом
-  //                 Navigator.of(context).pushNamed('/remember');
+  //                 context.go('/remember');
   //               },
   //               onError: (error) {
   //                 ScaffoldMessenger.of(context).showSnackBar(
@@ -852,7 +854,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
   //             label: 'Создать задачу',
   //             onTap: () {
   //               // Переход на создание задачи
-  //               Navigator.of(context).pushNamed('/tasks');
+  //               context.go('/tasks');
   //             },
   //           ),
   //         ),
@@ -861,7 +863,7 @@ class _WorkspaceSelectorPageState extends State<WorkspaceSelectorPage>
   //             icon: Icons.edit_note,
   //             label: 'Не забыть',
   //             onTap: () {
-  //               Navigator.of(context).pushNamed('/remember');
+  //               context.go('/remember');
   //             },
   //           ),
   //         ),

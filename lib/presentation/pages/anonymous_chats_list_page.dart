@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../../domain/entities/chat.dart';
@@ -132,7 +134,7 @@ class _AnonymousChatsListPageState extends State<AnonymousChatsListPage> {
         title: const Text('Чаты с клиентами'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: _isLoading && _chats == null

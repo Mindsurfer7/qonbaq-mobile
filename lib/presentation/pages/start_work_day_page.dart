@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 
 /// Страница начала рабочего дня
 class StartWorkDayPage extends StatelessWidget {
@@ -11,13 +13,13 @@ class StartWorkDayPage extends StatelessWidget {
         title: const Text('Начать рабочий день'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],

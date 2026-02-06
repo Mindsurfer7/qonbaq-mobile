@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/department.dart';
 import '../providers/department_provider.dart';
@@ -38,7 +40,7 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
         title: const Text('Подразделение'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           Consumer<DepartmentProvider>(
@@ -181,9 +183,8 @@ class _DepartmentDetailPageState extends State<DepartmentDetailPage> {
                                   ? Text(child.description!)
                                   : null,
                               onTap: () {
-                                Navigator.of(context).pushReplacementNamed(
+                                context.go(
                                   '/department_detail',
-                                  arguments: child.id,
                                 );
                               },
                               trailing: const Icon(Icons.arrow_forward_ios,

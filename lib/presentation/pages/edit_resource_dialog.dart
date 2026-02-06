@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/resource.dart';
 import '../../domain/usecases/update_resource.dart';
@@ -124,7 +126,7 @@ class _EditResourceDialogState extends State<EditResourceDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -183,7 +185,7 @@ class _EditResourceDialogState extends State<EditResourceDialog> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                            onPressed: _isLoading ? null : () => context.pop(),
                             child: const Text('Отмена'),
                           ),
                           const SizedBox(width: 8),

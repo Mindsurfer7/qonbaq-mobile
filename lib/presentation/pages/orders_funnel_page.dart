@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/order.dart';
 import '../providers/crm_provider.dart';
@@ -28,7 +30,7 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
         title: const Text('Воронка заказов'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -56,7 +58,7 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -96,7 +98,7 @@ class _OrdersFunnelPageState extends State<OrdersFunnelPage> {
                         },
                         onCardTap: (id) {
                           // TODO: Навигация на карточку заказа
-                          // Navigator.of(context).pushNamed(
+                          // context.go(
                           //   '/business/operational/crm/orders/$id',
                           // );
                         },

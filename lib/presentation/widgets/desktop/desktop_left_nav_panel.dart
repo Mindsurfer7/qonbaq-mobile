@@ -14,7 +14,12 @@ import '../desktop_accordions/analytics_accordion.dart';
 /// - Админ-хоз блок → AdminAccordion
 /// - Аналитика → AnalyticsAccordion
 class DesktopLeftNavPanel extends StatelessWidget {
-  const DesktopLeftNavPanel({super.key});
+  final String currentRoute;
+  
+  const DesktopLeftNavPanel({
+    super.key,
+    required this.currentRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +43,7 @@ class DesktopLeftNavPanel extends StatelessWidget {
               Expanded(
                 child: navProvider.isLeftPanelCollapsed
                     ? _buildCollapsedView()
-                    : _buildExpandedView(navProvider.currentBlock),
+                    : _buildExpandedView(navProvider.currentBlock, currentRoute),
               ),
             ],
           ),
@@ -94,18 +99,18 @@ class DesktopLeftNavPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildExpandedView(String currentBlock) {
+  Widget _buildExpandedView(String currentBlock, String currentRoute) {
     switch (currentBlock) {
       case 'operational':
-        return const OperationalAccordion();
+        return OperationalAccordion(currentRoute: currentRoute);
       case 'financial':
-        return const FinancialAccordion();
+        return FinancialAccordion(currentRoute: currentRoute);
       case 'admin':
-        return const AdminAccordion();
+        return AdminAccordion(currentRoute: currentRoute);
       case 'analytics':
         return const AnalyticsAccordion();
       default:
-        return const OperationalAccordion();
+        return OperationalAccordion(currentRoute: currentRoute);
     }
   }
 

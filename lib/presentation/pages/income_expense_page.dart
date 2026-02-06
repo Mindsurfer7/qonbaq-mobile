@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:dartz/dartz.dart' hide State;
@@ -147,13 +149,13 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
         title: const Text('Доходы - Расходы'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -770,7 +772,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
                   leading: const Icon(Icons.trending_up, color: Colors.green),
                   title: const Text('Приход'),
                   onTap: () {
-                    Navigator.of(context).pop();
+                    context.pop();
                     _showCreateFinancialMovementDialog(
                       context,
                       FinancialFormType.income,
@@ -782,7 +784,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
                   leading: const Icon(Icons.trending_down, color: Colors.red),
                   title: const Text('Расход'),
                   onTap: () {
-                    Navigator.of(context).pop();
+                    context.pop();
                     _showCreateFinancialMovementDialog(
                       context,
                       FinancialFormType.expense,
@@ -794,7 +796,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
                   leading: const Icon(Icons.swap_horiz, color: Colors.orange),
                   title: const Text('Транзит'),
                   onTap: () {
-                    Navigator.of(context).pop();
+                    context.pop();
                     _showCreateFinancialMovementDialog(
                       context,
                       FinancialFormType.transit,
@@ -806,7 +808,7 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
             ],
@@ -973,7 +975,7 @@ class _CreateFinancialMovementDialogState
           _isSubmitting = false;
         });
         if (mounted) {
-          Navigator.of(context).pop();
+          context.pop();
           widget.onCreated();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1247,7 +1249,7 @@ class _CreateFinancialMovementDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

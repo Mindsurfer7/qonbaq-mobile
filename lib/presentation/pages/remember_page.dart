@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -110,7 +112,7 @@ class _RememberPageState extends State<RememberPage> {
                     title: const Text('Создать задачу'),
                     leading: IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => context.pop(),
                     ),
                   ),
                   Expanded(
@@ -132,7 +134,7 @@ class _RememberPageState extends State<RememberPage> {
                             );
                           },
                           (createdTask) {
-                            Navigator.of(context).pop();
+                            context.pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Задача успешно создана'),
@@ -143,7 +145,7 @@ class _RememberPageState extends State<RememberPage> {
                           },
                         );
                       },
-                      onCancel: () => Navigator.of(context).pop(),
+                      onCancel: () => context.pop(),
                       initialTaskData: initialTaskData,
                     ),
                   ),
@@ -211,7 +213,7 @@ class _RememberPageState extends State<RememberPage> {
                     title: const Text('Детали элемента'),
                     leading: IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => context.pop(),
                     ),
                   ),
                   // Контент
@@ -422,7 +424,7 @@ class _RememberPageState extends State<RememberPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
               ElevatedButton(
@@ -443,7 +445,7 @@ class _RememberPageState extends State<RememberPage> {
                             : descriptionController.text.trim(),
                   );
                   if (mounted) {
-                    Navigator.of(context).pop();
+                    context.pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Успешно обновлено')),
@@ -474,7 +476,7 @@ class _RememberPageState extends State<RememberPage> {
         title: const Text('Заметки на ходу'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -495,7 +497,7 @@ class _RememberPageState extends State<RememberPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
             tooltip: 'На главную',
           ),
@@ -1016,7 +1018,7 @@ class _RememberPageState extends State<RememberPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Отмена'),
               ),
               ElevatedButton(
@@ -1043,7 +1045,7 @@ class _RememberPageState extends State<RememberPage> {
                       category: formData['category'] as InboxItemCategory?,
                     );
                     if (mounted) {
-                      Navigator.of(context).pop();
+                      context.pop();
                       if (success) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Успешно создано')),
@@ -1091,7 +1093,7 @@ class _RememberPageState extends State<RememberPage> {
           (context) => _VoiceRecordingDialog(
             businessId: selectedBusiness.id,
             onResult: (audioFile, audioBytes) async {
-              Navigator.of(context).pop();
+              context.pop();
 
               // Отправляем на backend
               final success = await inboxProvider.createItemFromVoice(
@@ -1116,7 +1118,7 @@ class _RememberPageState extends State<RememberPage> {
               }
             },
             onError: (error) {
-              Navigator.of(context).pop();
+              context.pop();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(error), backgroundColor: Colors.red),
@@ -1235,7 +1237,7 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog> {
       listen: false,
     );
     audioService.cancelRecording();
-    Navigator.of(context).pop();
+    context.pop();
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../workday_dialog.dart';
@@ -90,33 +91,22 @@ class DesktopTopBar extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         _buildWorkDayButton(context),
         const SizedBox(width: 12),
         _buildActionButton(
           context,
-          'Чаты, почта, телефония',
+          'Чаты',
           Icons.chat_bubble_outline,
-          () => Navigator.of(context).pushNamed('/chats_email'),
+          () => context.go('/chats_email'),
         ),
         const SizedBox(width: 12),
         _buildActionButton(
           context,
-          'Новости компании',
-          Icons.newspaper,
-          () {
-            // TODO: Реализовать страницу новостей
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Раздел в разработке')),
-            );
-          },
-        ),
-        const SizedBox(width: 12),
-        _buildActionButton(
-          context,
-          'Календарь событий',
+          'Календарь',
           Icons.calendar_today,
-          () => Navigator.of(context).pushNamed('/calendar'),
+          () => context.go('/calendar'),
         ),
       ],
     );
@@ -242,7 +232,7 @@ class DesktopTopBar extends StatelessWidget {
             }
             
             return InkWell(
-              onTap: () => Navigator.of(context).pushNamed('/profile_settings'),
+              onTap: () => context.go('/profile_settings'),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.all(8),

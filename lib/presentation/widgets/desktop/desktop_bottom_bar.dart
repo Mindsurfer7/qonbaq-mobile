@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/pending_confirmations_provider.dart';
 
 /// Нижняя панель для desktop версии с quick actions
@@ -38,7 +39,7 @@ class DesktopBottomBar extends StatelessWidget {
               'Задачи',
               Icons.task_alt,
               Colors.teal,
-              () => Navigator.of(context).pushNamed('/business/operational/tasks'),
+              () => context.go('/business/operational/tasks'),
             ),
             const SizedBox(width: 8),
             _buildApprovalsButton(context),
@@ -54,7 +55,7 @@ class DesktopBottomBar extends StatelessWidget {
               'Не забыть выполнить',
               Icons.note_add,
               Colors.red,
-              () => Navigator.of(context).pushNamed('/remember'),
+              () => context.go('/remember'),
             ),
             const Spacer(),
             _buildQuickActionButton(
@@ -62,7 +63,7 @@ class DesktopBottomBar extends StatelessWidget {
               'Избранное',
               Icons.star,
               Colors.amber,
-              () => Navigator.of(context).pushNamed('/favorites'),
+              () => context.go('/favorites'),
             ),
           ],
         ),
@@ -112,7 +113,7 @@ class DesktopBottomBar extends StatelessWidget {
         final hasPending = provider.hasPending;
         
         return InkWell(
-          onTap: () => Navigator.of(context).pushNamed('/approvals'),
+          onTap: () => context.go('/approvals'),
           borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service.dart';
 import '../../domain/entities/employee.dart';
@@ -432,9 +434,8 @@ class _ServicesAdminPageState extends State<ServicesAdminPage> {
               IconButton(
                 icon: const Icon(Icons.calendar_today),
                 onPressed: () {
-                  Navigator.of(context).pushNamed(
+                  context.go(
                     '/business/operational/services-admin/service-detail',
-                    arguments: service,
                   );
                 },
                 constraints: const BoxConstraints(),

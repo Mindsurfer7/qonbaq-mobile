@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/entities/order.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
+import '../../core/utils/responsive_utils.dart';
 
 /// Страница CRM
 class CrmPage extends StatefulWidget {
@@ -61,12 +63,8 @@ class _CrmPageState extends State<CrmPage> {
     final businessId = profileProvider.selectedBusiness?.id;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: context.isDesktop ? null : AppBar(
         title: const Text('CRM'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -82,9 +80,7 @@ class _CrmPageState extends State<CrmPage> {
           ),
           IconButton(
             icon: const Icon(Icons.home),
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
-            },
+            onPressed: () => context.go('/business'),
           ),
         ],
       ),
@@ -145,7 +141,7 @@ class _CrmPageState extends State<CrmPage> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/crm/sales_funnel');
+          context.go('/business/operational/crm/sales_funnel');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -224,7 +220,7 @@ class _CrmPageState extends State<CrmPage> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/crm/orders_funnel');
+          context.go('/business/operational/crm/orders_funnel');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -310,7 +306,7 @@ class _CrmPageState extends State<CrmPage> {
             Expanded(
               child: InkWell(
                 onTap: () {
-                  Navigator.of(context).pushNamed('/business/operational/crm/tasks_crm');
+                  context.go('/business/operational/crm/tasks');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
@@ -359,7 +355,7 @@ class _CrmPageState extends State<CrmPage> {
             Expanded(
               child: InkWell(
                 onTap: () {
-                  Navigator.of(context).pushNamed('/business/operational/crm/clients_list');
+                  context.go('/business/operational/crm/clients');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(

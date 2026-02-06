@@ -3,7 +3,6 @@ import '../widgets/desktop/desktop_top_bar.dart';
 import '../widgets/desktop/desktop_left_nav_panel.dart';
 import '../widgets/desktop/desktop_right_blocks_panel.dart';
 import '../widgets/desktop/desktop_bottom_bar.dart';
-import '../widgets/desktop/desktop_navigator.dart';
 
 /// Desktop layout с трехпанельной структурой
 /// 
@@ -14,7 +13,7 @@ import '../widgets/desktop/desktop_navigator.dart';
 /// ├──────────────┬─────────────────────────┬────────────────┤
 /// │              │                         │                │
 /// │   Left Nav   │    Content Area         │  Right Blocks  │
-/// │   Panel      │    (Desktop Navigator)  │  Panel         │
+/// │   Panel      │    (go_router child)    │  Panel         │
 /// │              │                         │                │
 /// │              │                         │                │
 /// └──────────────┴─────────────────────────┴────────────────┘
@@ -22,7 +21,14 @@ import '../widgets/desktop/desktop_navigator.dart';
 /// └─────────────────────────────────────────────────────────┘
 /// ```
 class DesktopLayout extends StatelessWidget {
-  const DesktopLayout({super.key});
+  final Widget child;
+  final String currentRoute;
+  
+  const DesktopLayout({
+    super.key, 
+    required this.child,
+    required this.currentRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +43,13 @@ class DesktopLayout extends StatelessWidget {
             child: Row(
               children: [
                 // Левая навигационная панель
-                const DesktopLeftNavPanel(),
+                DesktopLeftNavPanel(currentRoute: currentRoute),
                 
                 // Центральная область контента
                 Expanded(
                   child: Container(
-                    color: Theme.of(context).colorScheme.background,
-                    child: const DesktopNavigator(),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: child, // ← go_router рендерит страницы здесь
                   ),
                 ),
                 

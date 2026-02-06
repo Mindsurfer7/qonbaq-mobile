@@ -1,17 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-/// Провайдер для управления навигацией в desktop версии
+/// Провайдер для отслеживания текущего блока на desktop
 /// 
-/// Отвечает за:
-/// - Текущий блок (operational/financial/admin/analytics)
-/// - Текущий маршрут внутри блока
-/// - Состояние левой навигационной панели (свернута/развернута)
+/// Используется для визуального состояния панелей
+/// Навигация теперь управляется через go_router
 class DesktopNavigationProvider extends ChangeNotifier {
   // Текущий выбранный блок
   String _currentBlock = 'operational';
-  
-  // Текущий маршрут внутри блока
-  String? _currentRoute;
   
   // Состояние левой панели (свернута или нет)
   bool _isLeftPanelCollapsed = false;
@@ -19,28 +14,26 @@ class DesktopNavigationProvider extends ChangeNotifier {
   /// Получить текущий блок
   String get currentBlock => _currentBlock;
 
-  /// Получить текущий маршрут
-  String? get currentRoute => _currentRoute;
-
   /// Проверить, свернута ли левая панель
   bool get isLeftPanelCollapsed => _isLeftPanelCollapsed;
 
-  /// Установить текущий блок
-  /// При смене блока текущий маршрут сбрасывается
-  void setBlock(String block) {
-    if (_currentBlock != block) {
-      _currentBlock = block;
-      _currentRoute = null; // Сбрасываем маршрут при смене блока
-      debugPrint('🔄 Desktop Navigation: Changed block to $_currentBlock');
-      notifyListeners();
+  /// Установить блок на основе route (вызывается из router)
+  void setBlockFromRoute(String route) {
+    String newBlock = 'operational';
+    
+    if (route.startsWith('/business/financial')) {
+      newBlock = 'financial';
+    } else if (route.startsWith('/business/admin')) {
+      newBlock = 'admin';
+    } else if (route.startsWith('/business/analytics')) {
+      newBlock = 'analytics';
+    } else if (route.startsWith('/business/operational')) {
+      newBlock = 'operational';
     }
-  }
-
-  /// Навигация к конкретному маршруту
-  void navigateTo(String route) {
-    if (_currentRoute != route) {
-      _currentRoute = route;
-      debugPrint('🔄 Desktop Navigation: Navigated to $_currentRoute');
+    
+    if (_currentBlock != newBlock) {
+      _currentBlock = newBlock;
+      debugPrint('🔄 Desktop Navigation: Block changed to $_currentBlock (from route: $route)');
       notifyListeners();
     }
   }
@@ -57,30 +50,8 @@ class DesktopNavigationProvider extends ChangeNotifier {
   /// Сбросить навигацию к дефолтному состоянию
   void reset() {
     _currentBlock = 'operational';
-    _currentRoute = null;
     _isLeftPanelCollapsed = false;
     debugPrint('🔄 Desktop Navigation: Reset to default state');
     notifyListeners();
-  }
-
-  /// Получить дефолтный маршрут для текущего блока
-  String? getDefaultRouteForBlock(String block) {
-    switch (block) {
-      case 'operational':
-        return '/business/operational';
-      case 'financial':
-        return '/business/financial';
-      case 'admin':
-        return '/business/admin';
-      case 'analytics':
-        return '/business/analytics';
-      default:
-        return null;
-    }
-  }
-
-  /// Проверить, является ли данный маршрут активным
-  bool isRouteActive(String route) {
-    return _currentRoute == route;
   }
 }

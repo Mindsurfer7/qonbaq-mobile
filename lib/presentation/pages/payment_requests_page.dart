@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/approval.dart';
@@ -21,13 +23,13 @@ class PaymentRequestsPage extends StatelessWidget {
         title: const Text('Заявки на оплату'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -328,7 +330,7 @@ class _CreateFinancialRequestDialogState
           _isSubmitting = false;
         });
         if (mounted) {
-          Navigator.of(context).pop();
+          context.pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Финансовая заявка успешно создана'),
@@ -399,7 +401,7 @@ class _CreateFinancialRequestDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

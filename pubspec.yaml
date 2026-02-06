@@ -41,6 +41,9 @@ dependencies:
   # State management
   provider: ^6.1.1
   
+  # Routing
+  go_router: ^14.6.2
+  
   # HTTP клиент
   http: ^1.2.0
   

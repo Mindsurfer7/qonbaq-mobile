@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/utils/token_storage.dart';
 import '../../core/utils/deep_link_service.dart';
 import '../../core/utils/workspace_storage.dart';
 import '../../presentation/providers/auth_provider.dart';
-import 'auth_page.dart';
 
 /// Стартовая страница приложения
 class StartPage extends StatefulWidget {
@@ -48,29 +49,26 @@ class _StartPageState extends State<StartPage> {
         if (hasWorkspace) {
           // Если есть сохраненный workspace, переходим на главную страницу
           // BusinessMainPage сам загрузит workspace из ProfileProvider
-          Navigator.of(context).pushReplacementNamed('/business');
+          context.go('/business');
         } else {
           // Если нет сохраненного workspace, переходим на выбор workspace
-          Navigator.of(context).pushReplacementNamed('/workspace-selector');
+          context.go('/workspace-selector');
         }
       } else {
         // Токен невалиден, перенаправляем на страницу логина
-        Navigator.of(context).pushReplacementNamed('/auth');
+        context.go('/auth');
       }
     } else {
       // Если токенов нет, проверяем наличие кода приглашения
       final inviteCode = DeepLinkService.instance.pendingInviteCode;
       if (mounted) {
         if (inviteCode != null) {
-          // Если есть код приглашения, открываем страницу регистрации с кодом
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => AuthPage(inviteCode: inviteCode),
-            ),
-          );
+          // Если есть код приглашения, открываем страницу авторизации
+          // inviteCode передается через state в app_router
+          context.go('/auth');
         } else {
           // Если кода приглашения нет, перенаправляем на страницу логина
-          Navigator.of(context).pushReplacementNamed('/auth');
+          context.go('/auth');
         }
       }
     }

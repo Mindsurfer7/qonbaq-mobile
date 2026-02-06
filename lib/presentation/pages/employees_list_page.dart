@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -112,7 +114,7 @@ class _EmployeesListPageState extends State<EmployeesListPage> {
         title: const Text('Сотрудники'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: _isLoading

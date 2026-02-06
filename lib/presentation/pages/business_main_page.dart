@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/workday_dialog.dart';
 import '../providers/profile_provider.dart';
 import '../providers/pending_confirmations_provider.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/entities/workday.dart';
 import '../../core/utils/responsive_utils.dart';
-import '../layouts/adaptive_shell.dart';
 
 /// Главная страница бизнес-приложения
 class BusinessMainPage extends StatefulWidget {
@@ -43,7 +43,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
 
       if (profileProvider.selectedWorkspace == null) {
         // Если workspace не выбран, перенаправляем на страницу выбора
-        Navigator.of(context).pushReplacementNamed('/workspace-selector');
+        context.go('/workspace-selector');
         return;
       }
 
@@ -103,12 +103,14 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
 
   @override
   Widget build(BuildContext context) {
-    // На desktop используем DesktopLayout через AdaptiveShell
+    // На desktop страница рендерится через go_router в AdaptiveAppShell
+    // Здесь показываем только 4 блока для mobile
     if (context.isDesktop) {
-      return const AdaptiveShell(child: SizedBox.shrink());
+      // На desktop эта страница не показывается (редирект в app_router)
+      return const SizedBox.shrink();
     }
     
-    // На mobile показываем обычный Scaffold
+    // На mobile показываем обычный Scaffold с 4 блоками
     return Scaffold(
       appBar: AppBar(
         title: Selector<ProfileProvider, String>(
@@ -135,7 +137,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
           icon: const Icon(Icons.home),
           tooltip: 'Главная / Сменить пространство',
           onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/workspace-selector');
+            context.go('/workspace-selector');
           },
         ),
         actions: [
@@ -143,88 +145,12 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             icon: const Icon(Icons.person),
             tooltip: 'Профиль',
             onPressed: () {
-              Navigator.of(context).pushNamed('/home');
+              context.go('/home');
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Верхняя навигация
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Selector<ProfileProvider, WorkDayStatus?>(
-                  selector: (context, provider) {
-                    return provider.profile?.workDay?.status;
-                  },
-                  builder: (context, status, child) {
-                    if (status == WorkDayStatus.started) {
-                      // Когда день начат, показываем одну кнопку "Завершить / Пауза"
-                      return _buildWorkDayButton(
-                        context,
-                        'Завершить / Пауза',
-                        Icons.stop,
-                        true,
-                        onTap: () => _showWorkDayDialog(context),
-                      );
-                    } else if (status == WorkDayStatus.paused) {
-                      // Когда день на паузе, показываем кнопку "Возобновить"
-                      return _buildWorkDayButton(
-                        context,
-                        'Возобновить',
-                        Icons.play_arrow,
-                        false,
-                        onTap: () => _showWorkDayDialog(context),
-                      );
-                    } else {
-                      // Когда день не начат, показываем одну кнопку "Начать"
-                      return _buildWorkDayButton(
-                        context,
-                        'Начать рабочий день',
-                        Icons.play_arrow,
-                        false,
-                        onTap: () => _showWorkDayDialog(context),
-                      );
-                    }
-                  },
-                ),
-                _buildTopNavItem(
-                  context,
-                  'Чаты, почта, телефония',
-                  '/chats_email',
-                  Icons.chat,
-                ),
-                _buildTopNavItem(
-                  context,
-                  'Календарь событий',
-                  '/calendar',
-                  Icons.calendar_today,
-                ),
-                _buildTopNavItem(
-                  context,
-                  'Мой профиль/настройки',
-                  '/profile_settings',
-                  Icons.settings,
-                ),
-              ],
-            ),
-          ),
-          // Основной контент
-          Expanded(
-            child: GridView.count(
+      body: GridView.count(
               crossAxisCount: 2,
               padding: const EdgeInsets.all(16),
               crossAxisSpacing: 16,
@@ -260,10 +186,6 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -277,7 +199,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
     return Card(
       color: color.withOpacity(0.2),
       child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(route),
+        onTap: () => context.go(route),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -333,7 +255,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
             listen: false,
           );
           return InkWell(
-            onTap: () => Navigator.of(context).pushNamed(route),
+            onTap: () => context.go(route),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -384,7 +306,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
 
     // Обычная иконка для остальных пунктов
     return InkWell(
-      onTap: () => Navigator.of(context).pushNamed(route),
+      onTap: () => context.go(route),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -473,7 +395,7 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
         onTap:
             onTap ??
             (route != null
-                ? () => Navigator.of(context).pushNamed(route)
+                ? () => context.go(route)
                 : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),

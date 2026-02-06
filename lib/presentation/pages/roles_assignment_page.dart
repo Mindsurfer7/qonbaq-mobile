@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/roles_provider.dart';
@@ -48,7 +50,7 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
           title: const Text('Распределение ролей'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
           ),
         ),
         body: const Center(child: Text('Выберите компанию')),
@@ -60,13 +62,13 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
         title: const Text('Распределение ролей'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -254,13 +256,13 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => context.pop(),
               child: const Text('Понятно'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/organizational_structure');
+                context.pop();
+                context.go('/organizational_structure');
               },
               child: const Text('Открыть структуру'),
             ),
@@ -288,13 +290,13 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => context.pop(),
               child: const Text('Понятно'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/organizational_structure');
+                context.pop();
+                context.go('/organizational_structure');
               },
               child: const Text('Открыть структуру'),
             ),
@@ -325,7 +327,7 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -350,7 +352,7 @@ class _RolesAssignmentPageState extends State<RolesAssignmentPage> {
                         throw Exception(failure.message);
                       },
                       (updatedEmployment) {
-                        Navigator.of(context).pop();
+                        context.pop();
                         // Обновляем список сотрудников
                         final rolesProvider = context.read<RolesProvider>();
                         rolesProvider.loadEmployments(selectedBusiness!.id);

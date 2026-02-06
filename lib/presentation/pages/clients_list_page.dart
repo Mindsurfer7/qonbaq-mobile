@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/entities/customer.dart';
 import '../widgets/create_customer_dialog.dart';
 import 'customer_detail_page.dart';
+import '../../core/utils/responsive_utils.dart';
 
 /// Страница списка клиентов
 class ClientsListPage extends StatefulWidget {
@@ -87,7 +89,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
         title: const Text('Список клиентов'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -119,7 +121,7 @@ class _ClientsListPageState extends State<ClientsListPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],

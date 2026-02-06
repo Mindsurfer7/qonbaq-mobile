@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 
 /// Страница строительства
 class ConstructionPage extends StatelessWidget {
@@ -11,13 +13,13 @@ class ConstructionPage extends StatelessWidget {
         title: const Text('Строительство'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -60,7 +62,7 @@ class ConstructionPage extends StatelessWidget {
         leading: Icon(icon),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).pushNamed(route),
+        onTap: () => context.go(route),
       ),
     );
   }

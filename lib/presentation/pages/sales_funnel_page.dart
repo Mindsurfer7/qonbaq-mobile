@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/crm_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/sales_funnel_accordion.dart';
 import '../widgets/create_customer_dialog.dart';
+import '../../core/utils/responsive_utils.dart';
 
 /// Страница воронки продаж
 class SalesFunnelPage extends StatefulWidget {
@@ -45,12 +47,8 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
     final businessId = profileProvider.selectedBusiness?.id;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: context.isDesktop ? null : AppBar(
         title: const Text('Воронка продаж'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -78,9 +76,7 @@ class _SalesFunnelPageState extends State<SalesFunnelPage> {
           ),
           IconButton(
             icon: const Icon(Icons.home),
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
-            },
+            onPressed: () => context.go('/business'),
           ),
         ],
       ),

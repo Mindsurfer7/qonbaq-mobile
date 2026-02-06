@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/project.dart';
 import '../providers/project_provider.dart';
@@ -141,7 +143,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text('Отмена'),
         ),
         Consumer<ProjectProvider>(
@@ -201,7 +203,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pop();
+      context.pop();
       widget.onProjectCreated();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

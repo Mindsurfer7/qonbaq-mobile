@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
@@ -388,7 +390,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
         title: Text(_task?.title ?? 'Задача'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (!_isEditing) ...[
@@ -423,7 +425,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],

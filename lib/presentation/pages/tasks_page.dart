@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/business.dart';
@@ -127,7 +129,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => context.pop(),
                       ),
                     ],
                   ),
@@ -141,7 +143,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                         // Результат - TaskModel для контекста task
                         final taskData = result as TaskModel;
                         // Закрываем диалог записи
-                        Navigator.of(context).pop();
+                        context.pop();
                         // Открываем диалог создания задачи с предзаполненными данными
                         _showCreateTaskDialog(
                           createTaskUseCase,
@@ -453,7 +455,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         title: const Text('Задачи'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -519,7 +521,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -1110,7 +1112,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         ),
         trailing: _getStatusChip(task.status),
         onTap: () {
-          Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
+          context.go('/business/operational/task/1');
         },
       ),
     );
@@ -1479,7 +1481,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -1521,7 +1523,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     (createdTask) {
                       // Закрываем диалог и показываем успех
                       if (mounted) {
-                        Navigator.of(context).pop();
+                        context.pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Задача успешно создана'),
@@ -1533,7 +1535,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     },
                   );
                 },
-                onCancel: () => Navigator.of(context).pop(),
+                onCancel: () => context.pop(),
               ),
             ),
           ],

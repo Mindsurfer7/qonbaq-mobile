@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -489,7 +491,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
         title: Text(_approval?.title ?? 'Согласование'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (_approval != null && _canEdit())
@@ -1086,7 +1088,7 @@ class _ApprovalDetailPageState extends State<ApprovalDetailPage> {
                       onTap: () {
                         Navigator.of(
                           context,
-                        ).pushNamed('/tasks/detail', arguments: firstTask.id);
+                        ).pushNamed('/tasks/detail');
                       },
                       child: Row(
                         children: [
@@ -1479,7 +1481,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(
@@ -1537,7 +1539,7 @@ class _SelectExecutorDialogState extends State<_SelectExecutorDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(
@@ -1786,7 +1788,7 @@ class _EditApprovalDialogState extends State<_EditApprovalDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

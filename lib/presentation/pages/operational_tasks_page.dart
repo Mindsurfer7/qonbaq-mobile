@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/control_point.dart';
 import '../../domain/usecases/get_tasks.dart';
@@ -10,6 +11,7 @@ import '../../core/error/failures.dart';
 import '../../data/models/validation_error.dart';
 import '../../data/models/task_model.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/utils/responsive_utils.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/business_selector_widget.dart';
@@ -512,7 +514,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
         title: const Text('Задачи'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           // Иконка обновления (стилизованная)
@@ -1289,7 +1291,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
   Widget _buildTaskItem(Task task) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
+        context.go('/business/operational/task/1');
       },
       child: Container(
         width: double.infinity,
@@ -1324,7 +1326,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
     final frequencyText = _getFrequencyText(task);
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed('/tasks/detail', arguments: task.id);
+        context.go('/business/operational/task/1');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
@@ -1361,7 +1363,7 @@ class _OperationalTasksPageState extends State<OperationalTasksPage> {
       onTap: () {
         Navigator.of(
           context,
-        ).pushNamed('/control-points/detail', arguments: controlPoint.id);
+        ).pushNamed('/control-points/detail');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
@@ -1527,7 +1529,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -1568,7 +1570,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     (createdTask) {
                       // Закрываем диалог и показываем успех
                       if (mounted) {
-                        Navigator.of(context).pop();
+                        context.pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Задача успешно создана'),
@@ -1580,7 +1582,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     },
                   );
                 },
-                onCancel: () => Navigator.of(context).pop(),
+                onCancel: () => context.pop(),
               ),
             ),
           ],

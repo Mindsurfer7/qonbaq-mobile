@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../core/utils/credentials_storage.dart';
 import '../../core/utils/deep_link_service.dart';
@@ -142,7 +144,7 @@ class _LoginTabState extends State<LoginTab> {
         email: email,
         password: password,
       );
-      Navigator.of(context).pushReplacementNamed('/business');
+      context.go('/business');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Успешный вход!')));
@@ -334,7 +336,7 @@ class _RegisterTabState extends State<RegisterTab> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/workspace-selector');
+      context.go('/workspace-selector');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Регистрация успешна!')));
@@ -587,11 +589,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // Перенаправляем на страницу авторизации с invite кодом
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => AuthPage(inviteCode: inviteCode),
-        ),
-      );
+      context.go('/auth');
     }
   }
 

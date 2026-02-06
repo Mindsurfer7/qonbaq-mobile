@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/entities/customer_contact.dart';
@@ -355,7 +357,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         title: Text(_customer?.displayName ?? 'Клиент'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           if (_customer != null)
@@ -372,7 +374,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -949,7 +951,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
               title: const Text('Создать задачу'),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
               ),
             ),
             Expanded(
@@ -988,7 +990,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     (createdTask) {
                       // Закрываем диалог и показываем успех
                       if (mounted) {
-                        Navigator.of(context).pop();
+                        context.pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Задача успешно создана'),
@@ -999,7 +1001,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     },
                   );
                 },
-                onCancel: () => Navigator.of(context).pop(),
+                onCancel: () => context.pop(),
               ),
             ),
           ],
@@ -1076,7 +1078,7 @@ class _AssignResponsibleDialogState extends State<_AssignResponsibleDialog> {
         setState(() {
           _isLoading = false;
         });
-        Navigator.of(context).pop();
+        context.pop();
         widget.onAssigned();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1109,7 +1111,7 @@ class _AssignResponsibleDialogState extends State<_AssignResponsibleDialog> {
               title: const Text('Назначить ответственного'),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                onPressed: _isLoading ? null : () => context.pop(),
               ),
             ),
             Padding(
@@ -1152,7 +1154,7 @@ class _AssignResponsibleDialogState extends State<_AssignResponsibleDialog> {
                       TextButton(
                         onPressed: _isLoading
                             ? null
-                            : () => Navigator.of(context).pop(),
+                            : () => context.pop(),
                         child: const Text('Отмена'),
                       ),
                       const SizedBox(width: 8),

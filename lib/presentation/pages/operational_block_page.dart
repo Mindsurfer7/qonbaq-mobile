@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 
 /// Страница операционного блока
 class OperationalBlockPage extends StatelessWidget {
@@ -11,13 +13,13 @@ class OperationalBlockPage extends StatelessWidget {
         title: const Text('Операционный блок'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -95,7 +97,7 @@ class OperationalBlockPage extends StatelessWidget {
       color: Colors.orange.withOpacity(0.1),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/tasks');
+          context.go('/business/operational/tasks');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -130,7 +132,7 @@ class OperationalBlockPage extends StatelessWidget {
       color: Colors.purple.withOpacity(0.1),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/operational/business_processes');
+          context.go('/business/operational/business_processes');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -232,7 +234,7 @@ class OperationalBlockPage extends StatelessWidget {
     String route,
   ) {
     return InkWell(
-      onTap: () => Navigator.of(context).pushNamed(route),
+      onTap: () => context.go(route),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         width: double.infinity,

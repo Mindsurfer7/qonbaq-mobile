@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -170,7 +172,7 @@ class _FixedAssetDetailPageState extends State<FixedAssetDetailPage> {
         title: Text(_asset?.name ?? 'Основное средство'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           PopupMenuButton<String>(
@@ -275,7 +277,7 @@ class _FixedAssetDetailPageState extends State<FixedAssetDetailPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -916,7 +918,7 @@ class _FixedAssetDetailPageState extends State<FixedAssetDetailPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Актив архивирован'), backgroundColor: Colors.green),
                   );
-                  Navigator.of(context).pop(); // возврат к списку
+                  context.pop(); // возврат к списку
                 },
               );
             },

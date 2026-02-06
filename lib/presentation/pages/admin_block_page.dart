@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 
 /// Страница административно-хозяйственного блока
 class AdminBlockPage extends StatelessWidget {
@@ -11,13 +13,13 @@ class AdminBlockPage extends StatelessWidget {
         title: const Text('Административно-хозяйственный блок'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -47,7 +49,7 @@ class AdminBlockPage extends StatelessWidget {
       color: Colors.blue.withOpacity(0.1),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/admin/document_management');
+          context.go('/business/admin/document_management');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -133,7 +135,7 @@ class AdminBlockPage extends StatelessWidget {
     String route,
   ) {
     return InkWell(
-      onTap: () => Navigator.of(context).pushNamed(route),
+      onTap: () => context.go(route),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         width: double.infinity,
@@ -231,7 +233,7 @@ class AdminBlockPage extends StatelessWidget {
     String route,
   ) {
     return InkWell(
-      onTap: () => Navigator.of(context).pushNamed(route),
+      onTap: () => context.go(route),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         width: double.infinity,
@@ -271,7 +273,7 @@ class AdminBlockPage extends StatelessWidget {
       child: InkWell(
         onTap: () {
           // TODO: Добавить навигацию на страницу согласования процессов АХО
-          // Navigator.of(context).pushNamed('/business/admin/approvals');
+          // context.go('/business/admin/approvals');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Страница в разработке'),

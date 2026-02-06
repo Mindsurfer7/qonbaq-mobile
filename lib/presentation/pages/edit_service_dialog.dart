@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service.dart';
 import '../../domain/entities/employee.dart';
@@ -147,7 +149,7 @@ class _EditServiceDialogState extends State<EditServiceDialog> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -250,7 +252,7 @@ class _EditServiceDialogState extends State<EditServiceDialog> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                            onPressed: _isLoading ? null : () => context.pop(),
                             child: const Text('Отмена'),
                           ),
                           const SizedBox(width: 8),

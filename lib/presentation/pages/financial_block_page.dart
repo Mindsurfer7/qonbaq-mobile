@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../domain/entities/approval_template.dart';
@@ -100,13 +102,13 @@ class _FinancialBlockPageState extends State<FinancialBlockPage> {
         title: const Text('Финансовый блок'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -523,7 +525,7 @@ class _FinancialBlockPageState extends State<FinancialBlockPage> {
       color: Colors.green.withOpacity(0.1),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed('/business/financial/income_expense');
+          context.go('/business/financial/income_expense');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -959,7 +961,7 @@ class _CreateFinancialRequestDialogState
           _isSubmitting = false;
         });
         if (mounted) {
-          Navigator.of(context).pop();
+          context.pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Расход успешно создан'),
@@ -1035,7 +1037,7 @@ class _CreateFinancialRequestDialogState
             // Сохраняем данные перед закрытием
             await _saveFormToCache();
             if (mounted) {
-              Navigator.of(context).pop();
+              context.pop();
             }
           },
           child: const Text('Отмена'),
@@ -1204,7 +1206,7 @@ class _CreateAccountDialogState extends State<CreateAccountDialog> {
             financialProvider.loadAccounts(selectedBusiness.id, projectId: projectId);
           }
           
-          Navigator.of(context).pop();
+          context.pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Счет успешно создан'),
@@ -1351,7 +1353,7 @@ class _CreateAccountDialogState extends State<CreateAccountDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

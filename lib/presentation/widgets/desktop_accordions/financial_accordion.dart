@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/desktop_navigation_provider.dart';
+import 'package:go_router/go_router.dart';
 
 /// Аккордеон для финансового блока
 /// 
@@ -8,34 +7,33 @@ import '../../providers/desktop_navigation_provider.dart';
 /// - Заявки на оплату
 /// - Доходы - Расходы
 class FinancialAccordion extends StatelessWidget {
-  const FinancialAccordion({super.key});
+  final String currentRoute;
+  
+  const FinancialAccordion({
+    super.key,
+    required this.currentRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DesktopNavigationProvider>(
-      builder: (context, navProvider, child) {
-        return ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            _buildSimpleItem(
-              context,
-              'Заявки на оплату',
-              Icons.payment,
-              Colors.blue,
-              '/business/financial/payment_requests',
-              navProvider,
-            ),
-            _buildSimpleItem(
-              context,
-              'Доходы - Расходы',
-              Icons.account_balance_wallet,
-              Colors.green,
-              '/business/financial/income_expense',
-              navProvider,
-            ),
-          ],
-        );
-      },
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        _buildSimpleItem(
+          context,
+          'Заявки на оплату',
+          Icons.payment,
+          Colors.blue,
+          '/business/financial/payment_requests',
+        ),
+        _buildSimpleItem(
+          context,
+          'Доходы - Расходы',
+          Icons.account_balance_wallet,
+          Colors.green,
+          '/business/financial/income_expense',
+        ),
+      ],
     );
   }
 
@@ -45,9 +43,8 @@ class FinancialAccordion extends StatelessWidget {
     IconData icon,
     Color color,
     String route,
-    DesktopNavigationProvider navProvider,
   ) {
-    final isActive = navProvider.currentRoute == route;
+    final isActive = currentRoute.startsWith(route);
     
     return ListTile(
       leading: Icon(icon, color: color, size: 20),
@@ -64,7 +61,10 @@ class FinancialAccordion extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       dense: true,
-      onTap: () => navProvider.navigateTo(route),
+      onTap: () {
+        debugPrint('🔗 Navigating to: $route');
+        context.go(route);
+      },
     );
   }
 }

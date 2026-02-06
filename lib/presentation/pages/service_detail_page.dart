@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/service.dart';

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/business.dart';
 import '../providers/profile_provider.dart';
@@ -108,7 +110,7 @@ class _EditBusinessSlugDialogState extends State<EditBusinessSlugDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(
@@ -179,7 +181,7 @@ class _EditBusinessSlugDialogState extends State<EditBusinessSlugDialog> {
         });
       },
       (updated) {
-        Navigator.of(context).pop();
+        context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

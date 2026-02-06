@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/service.dart';
 import '../../domain/repositories/service_repository.dart';
@@ -35,7 +37,7 @@ class _AssignEmployeeToServiceDialogState
         content: const Text('Компания не выбрана'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text('Закрыть'),
           ),
         ],
@@ -112,7 +114,7 @@ class _AssignEmployeeToServiceDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../providers/auth_provider.dart';
@@ -59,7 +61,7 @@ class HomePage extends StatelessWidget {
                     await authProvider.logout();
                     
                     if (context.mounted) {
-                      Navigator.of(context).pushReplacementNamed('/auth');
+                      context.go('/auth');
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Вы вышли из системы')),
                       );
@@ -68,7 +70,7 @@ class HomePage extends StatelessWidget {
                     // Если что-то пошло не так, все равно выполняем логаут
                     await authProvider.logout();
                     if (context.mounted) {
-                      Navigator.of(context).pushReplacementNamed('/auth');
+                      context.go('/auth');
                     }
                   }
                 },

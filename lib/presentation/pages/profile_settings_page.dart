@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -41,13 +43,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         title: const Text('Мой профиль / настройки'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -115,7 +117,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(context).pushReplacementNamed('/business');
+                      context.go('/business');
                     },
                     icon: const Icon(Icons.home),
                     label: const Text('На главную'),
@@ -129,7 +131,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(context).pushNamed('/organizational_structure');
+                      context.go('/organizational_structure');
                     },
                     icon: const Icon(Icons.account_tree),
                     label: const Text('Орг структура'),

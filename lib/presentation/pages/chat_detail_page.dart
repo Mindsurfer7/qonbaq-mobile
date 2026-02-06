@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../domain/repositories/chat_repository.dart';
@@ -525,7 +527,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: Column(
@@ -852,9 +854,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       onTap: () {
                         // Переход на страницу задачи
                         if (message.taskId != null) {
-                          Navigator.of(context).pushNamed(
+                          context.go(
                             '/tasks/detail',
-                            arguments: message.taskId,
                           );
                         }
                       },
@@ -1052,9 +1053,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               onTap: () {
                                 // Переход на страницу задачи из реплая
                                 if (message.replyToMessage!.taskId != null) {
-                                  Navigator.of(context).pushNamed(
+                                  context.go(
                                     '/tasks/detail',
-                                    arguments: message.replyToMessage!.taskId,
                                   );
                                 }
                               },

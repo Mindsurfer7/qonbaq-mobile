@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/auth_provider.dart';
 import '../../core/utils/guest_uuid_storage.dart';
@@ -41,7 +43,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
       if (success) {
         // Перенаправляем на страницу выбора workspace
-        Navigator.of(context).pushReplacementNamed('/workspace-selector');
+        context.go('/workspace-selector');
       } else {
         setState(() {
           _isLoading = false;

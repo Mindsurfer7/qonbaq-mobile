@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:qonbaq/core/utils/api_client.dart';
 import 'package:qonbaq/core/utils/constants.dart';
 import 'package:qonbaq/core/utils/routes_config.dart';
+import 'package:qonbaq/core/router/app_router.dart';
 import 'package:qonbaq/data/datasources/auth_remote_datasource.dart';
 import 'package:qonbaq/data/repositories/auth_repository_impl.dart';
 import 'package:qonbaq/domain/repositories/auth_repository.dart';
@@ -728,12 +729,21 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          return MaterialApp(
-            navigatorKey: navigatorKey,
+          final router = AppRouter.createRouter();
+          
+          return MaterialApp.router(
+            routerConfig: router,
             title: AppConstants.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.currentTheme.themeData,
-            initialRoute: '/',
+          );
+        },
+      ),
+    );
+  }
+}
+
+/* СТАРЫЕ ROUTES - УДАЛЕНЫ, ЗАМЕНЕНЫ НА go_router
             routes: {
               // Стартовая страница
               '/': (context) => const StartPage(),
@@ -896,8 +906,4 @@ class MyApp extends StatelessWidget {
               '/favorites': (context) => const FavoritesPage(),
             },
           );
-        },
-      ),
-    );
-  }
-}
+*/

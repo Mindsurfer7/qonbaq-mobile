@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/desktop_navigation_provider.dart';
+import 'package:go_router/go_router.dart';
 
 /// Аккордеон для операционного блока
 /// 
@@ -13,121 +12,115 @@ import '../../providers/desktop_navigation_provider.dart';
 /// - Настройка телефонии
 /// - Права доступа сотрудников
 class OperationalAccordion extends StatelessWidget {
-  const OperationalAccordion({super.key});
+  final String currentRoute;
+  
+  const OperationalAccordion({
+    super.key,
+    required this.currentRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DesktopNavigationProvider>(
-      builder: (context, navProvider, child) {
-        return ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // CRM
-            _buildExpandableSection(
-              context,
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        // CRM
+        _buildExpandableSection(
+          context,
+          'CRM',
+          Icons.people,
+          Colors.blue,
+          [
+            _NavItem(
               'CRM',
+              '/business/operational/crm',
               Icons.people,
-              Colors.blue,
-              [
-                _NavItem(
-                  'CRM',
-                  '/business/operational/crm',
-                  Icons.people,
-                ),
-                _NavItem(
-                  'Управление услугами',
-                  '/business/operational/services-admin',
-                  Icons.room_service,
-                ),
-              ],
-              navProvider,
             ),
-            
-            // Задачи
-            _buildSimpleItem(
-              context,
-              'Задачи',
-              Icons.task,
-              Colors.orange,
-              '/business/operational/tasks',
-              navProvider,
-            ),
-            
-            // Бизнес-процессы
-            _buildSimpleItem(
-              context,
-              'Бизнес-процессы',
-              Icons.settings,
-              Colors.purple,
-              '/business/operational/business_processes',
-              navProvider,
-            ),
-            
-            // ERP
-            _buildExpandableSection(
-              context,
-              'ERP',
-              Icons.build,
-              Colors.green,
-              [
-                _NavItem(
-                  'Строительство',
-                  '/business/operational/construction',
-                  Icons.construction,
-                ),
-                _NavItem(
-                  'Торговля',
-                  '/business/operational/trade',
-                  Icons.shopping_cart,
-                ),
-                _NavItem(
-                  'Логистика',
-                  '/business/operational/logistics',
-                  Icons.local_shipping,
-                ),
-                _NavItem(
-                  'Сфера услуг',
-                  '/business/operational/services',
-                  Icons.room_service,
-                ),
-              ],
-              navProvider,
-            ),
-            
-            const Divider(height: 24),
-            
-            // Настройка группы
-            _buildSimpleItem(
-              context,
-              'Настройка группы',
-              Icons.group_work,
-              Colors.grey,
-              '/organizational_structure',
-              navProvider,
-            ),
-            
-            // Настройка телефонии
-            _buildSimpleItem(
-              context,
-              'Настройка телефонии',
-              Icons.phone,
-              Colors.grey,
-              '/phone_settings',
-              navProvider,
-            ),
-            
-            // Права доступа сотрудников
-            _buildSimpleItem(
-              context,
-              'Права доступа',
-              Icons.admin_panel_settings,
-              Colors.grey,
-              '/roles-assignment',
-              navProvider,
+            _NavItem(
+              'Управление услугами',
+              '/business/operational/services-admin',
+              Icons.room_service,
             ),
           ],
-        );
-      },
+        ),
+        
+        // Задачи
+        _buildSimpleItem(
+          context,
+          'Задачи',
+          Icons.task,
+          Colors.orange,
+          '/business/operational/tasks',
+        ),
+        
+        // Бизнес-процессы
+        _buildSimpleItem(
+          context,
+          'Бизнес-процессы',
+          Icons.settings,
+          Colors.purple,
+          '/business/operational/business_processes',
+        ),
+        
+        // ERP
+        _buildExpandableSection(
+          context,
+          'ERP',
+          Icons.build,
+          Colors.green,
+          [
+            _NavItem(
+              'Строительство',
+              '/business/operational/construction',
+              Icons.construction,
+            ),
+            _NavItem(
+              'Торговля',
+              '/business/operational/trade',
+              Icons.shopping_cart,
+            ),
+            _NavItem(
+              'Логистика',
+              '/business/operational/logistics',
+              Icons.local_shipping,
+            ),
+            _NavItem(
+              'Сфера услуг',
+              '/business/operational/services',
+              Icons.room_service,
+            ),
+          ],
+        ),
+        
+        const Divider(height: 24),
+        
+        // Настройка группы
+        _buildSimpleItem(
+          context,
+          'Настройка группы',
+          Icons.group_work,
+          Colors.grey,
+          '/organizational_structure',
+        ),
+        
+        // Настройка телефонии
+        _buildSimpleItem(
+          context,
+          'Настройка телефонии',
+          Icons.phone,
+          Colors.grey,
+          '/phone_settings',
+        ),
+        
+        // Права доступа сотрудников
+        _buildSimpleItem(
+          context,
+          'Права доступа',
+          Icons.admin_panel_settings,
+          Colors.grey,
+          '/roles-assignment',
+        ),
+      ],
     );
   }
 
@@ -137,9 +130,8 @@ class OperationalAccordion extends StatelessWidget {
     IconData icon,
     Color color,
     String route,
-    DesktopNavigationProvider navProvider,
   ) {
-    final isActive = navProvider.currentRoute == route;
+    final isActive = currentRoute.startsWith(route);
     
     return ListTile(
       leading: Icon(icon, color: color, size: 20),
@@ -156,7 +148,10 @@ class OperationalAccordion extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       dense: true,
-      onTap: () => navProvider.navigateTo(route),
+      onTap: () {
+        debugPrint('🔗 Navigating to: $route');
+        context.go(route);
+      },
     );
   }
 
@@ -166,24 +161,27 @@ class OperationalAccordion extends StatelessWidget {
     IconData icon,
     Color color,
     List<_NavItem> items,
-    DesktopNavigationProvider navProvider,
   ) {
+    // Проверяем, есть ли активный item в этой секции
+    final hasActiveItem = items.any((item) => currentRoute.startsWith(item.route));
+    
     return ExpansionTile(
       leading: Icon(icon, color: color, size: 20),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontWeight: hasActiveItem ? FontWeight.bold : FontWeight.w600,
         ),
       ),
+      initiallyExpanded: hasActiveItem,
       tilePadding: const EdgeInsets.symmetric(horizontal: 12),
       childrenPadding: const EdgeInsets.only(left: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
       children: items.map((item) {
-        final isActive = navProvider.currentRoute == item.route;
+        final isActive = currentRoute.startsWith(item.route);
         return ListTile(
           leading: Icon(item.icon, color: color, size: 18),
           title: Text(
@@ -200,7 +198,10 @@ class OperationalAccordion extends StatelessWidget {
           ),
           dense: true,
           visualDensity: VisualDensity.compact,
-          onTap: () => navProvider.navigateTo(item.route),
+          onTap: () {
+            debugPrint('🔗 Navigating to: ${item.route}');
+            context.go(item.route);
+          },
         );
       }).toList(),
     );

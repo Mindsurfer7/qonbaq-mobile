@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/control_point.dart';
 import '../../domain/entities/task.dart';
@@ -155,7 +157,7 @@ class _ControlPointDetailPageState extends State<ControlPointDetailPage> {
         title: Text(_controlPoint?.title ?? 'Точка контроля'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -166,7 +168,7 @@ class _ControlPointDetailPageState extends State<ControlPointDetailPage> {
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -805,9 +807,8 @@ class _ControlPointDetailPageState extends State<ControlPointDetailPage> {
       color: Colors.grey.shade50,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed(
+          context.go(
             '/tasks/detail',
-            arguments: task.id,
           );
         },
         child: Padding(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import '../../core/utils/dropdown_helpers.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/services/voice_context.dart';
 import '../../core/utils/form_cache_storage.dart';
+import '../../core/utils/responsive_utils.dart';
 // import '../../core/utils/unassigned_roles_popup_storage.dart'; // Закомментировано, так как старый попап не используется
 import '../../domain/entities/approval.dart';
 import '../../domain/entities/approval_template.dart';
@@ -505,7 +507,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
   //             ElevatedButton(
   //               onPressed: () {
   //                 Navigator.of(dialogContext).pop();
-  //                 Navigator.of(context).pushNamed('/roles-assignment');
+  //                 context.go('/roles-assignment');
   //               },
   //               child: const Text('Назначить роли'),
   //             ),
@@ -933,7 +935,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
         title: const Text('Согласования'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -944,7 +946,7 @@ class _ApprovalsPageState extends State<ApprovalsPage>
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/business');
+              context.go('/business');
             },
           ),
         ],
@@ -1552,7 +1554,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
-                  Navigator.of(context).pushNamed('/roles-assignment');
+                  context.go('/roles-assignment');
                 },
                 child: const Text('Перейти к распределению ролей'),
               ),
@@ -1763,7 +1765,7 @@ class _CreateApprovalDialogState extends State<_CreateApprovalDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: _isLoading ? null : () => context.pop(),
           child: const Text('Отмена'),
         ),
         ElevatedButton(
