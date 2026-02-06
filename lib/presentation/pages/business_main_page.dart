@@ -6,6 +6,8 @@ import '../providers/profile_provider.dart';
 import '../providers/pending_confirmations_provider.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/entities/workday.dart';
+import '../../core/utils/responsive_utils.dart';
+import '../layouts/adaptive_shell.dart';
 
 /// Главная страница бизнес-приложения
 class BusinessMainPage extends StatefulWidget {
@@ -101,6 +103,12 @@ class _BusinessMainPageState extends State<BusinessMainPage> {
 
   @override
   Widget build(BuildContext context) {
+    // На desktop используем DesktopLayout через AdaptiveShell
+    if (context.isDesktop) {
+      return const AdaptiveShell(child: SizedBox.shrink());
+    }
+    
+    // На mobile показываем обычный Scaffold
     return Scaffold(
       appBar: AppBar(
         title: Selector<ProfileProvider, String>(

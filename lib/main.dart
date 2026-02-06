@@ -69,6 +69,7 @@ import 'package:qonbaq/presentation/providers/profile_provider.dart';
 import 'package:qonbaq/presentation/providers/invite_provider.dart';
 import 'package:qonbaq/presentation/providers/inbox_provider.dart';
 import 'package:qonbaq/presentation/providers/theme_provider.dart';
+import 'package:qonbaq/presentation/providers/desktop_navigation_provider.dart';
 import 'package:qonbaq/data/datasources/user_remote_datasource_impl.dart';
 import 'package:qonbaq/data/datasources/user_local_datasource_impl.dart';
 import 'package:qonbaq/data/repositories/user_repository_impl.dart';
@@ -641,6 +642,9 @@ class MyApp extends StatelessWidget {
     // Провайдер для формы назначения ролей
     final roleAssignmentFormProvider = RoleAssignmentFormProvider();
 
+    // Провайдер для desktop навигации
+    final desktopNavigationProvider = DesktopNavigationProvider();
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => themeProvider),
@@ -656,6 +660,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => crmProvider),
         ChangeNotifierProvider(create: (_) => ordersProvider),
         ChangeNotifierProvider(create: (_) => roleAssignmentFormProvider),
+        ChangeNotifierProvider(create: (_) => desktopNavigationProvider),
         Provider<CreateTask>(create: (_) => createTask),
         Provider<GetTasks>(create: (_) => getTasks),
         Provider<GetTaskById>(create: (_) => getTaskById),
